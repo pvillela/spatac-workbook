@@ -231,3 +231,38 @@ fn values_only_with_the_option() {
     );
     assert_eq!(sheet(&loud, "Data").values.len(), 1, "{loud:#?}");
 }
+
+#[test]
+fn relabelled_and_reordered_rows_are_moves_not_deletions() {
+    let layout = |rows: &[(&str, f64)]| {
+        let mut wb = umya_spreadsheet::new_file();
+        let ws = wb.sheet_mut(0).unwrap();
+        ws.set_name("Cash");
+        for (i, (label, v)) in rows.iter().enumerate() {
+            let r = i as u32 + 1;
+            ws.cell_mut((1, r)).set_value(*label);
+            ws.cell_mut((2, r)).set_value_number(*v);
+        }
+        wb
+    };
+    let old = layout(&[
+        ("Opening", 1.0),
+        ("Carry-over", 0.0),
+        ("Closing", 9.0),
+        ("Adjustment", -5.0),
+    ]);
+    let new = layout(&[
+        ("Opening", 1.0),
+        ("Closing", 9.0),
+        ("Carry-over", 0.0),
+        ("Adjustment to minimum", -5.0),
+    ]);
+    let r = run("moves", &old, &new, Options::default());
+    let s = sheet(&r, "Cash");
+    assert!(s.structure.iter().any(|t| t.contains("moved")), "{s:#?}");
+    assert!(
+        s.cells.iter().all(|c| c.kind == ChangeKind::Changed),
+        "only the relabelled cell should change: {s:#?}"
+    );
+    assert_eq!(s.cells.len(), 1, "{s:#?}");
+}

@@ -763,6 +763,9 @@ class Migration:
         b.style("A3:G3", "Header")
         b.fmt("B3:G3", YEAR)
 
+        # Phase 4 fix: the carry-over sits below the closing balance, then the adjustment.
+        fixed = "closing" in self.fixes
+        carry, adj, minimum = (23, 24, 25) if fixed else (19, 22, 24)
         labels = {
             5: self.mtc_cell("A", 5),
             6: self.mtc_cell("A", 6),
@@ -776,10 +779,10 @@ class Migration:
             15: "3-year maturity",
             16: "4-year maturity",
             17: "5-year maturity (balancing figure)",
-            19: "Additional cash carry-over",
+            carry: "Additional cash carry-over",
             21: "Closing cash balance",
-            22: "Adjustment to cash balance",
-            24: "Minimum closing cash balance (Settings, inflated)",
+            adj: "Adjustment to minimum cash balance" if fixed else "Adjustment to cash balance",
+            minimum: "Minimum closing cash balance (Settings, inflated)",
             28: "RFS expenditures",
             29: "Revised expenditures",
             30: "Variance",
@@ -815,15 +818,27 @@ class Migration:
             for r in (13, 14, 15, 16):
                 b.value("%s%d" % (c, r), self.mtc_cell(c, r))
                 b.style("%s%d" % (c, r), "Input")
-            b.formula("%s17" % c, "=SUM({c}4:{c}11)-SUM({c}13:{c}16)-{c}19-{c}24-{c}22".format(c=c))
-            b.value("%s19" % c, self.mtc_cell(c, 19))
-            b.style("%s19" % c, "Input")
-            # Phase 4 fix: the adjustment is already in the balancing figure; add the carry-over.
-            closing_extra = 19 if "closing" in self.fixes else 22
-            b.formula("%s21" % c, "=SUM({c}5:{c}12)+{c}{x}".format(c=c, x=closing_extra))
-            b.value("%s22" % c, self.mtc_cell(c, 22))
-            b.style("%s22" % c, "Input")
-            b.formula("%s24" % c, "=Cfg_MinTarget*(1+RFS_ShortInflation)^(%s$3-Cfg_MinTargetYear)" % c)
+            b.formula(
+                "%s17" % c,
+                "=SUM({c}4:{c}11)-SUM({c}13:{c}16)-{c}{k}-{c}{m}-{c}{a}".format(
+                    c=c, k=carry, m=minimum, a=adj
+                ),
+            )
+            b.value("%s%d" % (c, carry), self.mtc_cell(c, 19))
+            b.style("%s%d" % (c, carry), "Input")
+            # Phase 4 fix: the balancing figure already leaves the carry-over and the adjustment
+            # in cash, so the closing balance adds nothing more. The old formula added the
+            # adjustment a second time.
+            if fixed:
+                b.formula("%s21" % c, "=SUM({c}5:{c}12)".format(c=c))
+            else:
+                b.formula("%s21" % c, "=SUM({c}5:{c}12)+{c}22".format(c=c))
+            b.value("%s%d" % (c, adj), self.mtc_cell(c, 22))
+            b.style("%s%d" % (c, adj), "Input")
+            b.formula(
+                "%s%d" % (c, minimum),
+                "=Cfg_MinTarget*(1+RFS_ShortInflation)^(%s$3-Cfg_MinTargetYear)" % c,
+            )
             b.formula("%s28" % c, "=-SUM(INDEX(Exp_RFS;0;MATCH(%s$3;Exp_RFSYears;0)))" % c)
             b.formula("%s29" % c, "=%s9" % c)
             b.formula("%s30" % c, "=%s29-%s28" % (c, c))
@@ -831,7 +846,7 @@ class Migration:
             b.formula("%s33" % c, "=INDEX(PB_Balance;MATCH(%s$3;PB_Year;0))" % c)
             b.formula("%s34" % c, "=%s33-%s32" % (c, c))
         b.fmt("B5:G34", MONEY_ZERO)
-        for r in (21, 24):
+        for r in (21, minimum):
             b.bold("A%d:G%d" % (r, r))
         for r in (26, 36):
             b.fill("A%d:G%d" % (r, r), SEPARATOR_COLOR)
@@ -853,17 +868,17 @@ class Migration:
             ("MTC_PlannedMaturities", "B11:G11"),
             ("MTC_NewInvTotal", "B12:G12"),
             ("MTC_NewInv", "B13:G17"),
-            ("MTC_CarryOver", "B19:G19"),
+            ("MTC_CarryOver", "B%d:G%d" % (carry, carry)),
             ("MTC_ClosingCash", "B21:G21"),
-            ("MTC_Adjustment", "B22:G22"),
-            ("MTC_MinCash", "B24:G24"),
+            ("MTC_Adjustment", "B%d:G%d" % (adj, adj)),
+            ("MTC_MinCash", "B%d:G%d" % (minimum, minimum)),
             ("MTC_RFSExpenditures", "B28:G28"),
             ("MTC_RevisedExpenditures", "B29:G29"),
             ("MTC_ExpVariance", "B30:G30"),
             ("MTC_RFSBalance", "B32:G32"),
             ("MTC_ProjectedBalance", "B33:G33"),
             ("MTC_BalanceVariance", "B34:G34"),
-            ("MTC_CashSection", "A3:G24"),
+            ("MTC_CashSection", "A3:G%d" % minimum),
             ("MTC_ComparisonSection", "A28:G30"),
         ):
             a, z = rng.split(":")

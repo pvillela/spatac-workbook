@@ -67,6 +67,10 @@ class Book:
         self.doc = doc
         self.cache = {}
 
+    def row_of(self, name):
+        """The first row a defined name refers to, 1-based."""
+        return self.doc.NamedRanges.getByName(name).ReferredCells.RangeAddress.StartRow + 1
+
     def v(self, sheet, a):
         c = self.doc.Sheets.getByName(sheet).getCellRangeByName(a)
         if c.getError():
@@ -117,9 +121,27 @@ def check_results(ck):
             ck.old.v("Medium_Term_Cashflow", "%s10" % c),
             ck.new.v("Medium_Term_Cashflow", "%s10" % c) + ck.new.v("Medium_Term_Cashflow", "%s11" % c),
         )
-    for r in (5, 8, 9, 12, 17, 21, 24, 28, 29, 30, 32, 33, 34):
+    # The restructured rows are found by their defined names, so that moving a row (phase 4)
+    # does not break the comparison.
+    names = {
+        5: ("MTC_OpeningCash", 0),
+        8: ("MTC_Contributions", 0),
+        9: ("MTC_Expenditures", 0),
+        12: ("MTC_NewInvTotal", 0),
+        17: ("MTC_NewInv", 4),
+        21: ("MTC_ClosingCash", 0),
+        24: ("MTC_MinCash", 0),
+        28: ("MTC_RFSExpenditures", 0),
+        29: ("MTC_RevisedExpenditures", 0),
+        30: ("MTC_ExpVariance", 0),
+        32: ("MTC_RFSBalance", 0),
+        33: ("MTC_ProjectedBalance", 0),
+        34: ("MTC_BalanceVariance", 0),
+    }
+    for r, (name, offset) in names.items():
+        nr = ck.new.row_of(name) + offset
         for c in "BCDEFG":
-            ck.pair("Medium_Term_Cashflow row %d" % r, "Medium_Term_Cashflow", "%s%d" % (c, r), "Medium_Term_Cashflow", "%s%d" % (c, r))
+            ck.pair("Medium_Term_Cashflow row %d" % r, "Medium_Term_Cashflow", "%s%d" % (c, r), "Medium_Term_Cashflow", "%s%d" % (c, nr))
 
     # Expenditures totals by year. Old row 6 = -SUM(column); new row 4 = SUM(column).
     old_current = {2026: "L", 2027: "P", 2028: "Q"}

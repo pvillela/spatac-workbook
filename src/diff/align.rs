@@ -10,6 +10,9 @@ use super::formula::Remap;
 use similar::{Algorithm, DiffOp, capture_diff_slices};
 use std::collections::{BTreeMap, HashMap};
 
+/// Each entry's label on the old and new side; `None` where an entry has no label.
+pub type Labels<'a> = (&'a [Option<String>], &'a [Option<String>]);
+
 /// Rows (or columns) whose similarity is below this are not paired.
 const PAIR_THRESHOLD: f64 = 0.5;
 
@@ -88,6 +91,19 @@ pub fn align(
     new: &[u64],
     blank: u64,
     similarity: &dyn Fn(usize, usize) -> f64,
+) -> Alignment {
+    align_labelled(old, new, blank, similarity, None)
+}
+
+/// Like [`align`], with each entry's label (a row's leading text). An unpaired entry whose label
+/// occurs exactly once among the unpaired entries on each side is the same entry, moved, even if
+/// its content changed.
+pub fn align_labelled(
+    old: &[u64],
+    new: &[u64],
+    blank: u64,
+    similarity: &dyn Fn(usize, usize) -> f64,
+    labels: Option<Labels<'_>>,
 ) -> Alignment {
     let mut a = Alignment::default();
     let mut unpaired_old = Vec::new();
@@ -173,7 +189,78 @@ pub fn align(
             moved_new.push(n);
         }
     }
+    if let Some((old_labels, new_labels)) = labels {
+        let taken_old: Vec<usize> = a.moved.iter().map(|m| m.0 as usize - 1).collect();
+        let free_old: Vec<usize> = unpaired_old
+            .iter()
+            .copied()
+            .filter(|o| !taken_old.contains(o))
+            .collect();
+        let free_new: Vec<usize> = unpaired_new
+            .iter()
+            .copied()
+            .filter(|n| !moved_new.contains(n))
+            .collect();
+        let count = |list: &[usize], labels: &[Option<String>], l: &str| {
+            list.iter()
+                .filter(|&&i| labels[i].as_deref() == Some(l))
+                .count()
+        };
+        for &o in &free_old {
+            let Some(label) = old_labels[o].as_deref() else {
+                continue;
+            };
+            if count(&free_old, old_labels, label) != 1 || count(&free_new, new_labels, label) != 1
+            {
+                continue;
+            }
+            let n = *free_new
+                .iter()
+                .find(|&&n| new_labels[n].as_deref() == Some(label))
+                .expect("counted above");
+            pair(&mut a, o, n);
+            a.moved.push((o as u32 + 1, n as u32 + 1));
+            moved_new.push(n);
+        }
+    }
+    // Whatever is still unpaired: the most similar pairs, best first. These are edited rows
+    // that also moved, such as a row relabelled after a reorder.
+    {
+        let taken_old: Vec<usize> = a.moved.iter().map(|m| m.0 as usize - 1).collect();
+        let free_old: Vec<usize> = unpaired_old
+            .iter()
+            .copied()
+            .filter(|o| !taken_old.contains(o) && old[*o] != blank)
+            .collect();
+        let free_new: Vec<usize> = unpaired_new
+            .iter()
+            .copied()
+            .filter(|n| !moved_new.contains(n) && new[*n] != blank)
+            .collect();
+        let mut candidates: Vec<(f64, usize, usize)> = Vec::new();
+        for &o in &free_old {
+            for &n in &free_new {
+                let s = similarity(o, n);
+                if s >= PAIR_THRESHOLD {
+                    candidates.push((s, o, n));
+                }
+            }
+        }
+        candidates.sort_by(|x, y| y.0.total_cmp(&x.0));
+        let mut used_old = Vec::new();
+        for (_, o, n) in candidates {
+            if used_old.contains(&o) || moved_new.contains(&n) {
+                continue;
+            }
+            pair(&mut a, o, n);
+            a.moved.push((o as u32 + 1, n as u32 + 1));
+            moved_new.push(n);
+            used_old.push(o);
+        }
+    }
     let moved_old: Vec<usize> = a.moved.iter().map(|m| m.0 as usize - 1).collect();
+    // A row that stayed where it was has not moved, however it was paired.
+    a.moved.retain(|&(o, n)| o != n);
     a.deleted = unpaired_old
         .into_iter()
         .filter(|o| !moved_old.contains(o))

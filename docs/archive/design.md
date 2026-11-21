@@ -264,7 +264,10 @@ labelled step:
   every row.)
 - Medium_Term_Cashflow closing cash balance counts the adjustment (row 22) twice: the 5-year
   balancing figure subtracts it and the closing balance adds it again. Found during phase 3.
-  Fix, decided by the user: closing balance `=SUM(B5:B12)+B19`.
+  Fix, decided by the user: closing balance `=SUM(B5:B12)`, so that it equals the minimum plus
+  the carry-over plus the adjustment, each counted once. The carry-over row moves below the
+  closing balance, after a blank row, and the adjustment row is relabelled "Adjustment to
+  minimum cash balance".
 
 The minimum balance (Q16, item 5) turned out not to be a bug. It is the Board's $1M
 target in 2024 dollars; see 4.3.

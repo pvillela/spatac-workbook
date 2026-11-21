@@ -1,6 +1,6 @@
 //! Compares two loaded workbooks and builds the [`Report`].
 
-use super::align::{Alignment, align};
+use super::align::{Alignment, align, align_labelled};
 use super::formula::{self, Remap, SheetMap, cell_name, column_letters};
 use super::model::{Book, Cell, Content, Sheet, Value};
 use similar::{Algorithm, DiffOp, capture_diff_slices};
@@ -431,24 +431,52 @@ fn align_sheets(o: &Sheet, n: &Sheet) -> (Alignment, Alignment) {
     };
     let osig: Vec<u64> = orows.iter().map(row_sig).collect();
     let nsig: Vec<u64> = nrows.iter().map(row_sig).collect();
-    let rows = align(&osig, &nsig, blank, &|i, j| {
-        let (a, b) = (&orows[i], &nrows[j]);
-        let mut used = 0;
-        let mut same = 0;
-        for k in 0..a.len() {
-            if !a[k].is_empty() || !b[k].is_empty() {
-                used += 1;
-                if a[k] == b[k] {
-                    same += 1;
+    let labels = |s: &Sheet| -> Vec<Option<String>> {
+        (1..=s.max_row)
+            .map(|r| {
+                s.cells
+                    .range((r, 0)..=(r, u32::MAX))
+                    .find(|(_, c)| c.has_content())
+                    .and_then(|(_, c)| match &c.content {
+                        Content::Value(Value::Text(t)) if !t.trim().is_empty() => Some(t.clone()),
+                        _ => None,
+                    })
+            })
+            .collect()
+    };
+    let (olabels, nlabels) = (labels(o), labels(n));
+    let rows = align_labelled(
+        &osig,
+        &nsig,
+        blank,
+        &|i, j| {
+            let (a, b) = (&orows[i], &nrows[j]);
+            let mut used = 0;
+            let mut same = 0;
+            for k in 0..a.len() {
+                if !a[k].is_empty() || !b[k].is_empty() {
+                    used += 1;
+                    if a[k] == b[k] {
+                        same += 1;
+                    }
                 }
             }
-        }
-        if used == 0 {
-            1.0
-        } else {
-            same as f64 / used as f64
-        }
-    });
+            if used == 0 {
+                return 1.0;
+            }
+            let fraction = same as f64 / used as f64;
+            // A row's leading text is its label: a row that kept its label and changed every formula
+            // is still the same row.
+            let leading = |cells: &Vec<String>| cells.iter().position(|c| !c.is_empty());
+            match (leading(a), leading(b)) {
+                (Some(x), Some(y)) if x == y && a[x] == b[y] && a[x].starts_with('s') => {
+                    fraction.max(0.75)
+                }
+                _ => fraction,
+            }
+        },
+        Some((&olabels, &nlabels)),
+    );
     (rows, cols)
 }
 
