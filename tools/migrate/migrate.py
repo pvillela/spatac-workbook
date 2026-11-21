@@ -818,7 +818,9 @@ class Migration:
             b.formula("%s17" % c, "=SUM({c}4:{c}11)-SUM({c}13:{c}16)-{c}19-{c}24-{c}22".format(c=c))
             b.value("%s19" % c, self.mtc_cell(c, 19))
             b.style("%s19" % c, "Input")
-            b.formula("%s21" % c, "=SUM({c}5:{c}12)+{c}22".format(c=c))
+            # Phase 4 fix: the adjustment is already in the balancing figure; add the carry-over.
+            closing_extra = 19 if "closing" in self.fixes else 22
+            b.formula("%s21" % c, "=SUM({c}5:{c}12)+{c}{x}".format(c=c, x=closing_extra))
             b.value("%s22" % c, self.mtc_cell(c, 22))
             b.style("%s22" % c, "Input")
             b.formula("%s24" % c, "=Cfg_MinTarget*(1+RFS_ShortInflation)^(%s$3-Cfg_MinTargetYear)" % c)
@@ -1211,7 +1213,7 @@ def main():
         "--fix",
         action="append",
         default=[],
-        choices=["compounding"],
+        choices=["compounding", "closing"],
         help="apply a phase 4 bug fix (repeatable)",
     )
     args = ap.parse_args()

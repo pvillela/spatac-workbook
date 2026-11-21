@@ -90,6 +90,9 @@ Measured in this devcontainer:
 - Input cells use a named `Input` cell style and are unlocked. Computed columns that sit
   next to inputs use a distinct `Calculated` style.
 - Sheets are protected **without a password**, to prevent accidental edits only.
+- Excel's outline (+/−) buttons do not work on a protected sheet, so collapsing or expanding the
+  column groups (Q46) means unprotecting the sheet first. Decided during phase 3: protect every
+  Spatac tab anyway.
 - The README tab carries the legend.
 
 ## 4. Workbook structure
@@ -256,7 +259,12 @@ labelled step:
 - Schedule_of_Investments compounding is hard-coded to `^5` regardless of term.
 - Medium_Term_Cashflow K41 multiplies by J13, the rate cell. It is removed with the
   scratch area.
-- Expenditures totals sum rows 8–252 while the data ends at 250.
+- Expenditures totals sum rows 8–252 while the data ends at 250. (Phase 3 found this was not a
+  bug: rows 251–252 hold Spatac rows, and only `Table1`'s range was short. The new totals cover
+  every row.)
+- Medium_Term_Cashflow closing cash balance counts the adjustment (row 22) twice: the 5-year
+  balancing figure subtracts it and the closing balance adds it again. Found during phase 3.
+  Fix, decided by the user: closing balance `=SUM(B5:B12)+B19`.
 
 The minimum balance (Q16, item 5) turned out not to be a bug. It is the Board's $1M
 target in 2024 dollars; see 4.3.
