@@ -1,0 +1,40 @@
+name: CI
+
+# Every push and every pull request. The release workflow runs on tags alone, so without this one
+# a broken test, a clippy warning or a rotted intra-doc link would be discovered when a release
+# was tagged — and the examples would be compiled by nothing at all.
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: Test, lint and document
+    # Pinned to the same image the release is built on, so a failure here and a failure there are
+    # the same failure. See the release workflow for why 26.04 rather than `ubuntu-latest`.
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      # Warnings are errors here: a warning that nobody sees is a warning that accumulates. This is
+      # also the only job that compiles the examples, benches and test targets.
+      - name: Lint every target and feature
+        run: cargo clippy --all-targets --all-features -- -D warnings
+      - name: Test every target and feature
+        run: cargo test --all-targets --all-features
+      # The cheapest rename detector the crate has: a broken intra-doc link is a `warning`, not an
+      # error, so without these flags `cargo doc` would stay green while a type lost its only path.
+      #
+      # `--document-private-items` because most of this crate is not `pub`, and without it the
+      # check sees none of those links; `private_intra_doc_links` because a public item linking to
+      # a private one is the shape that left `ReadError` unreachable with `cargo check` green.
+      - name: Check the intra-doc links
+        env:
+          RUSTDOCFLAGS: -D rustdoc::broken_intra_doc_links -D rustdoc::private_intra_doc_links
+        run: cargo doc --no-deps --all-features --document-private-items

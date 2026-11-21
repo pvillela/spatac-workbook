@@ -1,0 +1,145 @@
+name: Release Binaries
+on:
+  push:
+    tags: [ 'v*' ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build for ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    # Attaching an asset to the release — and creating that release, which whichever leg of the
+    # matrix arrives first does — are writes to the repository's contents. The default token is
+    # read-only, so without this the upload fails at the end of an otherwise successful build.
+    permissions:
+      contents: write
+    strategy:
+      # One platform's failure leaves the other still worth knowing. The default would cancel the
+      # Linux leg mid-compile over a Windows test failure, which reports a build that never ran as
+      # one that was stopped, and says nothing about whether Linux would pass.
+      fail-fast: false
+      matrix:
+        include:
+          # Pinned rather than `ubuntu-latest`: glibc is only backward compatible, so the binary
+          # runs on the build image's release and newer, never older. 26.04 is the oldest release
+          # we support, and building there is what makes the result run everywhere above it.
+          # `ubuntu-latest` would move that floor on GitHub's schedule rather than on ours.
+          - os: ubuntu-26.04
+            target: x86_64-unknown-linux-gnu
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+        #   - os: macos-latest
+        #     target: aarch64-apple-darwin
+
+    steps:
+      - uses: actions/checkout@v5
+      # The stamp every download carries: `v0_1_0_rc-1a2b3c4` from tag `v0.1.0-rc` at that commit.
+      # It comes from the tag rather than the manifest because the tag is what names the release,
+      # and the two are compared here so a tag pushed against a stale `version =` fails the build
+      # instead of shipping a binary whose name and contents disagree. `shell: bash` on Windows
+      # too, so both legs of the matrix compute the same string.
+      - name: Compute the release stamp
+        id: stamp
+        shell: bash
+        run: |
+          manifest=$(grep -m1 '^version = ' Cargo.toml | cut -d'"' -f2)
+          if [ "$GITHUB_REF_NAME" != "v$manifest" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match Cargo.toml version $manifest" >&2
+            exit 1
+          fi
+          echo "stamp=${GITHUB_REF_NAME//[.-]/_}-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          # A hyphen in the tag is a pre-release suffix — `v0.1.0-rc` — because the version it was
+          # checked against is a Cargo version, where that is the only thing a hyphen can mean.
+          # The release page then labels it, instead of offering it as the current download.
+          case "$GITHUB_REF_NAME" in
+            *-*) echo "prerelease=true" >> "$GITHUB_OUTPUT" ;;
+            *)   echo "prerelease=false" >> "$GITHUB_OUTPUT" ;;
+          esac
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      # Ahead of the build so a failure stops the release before any artifact is uploaded.
+      # `--all-targets`: the release and test builds do not compile the same code, which is exactly
+      # how a broken example or test target would otherwise reach a tag.
+      #
+      # Windows only. ci.yml fires on this same push -- its `on: push:` carries no branch or tag
+      # filter -- and runs the same suite on the same image, so a Linux run here would be the
+      # second of two identical ones. Windows has no such cover: ci.yml has a single job and it is
+      # not this one, so this is the only Windows run there will ever be, and the only thing
+      # standing between a Windows-only failure and a published binary.
+      #
+      # What that gives up: a Linux failure does not stop the release on its own. The two
+      # workflows run in parallel and neither waits on the other, so a red ci.yml and a published
+      # release can sit side by side. Read the CI run before trusting a release.
+      - name: Run tests
+        if: runner.os != 'Linux'
+        run: cargo test --all-targets --verbose
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-about
+      # Before the build, and not optional: `build.rs` refuses to compile a release whose notices
+      # are missing or stamped with a different dependency graph. The file is not committed, so
+      # this is the only place it exists.
+      - name: Generate third-party notices
+        shell: bash
+        run: bash scripts/gen-notices.sh
+      - name: Run Build
+        run: cargo build --release --target ${{ matrix.target }} --verbose
+      # The licences travel with the download, not only inside the binary, so the terms can be
+      # read without running the program. Staged in `dist` because `upload-artifact` roots the
+      # archive at the common ancestor of its inputs: handing it the binary under `target` and
+      # the licences from the root would nest everything under the build path.
+      - name: Stage the download (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p dist
+          for bin in xlsx-diff spatac-investment-plan; do
+            cp target/${{ matrix.target }}/release/$bin dist/$bin-${{ steps.stamp.outputs.stamp }}
+          done
+          cp LICENSE-MIT LICENSE-APACHE THIRD-PARTY-NOTICES.md dist/
+      - name: Stage the download (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          New-Item -ItemType Directory -Force -Path dist
+          foreach ($bin in 'xlsx-diff', 'spatac-investment-plan') {
+            Copy-Item target/${{ matrix.target }}/release/$bin.exe `
+              dist/$bin-${{ steps.stamp.outputs.stamp }}.exe
+          }
+          Copy-Item LICENSE-MIT, LICENSE-APACHE, THIRD-PARTY-NOTICES.md dist/
+      # A release asset is a single file, so each platform's `dist` is packed into one archive
+      # named for its target and stamp. Tar on Linux because zip drops the Unix mode bits and the
+      # binary would arrive without its executable bit; zip on Windows because that is what the
+      # platform opens without extra tooling.
+      #
+      # Each step records the name it produced in `ARCHIVE`, so the upload below names one file
+      # that exists rather than a pair of candidates of which one is always absent — which is what
+      # lets `fail_on_unmatched_files` mean something.
+      - name: Package Linux binary
+        if: runner.os == 'Linux'
+        run: |
+          archive=spatac-workbook-${{ matrix.target }}-${{ steps.stamp.outputs.stamp }}.tar.gz
+          tar -czf "$archive" -C dist .
+          echo "ARCHIVE=$archive" >> "$GITHUB_ENV"
+      - name: Package Windows binary
+        if: runner.os == 'Windows'
+        run: |
+          $archive = "spatac-workbook-${{ matrix.target }}-${{ steps.stamp.outputs.stamp }}.zip"
+          Compress-Archive -Path dist/* -DestinationPath $archive
+          "ARCHIVE=$archive" >> $env:GITHUB_ENV
+      # Straight onto the release page for the pushed tag, rather than a workflow artifact: the
+      # download then outlives the run's retention window and needs no GitHub account to fetch.
+      # Both legs of the matrix name the same tag, so whichever finishes first creates the release
+      # and the other adds its asset to it — `files` replaces only assets of the same name, and the
+      # two archives never collide because the target is in the name.
+      - name: Publish to the release page
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          prerelease: ${{ steps.stamp.outputs.prerelease }}
+          fail_on_unmatched_files: true
+          files: ${{ env.ARCHIVE }}
+
+

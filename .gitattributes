@@ -1,0 +1,5 @@
+# Zip containers and PDFs: any line-ending conversion corrupts them outright.
+*.xlsx binary
+*.ods binary
+*.pdf binary
+*.docx binary

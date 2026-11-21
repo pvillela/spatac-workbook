@@ -55,6 +55,20 @@ curl -LO https://github.com/zellij-org/zellij/releases/download/v${ZELLIJ_VERSIO
 mv zellij ${LOCAL_BIN}/ && \
     rm zellij-x86_64-unknown-linux-musl.tar.gz
 
+echo "Installing LibreOffice 26.2 ..."
+# The workbook must work in LibreOffice Calc 26.2, and the migration and its checks drive Calc
+# headless. The official packages are used rather than Ubuntu's, whose version may differ. They
+# do not pull in their runtime libraries, hence the explicit list.
+LO_VERSION=26.2.7
+LO_TMP=$(mktemp -d)
+curl -fL -o "${LO_TMP}/lo.tar.gz" \
+    "https://download.documentfoundation.org/libreoffice/stable/${LO_VERSION}/deb/x86_64/LibreOffice_${LO_VERSION}_Linux_x86-64_deb.tar.gz"
+tar -xzf "${LO_TMP}/lo.tar.gz" -C "${LO_TMP}"
+sudo dpkg -i "${LO_TMP}"/LibreOffice_${LO_VERSION}*_deb/DEBS/*.deb
+sudo apt-get update
+sudo apt-get install -y libx11-xcb1 libxinerama1 libcairo2 libcups2t64 libdbus-1-3 libnspr4 libnss3
+rm -rf "${LO_TMP}"
+
 # Add local binary folder to PATH
 echo "export PATH=\"\$LOCAL_BIN:\$PATH\"" >> "$HOME/.bashrc"
 
