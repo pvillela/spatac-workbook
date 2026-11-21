@@ -8,6 +8,12 @@ description = "Utilities and documentation to support Antiquary RF project track
 [dependencies]
 # Command-line parsing for both binaries.
 clap = { version = "4.5", features = ["derive"] }
+# Finds cell references in formula text, which is what lets a formula be compared after the rows
+# and columns it refers to have moved.
+regex = "1.11"
+# Myers sequence alignment of rows, columns and tab orders. Linear in memory, unlike a dynamic
+# programming LCS, so a sheet with tens of thousands of rows still diffs.
+similar = "2.6"
 # Stores row heights and column widths as f64 written straight through, which is what lets this
 # reproduce the reference workbook exactly. rust_xlsxwriter models both as whole pixels and cannot
 # represent the template's 13.8pt rows or 1.39-wide spacers.
