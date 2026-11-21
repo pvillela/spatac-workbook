@@ -1,0 +1,12 @@
+[package]
+name = "spatac-workbook"
+version = "0.1.0"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+description = "Utilities and documentation to support Antiquary RF project tracking and investment planning."
+
+[dependencies]
+# Stores row heights and column widths as f64 written straight through, which is what lets this
+# reproduce the reference workbook exactly. rust_xlsxwriter models both as whole pixels and cannot
+# represent the template's 13.8pt rows or 1.39-wide spacers.
+umya-spreadsheet = "3.1.1"
