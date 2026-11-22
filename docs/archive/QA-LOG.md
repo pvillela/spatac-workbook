@@ -355,3 +355,67 @@ section. Asked to go ahead.
 document that you can use tomorrow to continue work without blowin-up the context size. Also
 prepare a document that lists all Q&A items between me and you, starting with the first prompt
 -- do not include other session log items. Save both documents to the project root folder."
+
+---
+
+## Session of 2026-11-22: defects review
+
+Question numbers Q1–Q24 in this part appear as R1–R24 in design.md section 13; the rollover-grid decision is R25 and the Projected_Balances history decision R26.
+
+**User:** `/grill-me on @docs/archive/Prompt-20261122.md`: "Based on the context provided by
+@docs/archive/HANDOFF-20261121.md, address the defects documented in
+@docs/archive/defects-20261121.md."
+
+**Claude:** asked Q1–Q17 (scope, use of the review copy, alignment, the 404, README rows,
+Settings position, protected columns, the reason header, Approved, row 4 totals, C3,
+variances, borders, comments, Projected_Balances, commits, minor items).
+
+**User:** "Don't get hung-up on what cells are locked. I disabled protection on my copy so I
+could edit. Protection should be enabled after changes are made." Then: "What you need to pay
+attention to is not the status of whether the sheet is unlocked, but rather whether a cell is
+protected or not."
+**Claude:** agreed; the cells' own Protected flag is what counts. B–E were unprotected inputs
+in the build.
+
+**User's answers:**
+- Q1: "Create a plan that includes all, in whatever phases you consider appropriate."
+- Q2: "The review copy is not a master overall -- it is only a master for items that were
+  added/changed in it."
+- Q4: "The repo is public and I did push twice." Claude found Pages not enabled: the
+  Documentation workflow builds but its deploy step fails. The user enables Pages with Source
+  "GitHub Actions" and re-runs the workflow.
+- Q5: ok; "it will look a bit clunky if the user zooms in (I can live with that)."
+- Q7: ok; "Column A will probably need to stay visible to allow restoring to original sort
+  order."
+- Q12: ok; "Don't feel compelled to create options or ask questions when the answer is
+  obvious."
+- Q14: "I3, N221 and P221 are NOT empty." Claude had cut the text off; all 12 comments have
+  text.
+- Q15: ok, but "I need to be able to use the what-if block to validate the calculations in
+  RFS_cashflow."
+- Q3, Q6, Q8–Q11, Q13, Q16, Q17: ok.
+
+**Claude:** asked Q18–Q24: header row as the top boundary and a ▼ End row in place of marker
+rows; sorting needs the sheet unprotected; an item sort key; typed Row #; three what-if inputs
+with a difference column for validation; the current-year opening balance; where the plan goes.
+
+**User's answers:**
+- Q22: "ok; sounds reasonable, will be able to see for sure once implemented."
+- Q23: "Leave this as a user input, don't attempt to put in a formula. The user needs to know to
+  include payables / accrued liabilities, as well as investment principal and accrued interest.
+  These items are available from the financial statements. You may document this."
+- Q18–Q21, Q24: ok.
+
+**User:** "proceed". Claude wrote design.md section 13 (decisions and phases 8–14).
+
+**User:** "Explain item 13." **Claude:** explained the manual grid move at rollover; proposed
+fixed-year columns, with old years hidden.
+**User:** "This sounds like a creeping increase of workbook size as columns are hidden rather
+than removed."
+**Claude:** agreed; proposed deleting the old year's column and inserting one before a "▶ End"
+column, with fixed typed year headings and a base-year check cell (R25).
+**User:** "ok"
+
+**Claude:** asked whether the Projected_Balances past-year actuals columns stay.
+**User:** "Comparisons of past years with the RFS should be in prior years' workbooks, so I
+agree with your drop recommendation." (R26)

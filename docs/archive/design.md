@@ -580,3 +580,222 @@ the regenerated workbook.
     pushing, tagging and enabling GitHub Pages.
 
 **Verification:** the CI command set passes locally. The working tree is clean.
+
+## 13. Revisions of 2026-11-22
+
+Decisions from the review session of 2026-11-22, which addressed
+`docs/archive/defects-20261121.md`. Question numbers here are prefixed **R** (R1–R26) to keep
+them apart from those of the first session; `docs/archive/QA-LOG.md` has the discussion.
+
+Where this section conflicts with sections 1–12, this section wins.
+
+### 13.1 Inputs and sources
+
+- **The review copy** `_nogit/Spatac-20261121-restructured-review.xlsx` is the authority for
+  the items the user added or changed in it, and only for those (R2): README and Settings
+  text, the Medium_Term_Cashflow row changes (blank row inserted after row 11, closing balance
+  moved up to row 20, the rows below renumbered), cell formats on every tab, and on
+  Expenditures the B1 title, freeze panes (6 rows, 8 columns), the column groups and hidden
+  column F. Everything else stays as the current build makes it.
+- All of it is encoded in `migrate.py`, so the workbook is still rebuilt from
+  `_nogit/Spatac-20261121.xlsx`. The review copy is a reference only. The user had turned off
+  sheet protection to edit it; that is not one of the changes.
+- **Outputs** (R16): `_nogit/Spatac-20261121-restructured-20261122.xlsx` and
+  `_nogit/InvestmentPlan-20261121-20261122.xlsx`.
+
+### 13.2 Workbook-wide
+
+- **Vertical alignment: top**, set on the default cell style (Excel's "Normal"), so every tab,
+  the RFS tabs included, gets it (R3).
+- **Grid borders**: the border the user set on Expenditures J9 goes into the `Input` and
+  `Calculated` cell styles, so every input and calculated cell gets it (R13).
+- **Protection** (R7): every sheet is protected (no password) when the build ends. What
+  matters is each cell's own Protected flag: only real input cells are unprotected.
+- **Tab order**: Settings moves to the very end, after RFS_cashflow (R6).
+
+### 13.3 README and Settings
+
+- README and Settings take the review copy's text, including the new "Notice for Excel users".
+- README's text rows get **explicit row heights** computed from their text, because Excel does
+  not re-fit wrapped rows when it opens the file (R5). README stays protected. Rows may look
+  loose when zoomed; the user accepts that.
+- README describes the **Spatac row** and **RFS check** columns of Expenditures (R17).
+
+### 13.4 Expenditures
+
+- **Protected identity columns** (R7): A–F (row #, item, element, GL account, GL account name,
+  Spatac row) are protected and take the non-input look. Adding or removing items means
+  unprotecting the sheet; the docs say so. Column A stays visible (in the frozen area) because
+  sorting by it restores the original order.
+- **2026 Approved** is fixed once the year begins (R9): protected, with a third cell style,
+  "fixed for the year". It is filled at rollover with the sheet unprotected (`rollover.md`).
+- **Headers** (R8, R17):
+  - "Latest estimate" → **"Late-year estimate"** (column M), in the header, the range names
+    and the docs.
+  - "Actual to date" → **"Actuals to date"**.
+  - U6 → **"2027 Reason for change"**. The reasons explain only the next year's approved
+    changes. Its position is unchanged and no other reason columns are added.
+- **Row 4 totals** are blank for the change-only columns L, M, O, P, R and S (R10). Approved,
+  Actuals and the three Current estimate columns keep their totals.
+- **Row 3**: the label leaves C3; "Vendor total" goes in V3, next to the figures (R11).
+- **Variance vs RFS** (R12): a header-area row under N, Q, T and each Revised-block year
+  (AY–BZ): that column's total minus the RFS total for the same year.
+- **Boxes** round O2:Q5 (next year) and R2:T5 (year after), like the user's box round J2:N5
+  (R17).
+- The **RFS check** column is made narrower (R17).
+- **Comments** (R14): the 12 comments of the old `fvalues_spatac` tab are restored on the
+  matching cells of the new layout. Three of them (I3, N221, P221) are Excel threaded comments;
+  their text follows "Comment:" after Excel's legacy stub, and only that text is kept (e.g.
+  N221: "$42448.32 moved to 2025."). The 17 doubt comments in column U stay.
+
+### 13.5 Block boundaries, sorting and filtering (R1 a, R18–R21)
+
+This replaces the marker-row proposal of the 2026-11-21 handoff.
+
+- **Top boundary: the header row.** The row-block names (`Exp_*`; `Inv_Held`, `Inv_HeldFlows`
+  and the per-column `Inv_*` names) start at the block's header row, so a row inserted just
+  below the header is inside the name. There is no ▲ start row, because sorting would move it.
+- **Bottom boundary: a "▼ End" row** inside the names: grey, labelled "▼ End of items: insert
+  new rows above this line" (on Schedule_of_Investments, "… of held investments"). Its row #,
+  item, GL account and sort-key cells are blank, so every sort leaves it, and the spare blank
+  rows, at the bottom. It holds no amounts.
+- The same scheme applies to Expenditures and to the Schedule_of_Investments Held section.
+  The Planned section moves down on inserts; its formulas must stay relative (the `AGGREGATE`
+  k is `ROWS(M$49:M49)`-style). This is checked after the change.
+- Deleting the header row or the ▼ End row breaks the scheme; the docs say so.
+- **Filtering**: AutoFilter on Expenditures row 6, allowed while the sheet is protected.
+- **Sorting** needs the sheet unprotected, because Excel will not sort a range containing
+  protected cells on a protected sheet. The docs give the steps: unprotect, sort, protect.
+- **Item sort key**: a helper column in the folded group gives item numbers a sortable form
+  (2.1 before 10.1; 18.3.1, 15.5a in place). GL accounts already sort as 4-decimal text.
+- **Row #** is typed. An inserted item gets a number between its neighbours, e.g. 125.5, so
+  sorting by Row # restores the original order. It is never renumbered automatically.
+- Checked in LibreOffice by the build checks; an Excel check is added to
+  `docs/procedures/excel-checklist.md`.
+
+### 13.6 Projected_Balances (R15, R22, R23, R26)
+
+Rebuilt; this replaces section 4.5 where they differ.
+
+- **Two sections over the same year rows**:
+  - **RFS baseline**, read-only, from RFS_cashflow.
+  - **What-if**, whose contribution increase rates and resulting contribution amounts are both
+    visible.
+- **Three what-if inputs**, independent of each other:
+  - **Start**: "RFS" starts in the RFS's first year from the RFS opening balance; "Current
+    year" starts in `Cfg_BaseYear` from a typed opening balance.
+  - **Expenditures**: RFS or Revised (from the Expenditures Revised block).
+  - **Contributions**: the RFS schedule, or the RFS schedule through a chosen year followed by
+    the typed increase rates.
+- **Interest** follows the vendor's method: opening balance × the short-term rate for the first
+  3 years of the study, then the long-term rate.
+- **Validation**: a "difference from RFS balance" column is always visible. With all three
+  inputs set to RFS it is zero in every year, which validates RFS_cashflow. The hidden check
+  columns (old X–AA) are removed.
+- **Opening balance for "Current year"** is a **typed input**, not a formula (R23). The docs
+  say what it comprises, all from the financial statements: cash, less payables and accrued
+  liabilities, plus investment principal and accrued interest.
+- Minimum-balance margins and the "lowest over 30 years" table stay, computed from the what-if
+  balance.
+- A2 is reworded to describe the tab without the undefined word "Revised" (R17).
+- **Past-year actuals are dropped** (R26): the typed actual expenditures and actual closing
+  balance per year (old columns F and G) are removed. Comparisons of past years with the RFS
+  belong in the prior years' workbooks.
+
+### 13.7 Investment Plan tool
+
+- **Changes_from_RFS** is removed (R17). The Cover says, in generic terms, that the reasons
+  for change from the RFS are described in the Spatac workbooks for the current and previous
+  years.
+- **Generated date** (R1 b): the cover's date comes from the local clock, not UTC, and a
+  `--date YYYY-MM-DD` option overrides it.
+
+### 13.8 Other items (R1)
+
+- `CHANGELOG.md`: 0.1.0 is dated 2026-11-21.
+- `xlsx-diff`: a sheet whose protection was turned off is reported as such; its cells are
+  not reported as "Cells unlocked" unless their own Protected flag changed.
+- `xlsx-diff`: identical changes are grouped across a row as well as down a column.
+- **Rollover of Medium_Term_Cashflow (R25)**: the manual one-column-left copy of the grid,
+  carry-over and adjustment rows (rollover.md, Medium_Term_Cashflow step 2) is replaced by
+  deleting and inserting a column. This replaces the year-heading part of section 4.3.
+  - Each year column carries a **fixed, typed year** heading, no longer computed from
+    `Cfg_BaseYear`. Every column's formulas are identical and work from their own heading.
+  - A grey **"▶ End" column** sits right after the last year, inside the column-block names,
+    with the note "insert new year columns to the left of this column". It holds no amounts.
+  - A **check cell** warns when the first year heading differs from `Cfg_BaseYear`.
+  - At rollover: change the base year; delete the old year's column (typed values move left
+    with their columns); insert one column left of "▶ End" and fill it from its left
+    neighbour. The window stays six years; the previous dated file is the record of the
+    deleted year (4.1).
+  - Hiding old columns instead was rejected: it grows the workbook and clutters it.
+  - The extractor, Schedule_of_Investments' Planned list and `verify.py` are checked to
+    follow the names after a delete-and-insert.
+- Excel checklist: add the new items (boundary rows, AutoFilter on a protected sheet, README
+  row heights, the what-if validation). The user runs it.
+- **GitHub Pages** (the 404): the Documentation workflow builds but cannot deploy because
+  Pages is not enabled. The user sets Settings › Pages › Source to "GitHub Actions" and
+  re-runs the workflow.
+
+### 13.9 Phases of work
+
+The rules of section 12 apply: work on `aicode`; each phase ends with its verification
+passing and a commit; a failed verification or a design change is a stop; nothing
+outward-facing without explicit instruction; `_nogit` is create-only.
+
+The common verification, run at the end of every phase that changes the workbook:
+
+- build `_nogit`-bound output in the scratchpad with `migrate.py --fix compounding --fix closing`;
+- `verify.py --expect-changes` against `Spatac-20261121.xlsx`. Its expected-difference list is
+  updated in each phase for the changes that phase makes on purpose, and each new expected
+  difference is named in the commit message;
+- `check_investment_plan.py` on a freshly extracted plan;
+- the CI command set and `scripts/check-doc-links.py`.
+
+**Phase 8 — Workbook-wide formatting, README and Settings** (13.2, 13.3)
+- Default style top alignment; borders in `Input`/`Calculated`; the "fixed for the year" style.
+- Settings tab moved last; check that nothing locates tabs by position.
+- README and Settings text from the review copy; README row heights.
+- The review copy's format changes on Medium_Term_Cashflow, Schedule_of_Investments,
+  Projected_Balances and the RFS tabs, and the Medium_Term_Cashflow row changes (rows
+  renumbered; `verify.py`, the extractor and the docs follow the names, not row numbers).
+- Protection of every sheet at the end of the build.
+
+**Phase 9 — Expenditures** (13.4)
+- Review copy: title, freeze panes, groups, hidden F, formats.
+- Protected A–F and Approved; header renames, including range names; row 4 totals; row 3
+  label; Variance vs RFS row; year-block boxes; RFS check width; restored comments.
+
+**Phase 10 — Block boundaries, sorting and filtering** (13.5)
+- Names start at the header rows; ▼ End rows on Expenditures and the Held section.
+- Item sort key column; AutoFilter allowed under protection.
+- Check: insert a row just below each header and just above each ▼ End row, then confirm
+  every name grew and totals, lookups and the Planned list are unchanged. Sort by GL and by the
+  item key, then by Row #, and confirm the workbook returns to its original values.
+
+**Phase 11 — Projected_Balances** (13.6)
+- Rebuild the tab; the extractor and `check_investment_plan.py` follow if they read it.
+- Check: with all three inputs set to RFS, the difference column is zero in every year.
+  `verify.py`'s Projected_Balances key results are replaced by this check and by the
+  current-year projection.
+
+**Phase 12 — Tools** (13.7, 13.8)
+- `spatac-investment-plan`: Changes_from_RFS removed, Cover text, local date and `--date`;
+  `tests/investment_plan.rs` updated.
+- `xlsx-diff`: the protection report fix and row-wise grouping, with tests in `tests/diff.rs`.
+- `CHANGELOG.md`: 0.1.0 date; an Unreleased section listing this session's changes.
+
+**Phase 13 — Rollover grid** (13.8)
+- Fixed year headings, the "▶ End" column and the base-year check cell (13.8, R25).
+- Check: on a scratch copy, perform the rollover (base year +1, delete column B, insert and
+  fill a column before "▶ End"), then confirm the remaining years' figures, the Planned list
+  and the extracted plan are unchanged apart from the year shift, and the check cell is clear.
+
+**Phase 14 — Documentation and hand-off**
+- Update `docs/reference/names.md`, `docs/purposes/track-projects.md` ("Adding a row",
+  sorting and filtering), `docs/purposes/investment-plan.md`, the Projected_Balances purpose
+  pages, `docs/procedures/rollover.md` (Approved, the Held section, the grid) and
+  `docs/procedures/excel-checklist.md`.
+- Write the final outputs to the two `_nogit` names of 13.1.
+- A short hand-off note: what was verified, and what still requires the user (the Excel
+  checklist, Pages, pushing).
