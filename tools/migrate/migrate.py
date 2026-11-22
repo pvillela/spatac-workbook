@@ -72,7 +72,9 @@ SORT_KEY = (
 # Red negatives, as the user set on the Medium_Term_Cashflow variance rows.
 MONEY_RED = "#,##0;[RED]-#,##0"
 
+# Hides a zero: for amounts where 0 and blank mean the same thing.
 MONEY = '#,##0;-#,##0;""'
+# Shows a zero as 0: for amounts where a blank means something else.
 MONEY_ZERO = "#,##0;-#,##0;0"
 PERCENT = "0.00%"
 DATE = "YYYY-MM-DD"
@@ -891,7 +893,12 @@ class Migration:
         b.style("G%d:I%d" % (first, last), "Calculated")
         for c in "NQT":
             b.style("%s%d:%s%d" % (c, first, c, last), "Calculated")
-        b.fmt("J%d:T%d" % (first, last), MONEY)
+        b.fmt("J%d:K%d" % (first, last), MONEY)
+        # The estimate columns L-T show a zero as 0, so that it cannot be mistaken for a blank
+        # (design 13.4): in Mid-year and Late-year a blank means "no change" and a 0 means "will
+        # cost nothing", and the Current estimate columns show the 0 that results. A blank cell
+        # still shows blank.
+        b.fmt("L%d:T%d" % (first, last), MONEY_ZERO)
         b.fmt("%s%d:%s%d" % (rfs_cols[0], first, rev_cols[-1], last), MONEY)
         b.fmt("W%d:BZ%d" % (yr, yr), YEAR)
         widths = {"A": 6, "B": 8, "C": 34, "D": 10, "E": 24, "F": 6, "G": 20, "H": 16, "I": 8, "U": 30, "V": 40}

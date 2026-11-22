@@ -20,6 +20,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   alignment and grid borders; Settings last; Expenditures with protected identity columns, a
   fixed Approved column, a variance row, restored comments, filtering, sorting and ▼ End rows;
   Projected_Balances rebuilt as the RFS baseline and a what-if that validates RFS_cashflow.
+- Expenditures: a zero in the estimate columns L–T shows as `0`, no longer as an empty cell,
+  so that "will cost nothing" (0) and "no change" (blank) look different.
 
 ### Fixed
 

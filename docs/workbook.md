@@ -58,6 +58,6 @@ items whose estimate changed:
   `=MAX(J8,K8)`.
 - A **blank** cell means "no change": the item keeps its previous estimate.
 - A **0** means the item is now expected to cost nothing that year, for example because it was
-  deferred.
+  deferred. It shows as `0`, so it cannot be mistaken for a blank.
 
 The green **Current estimate** column beside them shows the resulting amount for every item.

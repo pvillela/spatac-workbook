@@ -35,6 +35,8 @@ workbook:
       refused.
 - [ ] Review › Unprotect Sheet works without a password.
 - [ ] After unprotecting Expenditures, the + and − buttons fold and unfold the column groups.
+- [ ] **Expenditures P29 and Q29** show `0`; a blank Mid-year or Late-year cell, such as
+      O29, shows nothing.
 - [ ] On the protected Expenditures tab, the filter buttons in row 7 work: filter column D on
       one GL account, then clear the filter.
 - [ ] Unprotect Expenditures and sort by column D (GL account), then by **Item sort key**
