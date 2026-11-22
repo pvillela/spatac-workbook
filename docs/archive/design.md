@@ -609,7 +609,8 @@ Where this section conflicts with sections 1–12, this section wins.
   the RFS tabs included, gets it (R3).
 - **Grid borders**: the border the user set on Expenditures J9 goes into the `Input` and
   `Calculated` cell styles, so every input and calculated cell gets it (R13).
-- **Protection** (R7): every sheet is protected (no password) when the build ends. What
+- **Protection** (R7): every Spatac tab is protected (no password) when the build ends, as
+  before (3.5); the RFS paste-in tabs stay unprotected so a new RFS can be pasted. What
   matters is each cell's own Protected flag: only real input cells are unprotected.
 - **Tab order**: Settings moves to the very end, after RFS_cashflow (R6).
 

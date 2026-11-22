@@ -18,7 +18,7 @@ sees the same thing. Run them:
 Compare with the same cells in LibreOffice, or with the figures below for the November 2026
 workbook:
 
-- [ ] **Medium_Term_Cashflow row 21** (closing cash): 1,039,813 · 1,061,208 · 1,082,190 ·
+- [ ] **Medium_Term_Cashflow row 20** (closing cash): 1,039,813 · 1,061,208 · 1,082,190 ·
       1,104,081 · 1,126,162 · 1,148,686.
 - [ ] **Medium_Term_Cashflow row 10** (held maturities, 2026): 655,399.
 - [ ] **Schedule_of_Investments rows 49 onward:** the planned investments, starting "Planned

@@ -37,6 +37,17 @@ INPUT_COLOR = 0xFFF2CC
 CALC_COLOR = 0xE2EFDA
 HEADER_COLOR = 0xD9D9D9
 SEPARATOR_COLOR = 0xBFBFBF
+FIXED_COLOR = 0xF2F2F2
+
+# The user's J9 border in the review copy: 0.26 mm (OuterLineWidth 26), dotted (LineStyle 1),
+# grey 0x666666.
+GRID_WIDTH = 26
+GRID_STYLE = 1
+GRID_COLOR = 0x666666
+VERT_TOP = 1  # com.sun.star.table.CellVertJustify.TOP
+
+# Red negatives, as the user set on the Medium_Term_Cashflow variance rows.
+MONEY_RED = "#,##0;[RED]-#,##0"
 
 MONEY = '#,##0;-#,##0;""'
 MONEY_ZERO = "#,##0;-#,##0;0"
@@ -158,6 +169,15 @@ class Builder:
     def height(self, row, points):
         self.sheet.Rows.getByIndex(row - 1).Height = int(points * 35.28)
 
+    def fix_heights(self, first, last, margin=1.1):
+        """Explicit heights for wrapped rows (design 13.3). Excel does not re-fit a row saved as
+        auto-height when it opens the file, so a wrapped cell would collapse to one line. Takes
+        LibreOffice's fitted height, with a margin for Excel's slightly wider font metrics."""
+        for r in range(first - 1, last):
+            row = self.sheet.Rows.getByIndex(r)
+            row.OptimalHeight = True
+            row.Height = int(row.Height * margin)
+
     def group_cols(self, first, last, collapse=False):
         a = CellRangeAddress()
         a.Sheet = self.sheet.RangeAddress.Sheet
@@ -192,10 +212,30 @@ def ref(sheet, rng):
     return "$%s.%s" % (quoted, ":".join(absolute(p) for p in parts))
 
 
+def grid_border():
+    """The thin dotted grey border the user set on Expenditures J9 (design 13.2)."""
+    line = uno.createUnoStruct("com.sun.star.table.BorderLine2")
+    line.OuterLineWidth = GRID_WIDTH
+    line.LineWidth = GRID_WIDTH
+    line.LineStyle = GRID_STYLE
+    line.Color = GRID_COLOR
+    return line
+
+
+def solid_border():
+    """A thin solid black line, as on the user's year-block boxes and closing-balance rules."""
+    line = uno.createUnoStruct("com.sun.star.table.BorderLine2")
+    line.OuterLineWidth = GRID_WIDTH
+    line.LineWidth = GRID_WIDTH
+    return line
+
+
 def make_styles(doc):
     styles = doc.StyleFamilies.getByName("CellStyles")
+    # Top vertical alignment everywhere (design 13.2): the default style is Excel's "Normal".
+    styles.getByName("Default").VertJustify = VERT_TOP
 
-    def add(name, color=None, locked=True, bold=False):
+    def add(name, color=None, locked=True, bold=False, grid=False):
         if styles.hasByName(name):
             s = styles.getByName(name)
         else:
@@ -213,10 +253,15 @@ def make_styles(doc):
         s.CellProtection = p
         if bold:
             s.CharWeight = 150.0
+        if grid:
+            for side in ("TopBorder", "BottomBorder", "LeftBorder", "RightBorder"):
+                setattr(s, side, grid_border())
         return s
 
-    add("Input", INPUT_COLOR, locked=False)
-    add("Calculated", CALC_COLOR)
+    add("Input", INPUT_COLOR, locked=False, grid=True)
+    add("Calculated", CALC_COLOR, grid=True)
+    # Amounts fixed for the year, such as the current year's Approved column (design 13.4).
+    add("Fixed", FIXED_COLOR, grid=True)
     add("Header", HEADER_COLOR, bold=True)
     title = add("Title", bold=True)
     title.CharHeight = 14.0
@@ -254,7 +299,7 @@ class Migration:
     def run(self):
         src = self.s.open(self.src_path)
         src.calculateAll()
-        doc = self.s.new_calc()
+        doc = self.s.new_calc(hidden=False)  # a hidden document loses its frozen panes
         self.doc = doc
         make_styles(doc)
 
@@ -426,7 +471,7 @@ class Migration:
         sh = doc.Sheets
         sh.insertNewByName("Settings", 1)
         b = Builder(doc, sh.getByName("Settings"))
-        b.value("A1", "SETTINGS").CellStyle = "Title"
+        b.value("A1", "CONFIGURATION SETTINGS").CellStyle = "Title"
         b.value("A2", "Values used throughout the workbook. Yellow cells are inputs.")
         rows = [
             ("Base year (the current year; change it in January to roll the workbook forward)", BASE_YEAR, YEAR, "Cfg_BaseYear"),
@@ -441,7 +486,7 @@ class Migration:
             b.style("B%d" % r, "Input")
             b.fmt("B%d" % r, fmt)
             define(doc, name, ref("Settings", "B%d" % r))
-        b.value("A9", "The minimum target is inflated from its year at the RFS short-term inflation rate.")
+        b.value("A9", "NOTE: The minimum target is inflated from its year at the RFS inflation rates.")
         b.width("A", 75)
         b.width("B", 14)
         self.notes.append(
@@ -461,21 +506,22 @@ class Migration:
             ("Documentation: https://pvillela.github.io/spatac-workbook/ — what each tab is for, how to use it, and the January and new-RFS procedures.", None),
             ("", None),
             ("Tabs", "Header"),
-            ("Settings — the base year, the minimum target cash balance and the rate assumed for planned investments.", None),
-            ("Expenditures — every RFS component, with Spatac's approved amounts, actuals, estimates and reasons; the RFS amounts by year; and the Revised amounts the plan uses.", None),
-            ("Medium_Term_Cashflow — the Investment Plan: six years of cash, expenditures, maturities and planned new investments against the minimum target.", None),
+            ("Expenditures — every RFS element, with Spatac's approved amounts, actuals, estimates, board’s reasons for adjustments to the RFS, the RFS amounts by year, and the Revised amounts the plan uses.", None),
+            ("Medium_Term_Cashflow — the Investment Plan: six years of cash, expenditures, maturities and planned new investments against the minimum target cash balances.", None),
             ("Schedule_of_Investments — investments held and planned, with each one's cash flows by year.", None),
-            ("Projected_Balances — the reserve fund balance projected to the end of the RFS, with Spatac's adjustments and what-if contribution increases.", None),
+            ("Projected_Balances — the reserve fund balance projected to the end of the RFS, with Spatac's adjustments and “what-if” contribution increases.", None),
             ("RFS_info, RFS_fvalues, RFS_cashflow — the vendor's RFS spreadsheet, pasted in unchanged. Helper columns to the right are not part of the paste.", None),
+            ("Settings — the base year, the minimum target cash balance and the rate assumed for planned new investments.", None),
             ("", None),
             ("Cell colours", "Header"),
-            ("Yellow — an input: type here.", "Input"),
+            ("Yellow — a manual input: user may type here.", "Input"),
             ("Green — calculated next to inputs: read only.", "Calculated"),
             ("Everything else is calculated or a label. Sheets are protected without a password to prevent accidents; Review > Unprotect Sheet when you need to.", None),
             ("", None),
-            ("Estimates", "Header"),
-            ("Mid-year, Latest and Late-year estimates are entered only for items whose estimate changed: type the new full amount, never a difference. Blank means no change; the Current estimate column shows the result for every item.", None),
+            ("Expenditures tab: Estimates", "Header"),
+            ("Mid-year, Latest and Late-year estimates are entered only for items whose estimate changed: type the new full amount, never a difference. Blank means no change; the Current estimate columns show the result for every item.", None),
             ("", None),
+            ("Notice for Excel users", "Header"),
             ("Excel users: enter formulas normally (no Ctrl+Shift+Enter) and do not use formulas that spill; LibreOffice cannot keep them.", None),
         ]
         for i, (text, style) in enumerate(lines):
@@ -484,6 +530,7 @@ class Migration:
                 c.CellStyle = style
         b.width("A", 120)
         b.wrap("A1:A%d" % len(lines))
+        b.fix_heights(1, len(lines))
 
     # -- Expenditures --------------------------------------------------------------------------
 
@@ -820,15 +867,19 @@ class Migration:
         b.value("A1", self.mtc_cell("A", 1)).CellStyle = "Title"
         b.style("A1", "Input")
         b.bold("A1")
+        b.cell("A1").CharHeight = 14.0
         b.formula("B3", "=Cfg_BaseYear")
         for k in range(1, HORIZON):
             b.formula("%s3" % yc[k], "=%s3+1" % yc[k - 1])
         b.style("A3:G3", "Header")
         b.fmt("B3:G3", YEAR)
 
+        # Layout from the user's review copy (design 13.1): a blank row after the planned
+        # maturities, the grid in rows 14-18 and the closing balance in row 20.
         # Phase 4 fix: the carry-over sits below the closing balance, then the adjustment.
         fixed = "closing" in self.fixes
-        carry, adj, minimum = (23, 24, 25) if fixed else (19, 22, 24)
+        carry, adj, minimum = (22, 23, 24) if fixed else (19, 22, 24)
+        newtot, grid0, closing = 13, 14, 20  # grid0..grid0+4: the 1- to 5-year rows
         labels = {
             5: self.mtc_cell("A", 5),
             6: self.mtc_cell("A", 6),
@@ -836,14 +887,14 @@ class Migration:
             9: "Revised expenditures (from Expenditures)",
             10: "Held investments maturing + interest payments (from Schedule_of_Investments)",
             11: "Planned investments maturing (from the grid below)",
-            12: "Planned new investments",
-            13: "1-year maturity",
-            14: "2-year maturity",
-            15: "3-year maturity",
-            16: "4-year maturity",
-            17: "5-year maturity (balancing figure)",
+            newtot: "Planned new investments",
+            grid0: "1-year maturity",
+            grid0 + 1: "2-year maturity",
+            grid0 + 2: "3-year maturity",
+            grid0 + 3: "4-year maturity",
+            grid0 + 4: "5-year maturity (balancing figure)",
             carry: "Additional cash carry-over",
-            21: "Closing cash balance",
+            closing: "Closing cash balance",
             adj: "Adjustment to minimum cash balance" if fixed else "Adjustment to cash balance",
             minimum: "Minimum closing cash balance (Settings, inflated)",
             28: "RFS expenditures",
@@ -859,7 +910,7 @@ class Migration:
         b.value("B5", self.mtc_cell("B", 5))
         b.style("B5", "Input")
         for k in range(1, HORIZON):
-            b.formula("%s5" % yc[k], "=%s21" % yc[k - 1])
+            b.formula("%s5" % yc[k], "=%s%d" % (yc[k - 1], closing))
         for c in yc:
             b.value("%s6" % c, self.mtc_cell(c, 6))
             b.style("%s6" % c, "Input")
@@ -874,17 +925,19 @@ class Migration:
                 prev = yc[yc.index(c) - 1]
                 b.formula(
                     "%s11" % c,
-                    "=SUMPRODUCT($B$13:{p}17*((COLUMN($B$13:{p}17)-COLUMN($B$13))+(ROW($B$13:{p}17)-ROW($B$13)+1)"
-                    "=(COLUMN({c}13)-COLUMN($B$13)))*(1+Cfg_NewInvRate)^(ROW($B$13:{p}17)-ROW($B$13)+1))".format(p=prev, c=c),
+                    "=SUMPRODUCT($B${g}:{p}{h}*((COLUMN($B${g}:{p}{h})-COLUMN($B${g}))+(ROW($B${g}:{p}{h})-ROW($B${g})+1)"
+                    "=(COLUMN({c}{g})-COLUMN($B${g})))*(1+Cfg_NewInvRate)^(ROW($B${g}:{p}{h})-ROW($B${g})+1))".format(
+                        p=prev, c=c, g=grid0, h=grid0 + 4
+                    ),
                 )
-            b.formula("%s12" % c, "=-SUM(%s13:%s17)" % (c, c))
-            for r in (13, 14, 15, 16):
-                b.value("%s%d" % (c, r), self.mtc_cell(c, r))
-                b.style("%s%d" % (c, r), "Input")
+            b.formula("%s%d" % (c, newtot), "=-SUM(%s%d:%s%d)" % (c, grid0, c, grid0 + 4))
+            for k in range(4):  # source rows 13-16
+                b.value("%s%d" % (c, grid0 + k), self.mtc_cell(c, 13 + k))
+                b.style("%s%d" % (c, grid0 + k), "Input")
             b.formula(
-                "%s17" % c,
-                "=SUM({c}4:{c}11)-SUM({c}13:{c}16)-{c}{k}-{c}{m}-{c}{a}".format(
-                    c=c, k=carry, m=minimum, a=adj
+                "%s%d" % (c, grid0 + 4),
+                "=SUM({c}4:{c}11)-SUM({c}{g}:{c}{h})-{c}{k}-{c}{m}-{c}{a}".format(
+                    c=c, k=carry, m=minimum, a=adj, g=grid0, h=grid0 + 3
                 ),
             )
             b.value("%s%d" % (c, carry), self.mtc_cell(c, 19))
@@ -893,9 +946,9 @@ class Migration:
             # in cash, so the closing balance adds nothing more. The old formula added the
             # adjustment a second time.
             if fixed:
-                b.formula("%s21" % c, "=SUM({c}5:{c}12)".format(c=c))
+                b.formula("%s%d" % (c, closing), "=SUM({c}5:{c}{n})".format(c=c, n=newtot))
             else:
-                b.formula("%s21" % c, "=SUM({c}5:{c}12)+{c}22".format(c=c))
+                b.formula("%s%d" % (c, closing), "=SUM({c}5:{c}{n})+{c}{a}".format(c=c, n=newtot, a=adj))
             b.value("%s%d" % (c, adj), self.mtc_cell(c, 22))
             b.style("%s%d" % (c, adj), "Input")
             b.formula(
@@ -909,8 +962,16 @@ class Migration:
             b.formula("%s33" % c, "=INDEX(PB_Balance;MATCH(%s$3;PB_Year;0))" % c)
             b.formula("%s34" % c, "=%s33-%s32" % (c, c))
         b.fmt("B5:G34", MONEY_ZERO)
-        for r in (21, minimum):
+        for r in (30, 34):  # the variances: red negatives (review copy)
+            b.fmt("B%d:G%d" % (r, r), MONEY_RED)
+        for r in (closing, minimum):
             b.bold("A%d:G%d" % (r, r))
+        # Rules from the review copy: under the planned new investments total, and above and
+        # below the closing balance.
+        rule = lambda rng, side: setattr(b.cell(rng), side, solid_border())
+        rule("B%d:G%d" % (newtot, newtot), "BottomBorder")
+        rule("B%d:G%d" % (closing, closing), "TopBorder")
+        rule("B%d:G%d" % (closing, closing), "BottomBorder")
         for r in (26, 36):
             b.fill("A%d:G%d" % (r, r), SEPARATOR_COLOR)
         b.value("I33", "Based on the assumptions in Projected_Balances;")
@@ -929,10 +990,10 @@ class Migration:
             ("MTC_Expenditures", "B9:G9"),
             ("MTC_Maturities", "B10:G10"),
             ("MTC_PlannedMaturities", "B11:G11"),
-            ("MTC_NewInvTotal", "B12:G12"),
-            ("MTC_NewInv", "B13:G17"),
+            ("MTC_NewInvTotal", "B%d:G%d" % (newtot, newtot)),
+            ("MTC_NewInv", "B%d:G%d" % (grid0, grid0 + 4)),
             ("MTC_CarryOver", "B%d:G%d" % (carry, carry)),
-            ("MTC_ClosingCash", "B21:G21"),
+            ("MTC_ClosingCash", "B%d:G%d" % (closing, closing)),
             ("MTC_Adjustment", "B%d:G%d" % (adj, adj)),
             ("MTC_MinCash", "B%d:G%d" % (minimum, minimum)),
             ("MTC_RFSExpenditures", "B28:G28"),
@@ -972,6 +1033,7 @@ class Migration:
 
         b.value("A1", self.inv_cell("A", 1)).CellStyle = "Input"
         b.bold("A1")
+        b.cell("A1").CharHeight = 14.0  # review copy
         heads3 = ["Name", "Due", "Purchased", "Book", "Interest", "Term", "Compounding", "Annual", "Maturity", "Last-year", "Purchase", "Due", "Grid"]
         heads4 = ["", "date", "date", "value", "rate", "(years)", "(A or C)", "interest", "value", "cash flow", "year", "year", "#"]
         for k, (h3, h4) in enumerate(zip(heads3, heads4)):
@@ -1271,14 +1333,24 @@ class Migration:
 
     def order_and_protect(self):
         sheets = self.doc.Sheets
+        # Settings goes last (design 13.2).
         order = [
-            "README", "Settings", "Expenditures", "Medium_Term_Cashflow",
-            "Schedule_of_Investments", "Projected_Balances", "RFS_info", "RFS_fvalues",
-            "RFS_cashflow",
+            "README", "Expenditures", "Medium_Term_Cashflow", "Schedule_of_Investments",
+            "Projected_Balances", "RFS_info", "RFS_fvalues", "RFS_cashflow", "Settings",
         ]
         for i, name in enumerate(order):
             sheets.moveByName(name, i)
-        for name in order[:6]:
+        # Top alignment on the vendor tabs too (design 13.2): their cells carry the vendor's
+        # own direct formatting, which the default style does not override.
+        for name in ("RFS_info", "RFS_fvalues", "RFS_cashflow"):
+            sh = sheets.getByName(name)
+            cur = sh.createCursor()
+            cur.gotoEndOfUsedArea(False)
+            a = cur.RangeAddress
+            sh.getCellRangeByPosition(0, 0, a.EndColumn, a.EndRow).VertJustify = VERT_TOP
+        # The Spatac tabs are protected, without a password, as before (design 3.5, 13.2).
+        for name in ("README", "Settings", "Expenditures", "Medium_Term_Cashflow",
+                     "Schedule_of_Investments", "Projected_Balances"):
             sheets.getByName(name).protect("")
         self.doc.CurrentController.setActiveSheet(sheets.getByName("README"))
 

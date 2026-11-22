@@ -5,12 +5,12 @@
 | Tab | What it holds |
 |---|---|
 | **README** | A short guide to the tabs and colours, with a link to this documentation. |
-| **Settings** | The base year (the current year), the minimum target cash balance and the year whose dollars it is stated in, and the interest rate assumed for planned investments. |
 | **Expenditures** | Every RFS component, one row each, plus Spatac's own rows. For each: the amount approved, actual spending, estimates and the reason for any change; the RFS amount for every year; and the Revised amount the plan uses. |
 | **Medium_Term_Cashflow** | The Investment Plan: six years of cash in and out, and the investments planned to keep cash at the minimum target. |
 | **Schedule_of_Investments** | Investments held and planned, each with its cash flows by year. |
 | **Projected_Balances** | The reserve fund balance year by year to the end of the RFS, with Spatac's changes and what-if contribution increases. |
 | **RFS_info**, **RFS_fvalues**, **RFS_cashflow** | The vendor's RFS spreadsheet, pasted in unchanged: the component inventory, the future value of each component's costs by year, and the cash flow summary. |
+| **Settings** | The base year (the current year), the minimum target cash balance and the year whose dollars it is stated in, and the interest rate assumed for planned investments. |
 
 ## Colours
 

@@ -42,21 +42,21 @@ Each covers columns B–G of its row.
 
 | Name | Row | Name | Row |
 |---|---|---|---|
-| `MTC_Years` | 3 | `MTC_ClosingCash` | 21 |
-| `MTC_OpeningCash` | 5 | `MTC_CarryOver` | 23 |
-| `MTC_Payables` | 6 | `MTC_Adjustment` | 24 |
-| `MTC_Contributions` | 8 | `MTC_MinCash` | 25 |
+| `MTC_Years` | 3 | `MTC_ClosingCash` | 20 |
+| `MTC_OpeningCash` | 5 | `MTC_CarryOver` | 22 |
+| `MTC_Payables` | 6 | `MTC_Adjustment` | 23 |
+| `MTC_Contributions` | 8 | `MTC_MinCash` | 24 |
 | `MTC_Expenditures` | 9 | `MTC_RFSExpenditures` | 28 |
 | `MTC_Maturities` | 10 | `MTC_RevisedExpenditures` | 29 |
 | `MTC_PlannedMaturities` | 11 | `MTC_ExpVariance` | 30 |
-| `MTC_NewInvTotal` | 12 | `MTC_RFSBalance` | 32 |
-| `MTC_NewInv` | 13–17 | `MTC_ProjectedBalance` | 33 |
+| `MTC_NewInvTotal` | 13 | `MTC_RFSBalance` | 32 |
+| `MTC_NewInv` | 14–18 | `MTC_ProjectedBalance` | 33 |
 | | | `MTC_BalanceVariance` | 34 |
 
 Three more names cover areas rather than a single row:
 
 - `MTC_Title` is A1.
-- `MTC_CashSection` is A3:G25.
+- `MTC_CashSection` is A3:G24.
 - `MTC_ComparisonSection` is A28:G30.
 
 The extraction tool keeps these.

@@ -38,9 +38,9 @@ Change **Base year** (B4) to the new year. Every year heading and RFS lookup mov
 
 1. Type the new year's **opening cash balance** (B5) and **payables** (B6) from the prior year's
    closing financial statements.
-2. **Move the planned investments one column left.** Copy C13:G16 and paste values only into
-   B13:F16, then clear G13:G16. Do the same for the carry-over (row 23) and the adjustment
-   (row 24).
+2. **Move the planned investments one column left.** Copy C14:G17 and paste values only into
+   B14:F17, then clear G14:G17. Do the same for the carry-over (row 22) and the adjustment
+   (row 23).
 3. Update the date in the title (A1).
 
 ## Schedule_of_Investments

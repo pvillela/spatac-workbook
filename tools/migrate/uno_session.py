@@ -71,9 +71,12 @@ class Session:
             raise RuntimeError("cannot open " + path)
         return doc
 
-    def new_calc(self):
+    def new_calc(self, hidden=True):
+        """A new spreadsheet. Pass hidden=False when the saved file must keep view settings
+        such as frozen panes: LibreOffice drops them from a hidden document. soffice runs
+        headless, so nothing is shown either way."""
         return self.desktop.loadComponentFromURL(
-            "private:factory/scalc", "_blank", 0, (prop("Hidden", True),)
+            "private:factory/scalc", "_blank", 0, (prop("Hidden", hidden),)
         )
 
     def save_xlsx(self, doc, path):
