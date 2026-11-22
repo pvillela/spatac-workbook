@@ -54,8 +54,9 @@ Change **Base year** (B4) to the new year. Every year heading and RFS lookup mov
 
 ## Projected_Balances
 
-For the year just ended, type the **actual expenditures** (column F) and the **actual closing
-balance** (column G) from the financial statements.
+Type the new year's **opening balance** (B5) from the prior year's financial statements: cash,
+less payables and accrued liabilities, plus investment principal and accrued interest. The
+what-if now starts in the new year.
 
 ## Finish
 

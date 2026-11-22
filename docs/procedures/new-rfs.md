@@ -52,8 +52,11 @@ the RFS block.
 
 ## 4. Review what follows from the study
 
-- **Projected_Balances B4:** the last year of contributions fixed by the new funding plan.
-  Review the catch-up increases in B5:B7.
+- **Projected_Balances B8:** the last year of contributions fixed by the new funding plan.
+  Review the catch-up increases in B9:B11.
+- **Projected_Balances, validation:** set the what-if to RFS and check that the difference
+  from the RFS balance is zero in every year (see
+  [Re-doing the vendor's arithmetic](../purposes/validate-funding.md#re-doing-the-vendors-arithmetic)).
 - **Settings:** the minimum target and its year, if the Board revisits them.
 - **Expenditures:** for the current year and the next two, review the estimates that now differ
   from the new RFS. Clear any that no longer reflect a Spatac decision, so that the RFS amount

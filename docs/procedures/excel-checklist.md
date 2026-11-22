@@ -26,6 +26,8 @@ workbook:
       `AGGREGATE`.
 - [ ] **Expenditures row 4:** totals in the RFS block equal row 3.
 - [ ] **Projected_Balances G4:I10:** the lowest margins show amounts and years, not errors.
+- [ ] **Projected_Balances validation:** choose **RFS** in the dropdowns B4, B6 and B7: column O
+      shows 0 in every year. Undo afterwards.
 
 ## Behaviour
 

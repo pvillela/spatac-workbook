@@ -8,11 +8,13 @@ Both workbooks are recalculated in LibreOffice, then:
 
 1. Key results must match: every computed row of Medium_Term_Cashflow; Expenditures totals per
    year (RFS, current estimates, revised); each investment's interest and maturity values;
-   Projected_Balances balances, contributions, interest, adjustments, margins and their 30-year
-   lows; and the recomputed RFS balance.
-2. No formula on any tab may use a function outside the allowed set (design section 3.3), a
+   Projected_Balances: the RFS baseline in every year, and the what-if projection from the base
+   year on, against the old simulator; their 30-year lows.
+2. With the what-if's three choices set to RFS (in memory only), its balance must equal the
+   RFS balance in every year.
+3. No formula on any tab may use a function outside the allowed set (design section 3.3), a
    spill reference or LAMBDA.
-3. No formula cell on a Spatac tab may hold an error.
+4. No formula cell on a Spatac tab may hold an error.
 
 Exits 1 on any failure. The only differences tolerated are listed in EXPECTED, each with its
 reason. Anything else is either explained by a phase 4 fix (pass `--expect-changes`, which reports
@@ -169,39 +171,75 @@ def check_results(ck):
         for c in "FHIJ":
             ck.pair("Investment row %d" % r, "Schedule_of_Investments", "%s%d" % (c, r), "Schedule_of_Investments", "%s%d" % (c, r))
 
-    # Projected_Balances against the simulator (rows 15..64 -> 13..62) and cashflow_spatac.
-    sim = "cashflow_spatac_simulator"
-    for i in range(50):
-        o, n = 15 + i, 13 + i
-        for oc, nc, what in (
-            ("A", "A", "year"),
-            ("B", "B", "RFS costs"),
-            ("D", "L", "interest"),
-            ("E", "K", "contributions"),
-            ("H", "M", "projected balance"),
-            ("M", "E", "RFS balance"),
-            ("N", "N", "variance"),
-            ("P", "O", "inflator"),
-            ("S", "P", "margin over minimum"),
-            ("T", "Q", "margin over inflated minimum"),
-            ("U", "R", "margin PV"),
+    # Projected_Balances (design 13.6). Old rows 15..64 and new rows 15..64 are the years
+    # 2024..2073. The RFS baseline must match the old RFS figures in every year. The what-if,
+    # with its default choices (current year, Revised, increases), must match the old simulator
+    # from the base year on: its opening balance is the simulator's own projection for the year
+    # before.
+    sim, cf = "cashflow_spatac_simulator", "cashflow_spatac"
+    for r in range(15, 65):
+        for sheet, oc, nc, what in (
+            (sim, "A", "A", "year"),
+            (sim, "B", "B", "RFS costs"),
+            (cf, "C", "C", "RFS interest"),
+            (cf, "D", "D", "RFS contributions"),
+            (sim, "M", "E", "RFS balance"),
+            (cf, "P", "F", "RFS margin over minimum"),
+            (cf, "Q", "G", "RFS margin over inflated minimum"),
+            (cf, "R", "H", "RFS margin PV"),
+            (sim, "P", "U", "inflator"),
         ):
-            ck.pair("Projected %s" % what, sim, "%s%d" % (oc, o), "Projected_Balances", "%s%d" % (nc, n))
-        old_c = ck.old.v(sim, "C%d" % o)
-        ck.same("Projected adjustment (%s!C%d vs Projected_Balances!H%d)" % (sim, o, n), old_c, ck.new.v("Projected_Balances", "H%d" % n))
+            ck.pair("Projected %s" % what, sheet, "%s%d" % (oc, r), "Projected_Balances", "%s%d" % (nc, r))
+        if ck.old.v(sim, "A%d" % r) < 2026:
+            continue
         for oc, nc, what in (
-            ("G", "Z", "recomputed RFS balance"),
-            ("C", "X", "recomputed RFS interest"),
-            ("D", "Y", "recomputed RFS contributions"),
-            ("P", "S", "RFS margin over minimum"),
-            ("Q", "T", "RFS margin over inflated minimum"),
-            ("R", "U", "RFS margin PV"),
+            ("D", "M", "what-if interest"),
+            ("E", "L", "what-if contributions"),
+            ("H", "N", "what-if balance"),
+            ("N", "O", "what-if difference from RFS"),
+            ("S", "P", "what-if margin over minimum"),
+            ("T", "Q", "what-if margin over inflated minimum"),
+            ("U", "R", "what-if margin PV"),
         ):
-            ck.pair("RFS check %s" % what, "cashflow_spatac", "%s%d" % (oc, o), "Projected_Balances", "%s%d" % (nc, n))
+            ck.pair("Projected %s" % what, sim, "%s%d" % (oc, r), "Projected_Balances", "%s%d" % (nc, r))
     for oc, nr in (("S", 5), ("T", 6), ("U", 7)):
         ck.pair("30-year low", sim, "%s13" % oc, "Projected_Balances", "H%d" % nr)
     for oc, nr in (("P", 8), ("Q", 9), ("R", 10)):
-        ck.pair("RFS 30-year low", "cashflow_spatac", "%s13" % oc, "Projected_Balances", "H%d" % nr)
+        ck.pair("RFS 30-year low", cf, "%s13" % oc, "Projected_Balances", "H%d" % nr)
+
+
+def check_validation(ck):
+    """With the what-if's three choices set to RFS, it must reproduce the vendor's balance in
+    every year (design 13.6). The inputs are changed in memory only."""
+    doc = ck.new.doc
+    pb = doc.Sheets.getByName("Projected_Balances")
+    pb.unprotect("")
+    for name in ("PB_Start", "PB_ExpBasis", "PB_ContribBasis"):
+        doc.NamedRanges.getByName(name).ReferredCells.setString("RFS")
+    doc.calculateAll()
+    variance(ck, doc, "every what-if choice set to RFS")
+    # The contributions too: grown from the RFS's present contribution at the RFS's own
+    # increases, from the study year on.
+    names = doc.NamedRanges
+    names.getByName("PB_ContribBasis").ReferredCells.setString("Increases")
+    names.getByName("PB_ContribFixedThrough").ReferredCells.setValue(
+        names.getByName("RFS_StudyYear").ReferredCells.getCellByPosition(0, 0).Value
+    )
+    names.getByName("PB_CatchUp").ReferredCells.setDataArray(
+        names.getByName("RFS_CatchUpIncreases").ReferredCells.getDataArray()
+    )
+    doc.calculateAll()
+    variance(ck, doc, "the RFS's own contribution increases")
+
+
+def variance(ck, doc, what):
+    years = doc.NamedRanges.getByName("PB_Variance").ReferredCells.getDataArray()
+    for k, (v,) in enumerate(years):
+        ck.checked += 1
+        if not isinstance(v, float) or abs(v) > 1:
+            ck.failures.append(
+                "Validation with %s: the difference from the RFS balance in row %d is %r" % (what, 15 + k, v)
+            )
 
 
 def check_formulas(doc):
@@ -247,6 +285,7 @@ def main():
         ck = Checker(old, new)
         check_results(ck)
         problems = check_formulas(new)
+        check_validation(ck)
         old.close(True)
         new.close(True)
     print("Key results compared: %d; differences: %d" % (ck.checked, len(ck.failures)))

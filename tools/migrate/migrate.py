@@ -538,7 +538,6 @@ class Migration:
         self.mtc = read_block(sh.getByName("Medium_Term_Cashflow"), "A1:M69")
         self.inv = read_block(sh.getByName("Schedule_of_Investments"), "A1:T46")
         self.sim = read_block(sh.getByName("cashflow_spatac_simulator"), "A1:V65")
-        self.sim_comments = read_comments(self.src_path, "cashflow_spatac_simulator")
         fv = read_block(sh.getByName("fvalues"), "A1:AZ218")
         # RFS amount per key and year, as the lookup will see it.
         years = {}
@@ -1334,48 +1333,90 @@ class Migration:
         return self.sim[row - 1][colnum(letters) - 1]
 
     def build_projected(self):
+        """The reserve fund balance year by year (design 13.6): the RFS baseline, read from
+        RFS_cashflow, and a what-if projection beside it. With the what-if's three choices set to
+        RFS it recomputes the vendor's balances, which validates RFS_cashflow."""
         doc = self.doc
         doc.Sheets.insertNewByName("Projected_Balances", 5)
         sheet = doc.Sheets.getByName("Projected_Balances")
         b = Builder(doc, sheet)
-        first, n_years = 13, 50
-        last = first + n_years - 1  # 62
-        last30 = first + 29  # 2024..2053
+        hdr = 14
+        first, n_years = hdr + 1, 50
+        last = first + n_years - 1  # 2024..2073
+        last30 = first + 29  # the first 30 years of the RFS
 
         b.value("A1", "PROJECTED RESERVE FUND BALANCES").CellStyle = "Title"
-        b.value("A2", "RFS figures from RFS_cashflow; Spatac adjustments are Revised minus RFS from Expenditures.")
-        b.value("A4", "Contributions follow the RFS schedule through")
-        b.value("B4", 2027.0)
-        b.value("A5", "Contribution increase, 1st year after")
-        b.value("A6", "Contribution increase, 2nd year after")
-        b.value("A7", "Contribution increase, 3rd year after")
-        for r, src in ((5, "Q9"), (6, "Q10"), (7, "Q11")):
-            b.value("B%d" % r, num(self.sim_cell(src[0], int(src[1:]))))
-        b.value("A8", "Subsequent annual increase")
-        b.formula("B8", "=RFS_SubsequentIncrease")
-        b.style("B4:B8", "Input")
-        b.fmt("B4", YEAR)
-        b.fmt("B5:B8", PERCENT)
-        define(doc, "PB_ContribFixedThrough", ref("Projected_Balances", "B4"))
-        define(doc, "PB_CatchUp", ref("Projected_Balances", "B5:B7"))
-        define(doc, "PB_SubsequentIncrease", ref("Projected_Balances", "B8"))
+        b.value("A2", "The RFS's own projection (columns B-H, from RFS_cashflow) and a what-if projection (columns J-S).")
+        b.value(
+            "A3",
+            "To check the vendor's arithmetic, set the three what-if choices to RFS: the difference "
+            "from the RFS balance (column O) is then zero in every year.",
+        )
 
-        b.value("D4", "Historical inflation rate 2021–2024")
-        b.value("E4", num(self.sim_cell("T", 4)))
-        b.value("D5", "Unlabelled value carried over from the old simulator (Q7)")
-        b.value("E5", num(self.sim_cell("Q", 7)))
-        b.fmt("E4:E5", PERCENT)
+        # What-if inputs.
+        inputs = [
+            # (row, label, value, format, name, choices)
+            (4, "What-if starts from", "Current year", None, "PB_Start", ("Current year", "RFS")),
+            (5, "Opening balance of the current year (Current year start only)",
+             num(self.sim_cell("H", 16)), MONEY_ZERO, "PB_OpeningBalance", None),
+            (6, "Expenditures", "Revised", None, "PB_ExpBasis", ("Revised", "RFS")),
+            (7, "Contributions", "Increases", None, "PB_ContribBasis", ("Increases", "RFS")),
+            (8, "Contributions follow the RFS schedule through", 2027.0, YEAR, "PB_ContribFixedThrough", None),
+            (9, "Contribution increase, 1st year after", num(self.sim_cell("Q", 9)), PERCENT, None, None),
+            (10, "Contribution increase, 2nd year after", num(self.sim_cell("Q", 10)), PERCENT, None, None),
+            (11, "Contribution increase, 3rd year after", num(self.sim_cell("Q", 11)), PERCENT, None, None),
+            (12, "Subsequent annual increase", "=RFS_SubsequentIncrease", PERCENT, "PB_SubsequentIncrease", None),
+        ]
+        for r, label, v, fmt, name, choices in inputs:
+            b.value("A%d" % r, label)
+            if isinstance(v, str) and v.startswith("="):
+                b.formula("B%d" % r, v)
+            else:
+                b.value("B%d" % r, v)
+            b.style("B%d" % r, "Input")
+            if fmt:
+                b.fmt("B%d" % r, fmt)
+            if name:
+                define(doc, name, ref("Projected_Balances", "B%d" % r))
+            if choices:
+                cell = b.cell("B%d" % r)
+                val = cell.Validation
+                val.Type = uno.Enum("com.sun.star.sheet.ValidationType", "LIST")
+                val.ShowList = 1
+                val.ShowErrorMessage = True
+                val.ErrorMessage = "Choose %s." % " or ".join(choices)
+                val.setFormula1(";".join('"%s"' % c for c in choices))
+                cell.Validation = val
+        define(doc, "PB_CatchUp", ref("Projected_Balances", "B9:B11"))
+        b.comment(
+            "B5",
+            "Seeded with the old simulator's projected closing balance for 2025, from the 2024 "
+            "audited closing balance and the 2025 actual expenditures. Replace it with the "
+            "figure from the financial statements: cash, less payables and accrued liabilities, "
+            "plus investment principal and accrued interest.",
+        )
+        b.value("C4", "starts in")
+        b.formula("D4", '=IF(PB_Start="RFS";RFS_StudyYear;Cfg_BaseYear)')
+        b.fmt("D4", YEAR)
+        define(doc, "PB_StartYear", ref("Projected_Balances", "D4"))
 
-        b.value("G4", "Lowest over 30 years")
+        b.value("D8", "Historical inflation rate 2021–2024")
+        b.value("E8", num(self.sim_cell("T", 4)))
+        b.value("D9", "Unlabelled value carried over from the old simulator (Q7)")
+        b.value("E9", num(self.sim_cell("Q", 7)))
+        b.fmt("E8:E9", PERCENT)
+
+        # Lowest margins over the first 30 years of the RFS.
+        b.value("G4", "Lowest over the first 30 years")
         b.value("H4", "Amount")
         b.value("I4", "Year")
         lows = (
-            ("Projected: margin over minimum", "P"),
-            ("Projected: margin over inflated minimum", "Q"),
-            ("Projected: margin over minimum (PV)", "R"),
-            ("RFS: margin over minimum", "S"),
-            ("RFS: margin over inflated minimum", "T"),
-            ("RFS: margin over minimum (PV)", "U"),
+            ("What-if: margin over minimum", "P"),
+            ("What-if: margin over inflated minimum", "Q"),
+            ("What-if: margin over minimum (PV)", "R"),
+            ("RFS: margin over minimum", "F"),
+            ("RFS: margin over inflated minimum", "G"),
+            ("RFS: margin over minimum (PV)", "H"),
         )
         for i, (label, c) in enumerate(lows):
             r = 5 + i
@@ -1387,122 +1428,104 @@ class Migration:
         b.fmt("I5:I10", YEAR)
         define(doc, "PB_Lowest", ref("Projected_Balances", "G5:I10"))
 
-        heads = [
-            "Year", "RFS expected costs", "RFS interest", "RFS contributions", "RFS balance",
-            "Actual expenditures", "Actual closing balance", "Spatac adjustment", "Adjusted costs",
-            "Contribution increase", "Contributions", "Interest", "Projected balance",
-            "Variance from RFS", "Inflator", "Margin over minimum", "Margin over inflated minimum",
-            "Margin over minimum (PV)", "RFS margin over minimum", "RFS margin over inflated minimum",
-            "RFS margin over minimum (PV)", "Contribution per unit per month", "",
-            "Check: RFS interest recomputed", "Check: RFS contributions recomputed",
-            "Check: RFS balance recomputed", "Check",
-        ]
-        for k, h in enumerate(heads):
-            b.value("%s12" % col(k + 1), h)
-        b.style("A12:AA12", "Header")
-        b.wrap("A12:AA12")
-        b.height(12, 42)
+        # The year table.
+        b.value("B%d" % (hdr - 1), "RFS (from RFS_cashflow; read only)")
+        b.value("J%d" % (hdr - 1), "What-if")
+        b.bold("A%d:S%d" % (hdr - 1, hdr - 1))
+        heads = {
+            "A": "Year",
+            "B": "RFS expected costs", "C": "RFS interest", "D": "RFS contributions",
+            "E": "RFS balance", "F": "RFS margin over minimum",
+            "G": "RFS margin over inflated minimum", "H": "RFS margin over minimum (PV)",
+            "J": "Expenditures", "K": "Contribution increase", "L": "Contributions",
+            "M": "Interest", "N": "Closing balance", "O": "Difference from RFS balance",
+            "P": "Margin over minimum", "Q": "Margin over inflated minimum",
+            "R": "Margin over minimum (PV)", "S": "Contribution per unit per month",
+            "U": "Inflator",
+        }
+        for c, h in heads.items():
+            b.value("%s%d" % (c, hdr), h)
+        b.style("A%d:U%d" % (hdr, hdr), "Header")
+        b.wrap("A%d:U%d" % (hdr, hdr))
+        b.height(hdr, 42)
 
         rate = "IF($A{r}<=RFS_StudyYear+3;RFS_ShortInterest;RFS_LongInterest)"
         rows = []
         for r in range(first, last + 1):
             p = r - 1
             firstrow = r == first
-            year = "=RFS_StudyYear" if firstrow else "=$A%d+1" % p
-            row = [
-                year,
-                "=IFERROR(INDEX(RFS_Cf_Cost;MATCH($A{r};RFS_Cf_Year;0));0)",
-                "=IFERROR(INDEX(RFS_Cf_Interest;MATCH($A{r};RFS_Cf_Year;0));0)",
-                "=IFERROR(INDEX(RFS_Cf_Contrib;MATCH($A{r};RFS_Cf_Year;0));0)",
-                "=IFERROR(INDEX(RFS_Cf_Balance;MATCH($A{r};RFS_Cf_Year;0));0)",
-            ]
-            rows.append(row)
-        b.formulas("A%d:E%d" % (first, last), [[f.format(r=r) for f in row] for r, row in zip(range(first, last + 1), rows)])
-
-        calc = []
-        for r in range(first, last + 1):
-            p = r - 1
-            firstrow = r == first
-            prev_bal = "RFS_OpeningBalance" if firstrow else "$M%d" % p
-            prev_k = "RFS_PresentContribution" if firstrow else "$K%d" % p
-            prev_z = "RFS_OpeningBalance" if firstrow else "$Z%d" % p
-            prev_y = None if firstrow else "$Y%d" % p
-            row = [
-                '=IF($F{r}<>"";$F{r}-$B{r};IF(ISNA(MATCH($A{r};Exp_RevisedYears;0));0;'
-                "-SUM(INDEX(Exp_Revised;0;MATCH($A{r};Exp_RevisedYears;0)))-$B{r}))",  # H
-                "=$B{r}+$H{r}",  # I
-                '=IF($A{r}<=PB_ContribFixedThrough;"";IF($A{r}-PB_ContribFixedThrough<=3;'
-                "INDEX(PB_CatchUp;$A{r}-PB_ContribFixedThrough);PB_SubsequentIncrease))",  # J
-                "=IF($A{r}<=PB_ContribFixedThrough;$D{r};%s*(1+$J{r}))" % prev_k,  # K
-                "=%s*%s" % (prev_bal, rate),  # L
-                '=IF($G{r}<>"";$G{r};%s+$I{r}+$L{r}+$K{r})' % prev_bal,  # M
-                "=$M{r}-$E{r}",  # N
-                "=(1+RFS_ShortInflation)^($A{r}-RFS_StudyYear)",  # O
-                "=$M{r}-RFS_MinBalance",  # P
-                "=$M{r}-RFS_MinBalance*$O{r}",  # Q
-                "=$M{r}/$O{r}-RFS_MinBalance",  # R
-                "=$E{r}-RFS_MinBalance",  # S
-                "=$E{r}-RFS_MinBalance*$O{r}",  # T
-                "=$E{r}/$O{r}-RFS_MinBalance",  # U
-                "=$K{r}/12/RFS_Units",  # V
-            ]
-            checks = [
-                "=%s*%s" % (prev_z, rate),  # X
-                "=RFS_PresentContribution"
-                if firstrow
-                else "=%s*(1+IF($A{r}-RFS_StudyYear<=3;INDEX(RFS_CatchUpIncreases;$A{r}-RFS_StudyYear);RFS_SubsequentIncrease))" % prev_y,  # Y
-                "=%s+$B{r}+$X{r}+$Y{r}" % prev_z,  # Z
-                '=IF(ABS($Z{r}-$E{r})>1;"Differs from RFS";"")',  # AA
-            ]
-            calc.append(([f.format(r=r) for f in row], [f.format(r=r) for f in checks]))
-        b.formulas("H%d:V%d" % (first, last), [c[0] for c in calc])
-        b.formulas("X%d:AA%d" % (first, last), [c[1] for c in calc])
-
-        # Inputs carried over from the simulator: the 2024 actual closing balance (H15) and the
-        # 2025 actual expenditures (C16 = -1824525 - B16).
-        b.value("G%d" % first, num(self.sim_cell("H", 15)))
-        b.value("F%d" % (first + 1), -1824525.0)
-        b.style("F%d:G%d" % (first, last), "Input")
-        for row, c, text in self.sim_comments:
-            if (row, c) == (15, colnum("H")):
-                b.comment("G%d" % first, text)
+            if firstrow:
+                opening = 'IF(PB_Start="RFS";RFS_OpeningBalance;PB_OpeningBalance)'
+                prev_contrib = "RFS_PresentContribution"
             else:
-                b.comment("A%d" % first, "[Comment from old simulator %s%d] %s" % (col(c), row, text))
-        self.notes.append(
-            "Projected_Balances: merges cashflow_spatac and cashflow_spatac_simulator. The 2025 "
-            "actual expenditures (-1,824,525, hard-coded in the old C16) and the 2024 actual "
-            "closing balance are now inputs; the unused 1st-year increase (old L9, 4.4%) is gone; "
-            "the RFS balance is read from RFS_cashflow instead of pasted values."
-        )
+                opening = 'IF($A{r}=PB_StartYear;IF(PB_Start="RFS";RFS_OpeningBalance;PB_OpeningBalance);$N%d)' % p
+                prev_contrib = 'IF($L%d="";$D%d;$L%d)' % (p, p, p)
+            active = "$A{r}>=PB_StartYear"
+            row = [
+                "=RFS_StudyYear" if firstrow else "=$A%d+1" % p,  # A
+                "=IFERROR(INDEX(RFS_Cf_Cost;MATCH($A{r};RFS_Cf_Year;0));0)",  # B
+                "=IFERROR(INDEX(RFS_Cf_Interest;MATCH($A{r};RFS_Cf_Year;0));0)",  # C
+                "=IFERROR(INDEX(RFS_Cf_Contrib;MATCH($A{r};RFS_Cf_Year;0));0)",  # D
+                "=IFERROR(INDEX(RFS_Cf_Balance;MATCH($A{r};RFS_Cf_Year;0));0)",  # E
+                "=$E{r}-RFS_MinBalance",  # F
+                "=$E{r}-RFS_MinBalance*$U{r}",  # G
+                "=$E{r}/$U{r}-RFS_MinBalance",  # H
+                "",  # I: spacer
+                # J: the RFS cost, or the Revised amounts for the years the Revised block covers.
+                '=IF(NOT(%s);"";IF(OR(PB_ExpBasis="RFS";ISNA(MATCH($A{r};Exp_RevisedYears;0)));$B{r};'
+                "-SUM(INDEX(Exp_Revised;0;MATCH($A{r};Exp_RevisedYears;0)))))" % active,
+                # K: the increase, after the years that follow the RFS schedule.
+                '=IF(OR(NOT(%s);PB_ContribBasis="RFS";$A{r}<=PB_ContribFixedThrough);"";'
+                "IF($A{r}-PB_ContribFixedThrough<=3;INDEX(PB_CatchUp;$A{r}-PB_ContribFixedThrough);"
+                "PB_SubsequentIncrease))" % active,
+                '=IF(NOT(%s);"";IF($K{r}="";$D{r};%s*(1+$K{r})))' % (active, prev_contrib),  # L
+                '=IF(NOT(%s);"";%s*%s)' % (active, opening, rate),  # M
+                '=IF(NOT(%s);"";%s+$J{r}+$M{r}+$L{r})' % (active, opening),  # N
+                '=IF($N{r}="";"";$N{r}-$E{r})',  # O
+                '=IF($N{r}="";"";$N{r}-RFS_MinBalance)',  # P
+                '=IF($N{r}="";"";$N{r}-RFS_MinBalance*$U{r})',  # Q
+                '=IF($N{r}="";"";$N{r}/$U{r}-RFS_MinBalance)',  # R
+                '=IF($L{r}="";"";$L{r}/12/RFS_Units)',  # S
+                "",  # T: spacer
+                "=(1+RFS_ShortInflation)^($A{r}-RFS_StudyYear)",  # U
+            ]
+            rows.append([f.format(r=r) if f else "" for f in row])
+        b.formulas("A%d:U%d" % (first, last), rows)
 
-        b.fmt("B%d:I%d" % (first, last), MONEY_ZERO)
-        b.fmt("J%d:J%d" % (first, last), PERCENT)
-        b.fmt("K%d:N%d" % (first, last), MONEY_ZERO)
-        b.fmt("O%d:O%d" % (first, last), "0.0000")
-        b.fmt("P%d:U%d" % (first, last), MONEY_ZERO)
-        b.fmt("V%d:V%d" % (first, last), "#,##0.00")
-        b.fmt("X%d:Z%d" % (first, last), MONEY_ZERO)
+        b.style("J%d:S%d" % (first, last), "Calculated")
         b.fmt("A%d:A%d" % (first, last), YEAR)
-        b.width("A", 30)
-        for k in range(2, 28):
+        b.fmt("B%d:H%d" % (first, last), MONEY_ZERO)
+        b.fmt("J%d:J%d" % (first, last), MONEY_ZERO)
+        b.fmt("K%d:K%d" % (first, last), PERCENT)
+        b.fmt("L%d:R%d" % (first, last), MONEY_ZERO)
+        b.fmt("O%d:O%d" % (first, last), MONEY_RED)
+        b.fmt("S%d:S%d" % (first, last), "#,##0.00")
+        b.fmt("U%d:U%d" % (first, last), "0.0000")
+        b.width("A", 52)
+        for k in range(2, 22):
             b.width(col(k), 13)
-        b.width("A", 8)
-        b.width("D", 13)
+        b.width("I", 2)
+        b.width("T", 2)
         b.width("G", 30)
-        b.group_cols("X", "AA", collapse=True)
+        b.group_cols("U", "U", collapse=True)
+        self.notes.append(
+            "Projected_Balances: rebuilt as the RFS baseline and a what-if projection (design "
+            "13.6). The typed 2024 closing balance and 2025 actual expenditures are dropped; the "
+            "old simulator's 2025 closing projection seeds the current-year opening balance. The "
+            "hidden check columns are replaced by the what-if's difference from the RFS balance."
+        )
 
         span = lambda c: ref("Projected_Balances", "%s%d:%s%d" % (c, first, c, last))
         for n, c in (
             ("PB_Year", "A"), ("PB_RFSCost", "B"), ("PB_RFSInterest", "C"), ("PB_RFSContrib", "D"),
-            ("PB_RFSBalance", "E"), ("PB_ActualCost", "F"), ("PB_ActualBalance", "G"),
-            ("PB_Adjustment", "H"), ("PB_AdjustedCost", "I"), ("PB_Increase", "J"),
-            ("PB_Contributions", "K"), ("PB_Interest", "L"), ("PB_Balance", "M"),
-            ("PB_Variance", "N"), ("PB_Inflator", "O"), ("PB_Margin", "P"),
-            ("PB_MarginInflated", "Q"), ("PB_MarginPV", "R"), ("PB_RFSMargin", "S"),
-            ("PB_RFSMarginInflated", "T"), ("PB_RFSMarginPV", "U"), ("PB_Check", "AA"),
+            ("PB_RFSBalance", "E"), ("PB_RFSMargin", "F"), ("PB_RFSMarginInflated", "G"),
+            ("PB_RFSMarginPV", "H"), ("PB_Cost", "J"), ("PB_Increase", "K"),
+            ("PB_Contributions", "L"), ("PB_Interest", "M"), ("PB_Balance", "N"),
+            ("PB_Variance", "O"), ("PB_Margin", "P"), ("PB_MarginInflated", "Q"),
+            ("PB_MarginPV", "R"), ("PB_PerUnitMonth", "S"), ("PB_Inflator", "U"),
         ):
             define(doc, n, span(c))
-        self.freeze(sheet, 1, 12)
+        self.freeze(sheet, 1, hdr)
 
     # -- order and protection ------------------------------------------------------------------
 

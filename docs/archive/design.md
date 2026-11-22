@@ -725,6 +725,22 @@ Rebuilt; this replaces section 4.5 where they differ.
   balance per year (old columns F and G) are removed. Comparisons of past years with the RFS
   belong in the prior years' workbooks.
 
+**As built (phase 11).**
+
+- Layout: inputs B4:B12 (dropdowns for B4, B6 and B7), the 30-year lows G4:I10, headers in
+  row 14, years 2024–2073 in rows 15–64. RFS baseline B–H, what-if J–S, inflator U (folded).
+  Years before the what-if's start year are blank in J–S.
+- The current-year opening balance (B5) is **seeded** with the old simulator's projected
+  closing balance for 2025, which carried the 2024 audited balance and the 2025 actual
+  expenditures; a comment on B5 says to replace it with the figure from the financial
+  statements. With it, the default what-if reproduces the old simulator from 2026 on, and
+  `verify.py` compares them.
+- **Two validations** in `verify.py`, both in memory: all three choices set to RFS; and
+  Contributions set to Increases from the study year at the RFS's own increases
+  (RFS_CatchUpIncreases), which also checks the vendor's contribution arithmetic (the old
+  check column Y). Both must give a zero difference in every year. The docs give both
+  procedures.
+
 ### 13.7 Investment Plan tool
 
 - **Changes_from_RFS** is removed (R17). The Cover says, in generic terms, that the reasons
