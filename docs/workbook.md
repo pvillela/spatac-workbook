@@ -17,6 +17,8 @@
 - **Yellow cells are inputs.** They are the only cells you type into.
 - **Green cells are calculated** and sit next to inputs, such as the Current estimate columns
   on Expenditures. Read them, don't type into them.
+- **Grey cells are fixed for the year**, such as the current year's Approved amounts on
+  Expenditures. They change only at the [January rollover](procedures/rollover.md).
 - Everything else is a label or a calculation.
 
 The Spatac tabs are protected **without a password**, so that a stray keystroke cannot
@@ -48,11 +50,11 @@ a year: see [January rollover](procedures/rollover.md).
 
 ## Estimates are entered only where they change
 
-On Expenditures, the Mid-year, Latest and Late-year estimate columns hold an entry only for
+On Expenditures, the Mid-year and Late-year estimate columns hold an entry only for
 items whose estimate changed:
 
 - Type the **new full amount**, never a difference. It can be a formula, such as
-  `=MAX(J7,K7)`.
+  `=MAX(J8,K8)`.
 - A **blank** cell means "no change": the item keeps its previous estimate.
 - A **0** means the item is now expected to cost nothing that year, for example because it was
   deferred.

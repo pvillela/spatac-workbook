@@ -105,7 +105,7 @@ REASONS = {
         "Elevator modernization (with safeties) completed in 2026; the remaining placeholder, "
         "including the TK buy-out, dropped.",
         "The notes give two figures: 220,326 (actual plus pending Solucore, revised by Bruce, "
-        "now the Latest estimate) and the year-end projection 379,893 (including a December "
+        "now the 2026 Late-year estimate) and the year-end projection 379,893 (including a December "
         "forecast of 154,085). Please confirm which applies.",
     ),
     ("16.1.1a", ""): ("Fire damper in the garbage chute, 2026 actual.", None),

@@ -15,14 +15,14 @@ name: formulas and the command-line tools depend on them. When inserting rows, i
 
 ## Expenditures (`Exp_`)
 
-Each column name covers the item rows (7–250).
+Each column name covers the item rows (8–251).
 
 | Name | Column | Name | Column |
 |---|---|---|---|
 | `Exp_RowNumber` | A | `Exp_Approved` | J |
 | `Exp_Item` | B | `Exp_Actual` | K |
 | `Exp_Element` | C | `Exp_MidEst` | L |
-| `Exp_GL` | D | `Exp_Latest` | M |
+| `Exp_GL` | D | `Exp_LateEst` | M |
 | `Exp_GLName` | E | `Exp_Current` | N |
 | `Exp_SpatacRow` | F | `Exp_MidEst1`, `Exp_LateEst1`, `Exp_Current1` | O, P, Q |
 | `Exp_Key` | G | `Exp_MidEst2`, `Exp_LateEst2`, `Exp_Current2` | R, S, T |

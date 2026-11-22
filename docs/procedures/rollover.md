@@ -16,7 +16,7 @@ show. Copy them while they still show the old years, which means before changing
 
 ## Expenditures
 
-1. **Approved for the new year.** Copy the next-year **Current estimate** (column Q, rows 7–250)
+1. **Approved for the new year.** Copy the next-year **Current estimate** (column Q, rows 8–251)
    and paste **values only** into **Approved** (column J).
    - Excel: Paste Special › Values.
    - LibreOffice: Paste Special › Values Only.
@@ -25,10 +25,10 @@ show. Copy them while they still show the old years, which means before changing
 2. **Next year's starting estimate.** Copy the year-after **Current estimate** (column T) and
    paste values only into the next-year **Mid-year estimate** (column O). It stands until the
    next mid-year review replaces it.
-3. **Clear** the old year's inputs: Actual to date (K), Mid-year estimate (L) and Latest estimate
-   (M). Also clear the next-year Late-year estimate (P) and the year-after estimates (R and S).
+3. **Clear** the old year's inputs: Actuals to date (K), Mid-year estimate (L) and Late-year
+   estimate (M). Also clear the next-year Late-year estimate (P) and the year-after estimates (R and S).
 4. **Reasons.** Review column U: delete reasons for changes that no longer apply.
-5. Update the "as of" notes in row 5.
+5. Update the "as of" notes in row 6.
 
 ## Settings
 

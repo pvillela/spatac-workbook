@@ -8,21 +8,28 @@ for it.
 
 | Columns | Content |
 |---|---|
-| A–F | The item: row number (folded), item number, building element, GL account, GL account name (folded), and **S** for a Spatac row (one with no RFS item, such as a GL account split out of an item). |
+| A–F | The item: row number, item number, building element, GL account, GL account name (folded), and **S** for a Spatac row (folded; one with no RFS item, such as a GL account split out of an item). These columns are fixed: unprotect the tab to change them. |
 | G–I | Lookup keys (folded) and the [RFS check](analyse-rfs.md#the-rfs-check-column). |
-| J–N | **Current year.** Approved (approved by the Board the previous November), Actual to date, Mid-year estimate, Latest estimate, and the calculated **Current estimate**. |
+| J–N | **Current year.** Approved (approved by the Board the previous November; grey, fixed for the year), Actuals to date, Mid-year estimate, Late-year estimate, and the calculated **Current estimate**. |
 | O–Q | **Next year.** Mid-year estimate, Late-year estimate, **Current estimate**. |
 | R–T | **The year after.** The same three. |
-| U | **Reason for change**: one short line the Board can read. |
+| U | **Reason for change** for the next year (headed, for example, "2027 Reason for change"): one short line the Board can read, explaining the approved change from the RFS. |
 | V | **Working notes**: the running log of updates and sources. |
 | then | The **RFS** block and the **Revised** block, one column per year. |
 
-Row 5 above the headings records where each column's figures came from, such as "to Oct 26" or
-"2026-11-04". Update it when you update a column.
+Above the headings:
+
+- Row 4 totals the columns that hold an amount for every item: Approved, Actuals to date, the
+  three Current estimates, and the RFS and Revised blocks. The estimate columns that hold
+  changes only have no total.
+- Row 5 is the **variance vs RFS** of each Current estimate and each Revised year: its total
+  minus the RFS total for the same year. A positive variance means more spending than the RFS.
+- Row 6 records where each column's figures came from, such as "to Oct 26" or "2026-11-04".
+  Update it when you update a column.
 
 ## How the Current estimate is chosen
 
-- **Current year:** the Latest estimate if one is entered, otherwise the Mid-year estimate,
+- **Current year:** the Late-year estimate if one is entered, otherwise the Mid-year estimate,
   otherwise the Approved amount.
 - **Next year and the year after:** the Late-year estimate, otherwise the Mid-year estimate,
   otherwise the RFS amount.
@@ -32,7 +39,7 @@ the difference. A blank means no change. Type **0** to record that an item will 
 that year, for example because it was deferred.
 
 An estimate can be a formula as well as a number, when that is how it was worked out. For
-example, `=MAX(J7,K7)` keeps the Latest estimate at the approved amount until actual spending
+example, `=MAX(J8,K8)` keeps the Late-year estimate at the approved amount until actual spending
 exceeds it, then follows actual spending. A cell holding a formula counts as entered, even when
 the formula's result is zero.
 

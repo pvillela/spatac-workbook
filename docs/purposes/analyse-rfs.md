@@ -20,7 +20,8 @@ amount for every year from the base year on. Each amount is looked up in RFS_fva
 item's number and description, so the block always matches the pasted study.
 
 Row 3 of the RFS block is the vendor's own total for each year and row 4 adds up the items. The
-two should agree; a difference means an item is missing from Expenditures.
+two should agree; a difference means an item is missing from Expenditures. Row 5 shows, for
+each year, how far the Revised amounts depart from the RFS.
 
 ## Questions the workbook answers
 

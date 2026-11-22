@@ -13,8 +13,11 @@ The migration reproduces today's results. Known bugs are preserved here and fixe
 """
 
 import argparse
+import posixpath
 import re
 import sys
+import xml.etree.ElementTree as ET
+import zipfile
 
 import uno  # noqa: F401  (registers the com.sun.star import hook)
 from com.sun.star.table import CellRangeAddress
@@ -187,9 +190,12 @@ class Builder:
         if collapse:
             self.sheet.hideDetail(a)
 
+    # Comments wait until every formula has been rewritten (Migration.reparse): rewriting a
+    # formula cell deletes its comment.
+    pending_comments = []
+
     def comment(self, a, text):
-        addr = self.cell(a).CellAddress
-        self.sheet.Annotations.insertNew(addr, text)
+        Builder.pending_comments.append((self.sheet, self.cell(a).CellAddress, text))
 
 
 def define(doc, name, content):
@@ -275,12 +281,45 @@ def read_block(sheet, rng):
     return [list(r) for r in sheet.getCellRangeByName(rng).getDataArray()]
 
 
-def read_annotations(sheet):
+def read_comments(path, sheet_name):
+    """The comments of one tab of an .xlsx file, as (row, column, text), 1-based.
+
+    Read from the file's XML because LibreOffice's API returns these comments with empty text
+    (design 13.4). Excel's threaded comments are stored with a legacy stub ("[Threaded
+    comment] ... Comment:") in front of the text; only the text after it is kept."""
+    ns = {
+        "m": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
+        "r": "http://schemas.openxmlformats.org/officeDocument/2006/relationships",
+        "p": "http://schemas.openxmlformats.org/package/2006/relationships",
+    }
+    with zipfile.ZipFile(path) as z:
+        book = ET.fromstring(z.read("xl/workbook.xml"))
+        rels = ET.fromstring(z.read("xl/_rels/workbook.xml.rels"))
+        target = {r.get("Id"): r.get("Target") for r in rels.findall("p:Relationship", ns)}
+        sheet_path = None
+        for sh in book.find("m:sheets", ns):
+            if sh.get("name") == sheet_name:
+                sheet_path = "xl/" + target[sh.get("{%s}id" % ns["r"])].lstrip("/").replace("xl/", "", 1)
+        if sheet_path is None:
+            raise RuntimeError("no tab %s in %s" % (sheet_name, path))
+        rels_path = posixpath.join(posixpath.dirname(sheet_path), "_rels", posixpath.basename(sheet_path) + ".rels")
+        if rels_path not in z.namelist():
+            return []
+        comments_path = None
+        for r in ET.fromstring(z.read(rels_path)).findall("p:Relationship", ns):
+            if r.get("Type").endswith("/comments"):
+                comments_path = posixpath.normpath(posixpath.join(posixpath.dirname(sheet_path), r.get("Target")))
+        if comments_path is None:
+            return []
+        root = ET.fromstring(z.read(comments_path))
     out = []
-    anns = sheet.Annotations
-    for i in range(anns.Count):
-        a = anns.getByIndex(i)
-        out.append((a.Position.Row + 1, a.Position.Column + 1, a.String))
+    for c in root.iter("{%s}comment" % ns["m"]):
+        text = "".join(t.text or "" for t in c.iter("{%s}t" % ns["m"]))
+        if text.startswith("[Threaded comment]") and "Comment:" in text:
+            text = text.split("Comment:", 1)[1]
+        text = text.strip()
+        m = re.match(r"([A-Z]+)(\d+)$", c.get("ref"))
+        out.append((int(m.group(2)), colnum(m.group(1)), text))
     return out
 
 
@@ -313,6 +352,9 @@ class Migration:
         self.build_projected()
         self.finish_vendor_helpers()
         self.reparse()
+        for sheet, addr, text in Builder.pending_comments:
+            sheet.Annotations.insertNew(addr, text)
+        Builder.pending_comments.clear()
         self.order_and_protect()
 
         doc.calculateAll()
@@ -439,11 +481,11 @@ class Migration:
         self.fs_formulas = [
             list(r) for r in sh.getByName("fvalues_spatac").getCellRangeByName("A1:AP255").getFormulaArray()
         ]
-        self.fs_comments = read_annotations(sh.getByName("fvalues_spatac"))
+        self.fs_comments = read_comments(self.src_path, "fvalues_spatac")
         self.mtc = read_block(sh.getByName("Medium_Term_Cashflow"), "A1:M69")
         self.inv = read_block(sh.getByName("Schedule_of_Investments"), "A1:T46")
         self.sim = read_block(sh.getByName("cashflow_spatac_simulator"), "A1:V65")
-        self.sim_comments = read_annotations(sh.getByName("cashflow_spatac_simulator"))
+        self.sim_comments = read_comments(self.src_path, "cashflow_spatac_simulator")
         fv = read_block(sh.getByName("fvalues"), "A1:AZ218")
         # RFS amount per key and year, as the lookup will see it.
         years = {}
@@ -516,10 +558,14 @@ class Migration:
             ("Cell colours", "Header"),
             ("Yellow — a manual input: user may type here.", "Input"),
             ("Green — calculated next to inputs: read only.", "Calculated"),
+            ("Grey — fixed for the year, such as the current year's Approved amounts: changed only at the January rollover.", "Fixed"),
             ("Everything else is calculated or a label. Sheets are protected without a password to prevent accidents; Review > Unprotect Sheet when you need to.", None),
             ("", None),
             ("Expenditures tab: Estimates", "Header"),
-            ("Mid-year, Latest and Late-year estimates are entered only for items whose estimate changed: type the new full amount, never a difference. Blank means no change; the Current estimate columns show the result for every item.", None),
+            ("Mid-year and Late-year estimates are entered only for items whose estimate changed: type the new full amount, never a difference. Blank means no change; the Current estimate columns show the result for every item.", None),
+            ("Spatac row — S marks an item Spatac added that is not in the RFS, such as a project the RFS does not foresee. These rows are exempt from the RFS check.", None),
+            ("RFS check — flags a row whose item and GL account are not in RFS_info (\"Not in RFS\"), or whose item and element have no amounts in RFS_fvalues (\"No RFS amounts\"). Blank means the row matches the RFS. Check it after pasting a new RFS.", None),
+            ("Item number, building element and GL account are fixed: unprotect the sheet to add or remove an item.", None),
             ("", None),
             ("Notice for Excel users", "Header"),
             ("Excel users: enter formulas normally (no Ctrl+Shift+Enter) and do not use formulas that spill; LibreOffice cannot keep them.", None),
@@ -539,13 +585,16 @@ class Migration:
         doc.Sheets.insertNewByName("Expenditures", 2)
         sheet = doc.Sheets.getByName("Expenditures")
         b = Builder(doc, sheet)
-        first, last = 7, 250  # data rows (old 9..252)
+        # Rows: 3 vendor totals, 4 totals, 5 variance vs RFS, 6 provenance notes, 7 headers.
+        hdr = 7
+        first, last = 8, 251  # data rows (old 9..252)
         rfs0, rev0 = colnum("W"), colnum("AY")
         rfs_cols = [col(rfs0 + k) for k in range(RFS_YEARS)]
         rev_cols = [col(rev0 + k) for k in range(RFS_YEARS)]
 
-        # Titles and group labels.
-        b.value("A1", "SPATAC FUTURE EXPENDITURE TABLE").CellStyle = "Title"
+        # Titles and group labels. The title is the user's B1 from the review copy; A1 is
+        # left empty now that column A is visible.
+        b.value("B1", "EXPENDITURES").CellStyle = "Title"
         b.formula("J2", '=Cfg_BaseYear&" — current year"')
         b.formula("O2", '=(Cfg_BaseYear+1)&" — next year"')
         b.formula("R2", '=(Cfg_BaseYear+2)&" — year after"')
@@ -553,18 +602,32 @@ class Migration:
         b.value("AY2", "Revised amounts by year (what the plan uses)")
         b.bold("A2:BZ2")
 
-        # Row 3: vendor totals (check); row 4: totals; row 5: provenance notes.
-        b.value("C3", "RFS total per vendor")
+        # Row 3: vendor totals (a check), labelled next to the figures; row 4: totals; row 5:
+        # variance vs RFS; row 6: provenance notes.
+        b.value("V3", "Vendor total")
+        b.cell("V3").HoriJustify = uno.Enum("com.sun.star.table.CellHoriJustify", "RIGHT")
         b.value("C4", "Total")
-        b.value("C5", "As of / source (edit when you update a column)")
+        b.value("C5", "Variance vs RFS (more than the RFS is positive)")
+        b.value("C6", "As of / source (edit when you update a column)")
         for k, c in enumerate(rfs_cols):
             b.formula(
                 "%s3" % c,
-                "=IFERROR(-INDEX(RFS_Fv_Totals;1;MATCH(%s$6;RFS_Fv_Years;0));0)" % c,
+                "=IFERROR(-INDEX(RFS_Fv_Totals;1;MATCH(%s$%d;RFS_Fv_Years;0));0)" % (c, hdr),
             )
-        for c in ["J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T"] + rfs_cols + rev_cols:
+        # Totals only where they mean something: the change-only estimate columns (L, M, O, P,
+        # R, S) hold amounts for changed items only, so they get none (design 13.4).
+        for c in ["J", "K", "N", "Q", "T"] + rfs_cols + rev_cols:
             b.formula("%s4" % c, "=SUM(%s%d:%s%d)" % (c, first, c, last))
-        b.fmt("J3:BZ4", MONEY_ZERO)
+        # Variance: each Current estimate and Revised total against the RFS total of its year.
+        rfs_total = "INDEX($%s$4:$%s$4;MATCH(%%s;Exp_RFSYears;0))" % (rfs_cols[0], rfs_cols[-1])
+        for c, k in (("N", 0), ("Q", 1), ("T", 2)):
+            b.formula("%s5" % c, "=%s4-%s" % (c, rfs_total % ("Cfg_BaseYear+%d" % k)))
+        for c in rev_cols:
+            b.formula("%s5" % c, "=%s4-%s" % (c, rfs_total % ("%s$%d" % (c, hdr))))
+        b.fmt("J3:BZ5", MONEY_ZERO)
+        for c in ["N", "Q", "T"]:
+            b.fmt("%s5" % c, MONEY_RED)
+        b.fmt("%s5:%s5" % (rev_cols[0], rev_cols[-1]), MONEY_RED)
         b.bold("A4:BZ4")
         provenance = {
             "K": "to Oct 26",
@@ -576,9 +639,9 @@ class Migration:
             "S": "2026-11-04",
         }
         for c, text in provenance.items():
-            b.value("%s5" % c, text)
-            b.style("%s5" % c, "Input")
-        b.wrap("A5:V5")
+            b.value("%s6" % c, text)
+            b.style("%s6" % c, "Input")
+        b.wrap("A6:V6")
 
         # Row 6: headers.
         headers = {
@@ -591,16 +654,17 @@ class Migration:
             "G": "Key (item|element)",
             "H": "Key (item|GL)",
             "I": "RFS check",
-            "U": "Reason for change",
             "V": "Working notes",
         }
         for c, t in headers.items():
-            b.value("%s6" % c, t)
+            b.value("%s%d" % (c, hdr), t)
+        # The reasons explain the next year's approved changes only (design 13.4).
+        b.formula("U%d" % hdr, '=(Cfg_BaseYear+1)&" Reason for change"')
         year_headers = {
             "J": "Approved",
-            "K": "Actual to date",
+            "K": "Actuals to date",
             "L": "Mid-year estimate",
-            "M": "Latest estimate",
+            "M": "Late-year estimate",
             "N": "Current estimate",
             "O": "Mid-year estimate",
             "P": "Late-year estimate",
@@ -611,22 +675,22 @@ class Migration:
         }
         offset = {"J": 0, "K": 0, "L": 0, "M": 0, "N": 0, "O": 1, "P": 1, "Q": 1, "R": 2, "S": 2, "T": 2}
         for c, t in year_headers.items():
-            b.formula("%s6" % c, '=(Cfg_BaseYear+%d)&" %s"' % (offset[c], t))
-        b.formula("W6", "=Cfg_BaseYear")
-        b.formula("AY6", "=Cfg_BaseYear")
+            b.formula("%s%d" % (c, hdr), '=(Cfg_BaseYear+%d)&" %s"' % (offset[c], t))
+        b.formula("W%d" % hdr, "=Cfg_BaseYear")
+        b.formula("AY%d" % hdr, "=Cfg_BaseYear")
         for k in range(1, RFS_YEARS):
-            b.formula("%s6" % rfs_cols[k], "=%s6+1" % rfs_cols[k - 1])
-            b.formula("%s6" % rev_cols[k], "=%s6+1" % rev_cols[k - 1])
-        b.style("A6:BZ6", "Header")
-        b.wrap("A6:BZ6")
-        b.height(6, 42)
+            b.formula("%s%d" % (rfs_cols[k], hdr), "=%s%d+1" % (rfs_cols[k - 1], hdr))
+            b.formula("%s%d" % (rev_cols[k], hdr), "=%s%d+1" % (rev_cols[k - 1], hdr))
+        b.style("A%d:BZ%d" % (hdr, hdr), "Header")
+        b.wrap("A%d:BZ%d" % (hdr, hdr))
+        b.height(hdr, 42)
 
         # Data rows.
         identity, inputs, notes = [], [], []
         zero_rule = {"M": 0, "P": 0, "S": 0}
         spatac_rows = 0
         for r in range(first, last + 1):
-            old = r + 2
+            old = r + 1
             item = self.fs_cell("B", old)
             element = self.fs_cell("C", old)
             gl = self.fs_cell("D", old)
@@ -697,7 +761,7 @@ class Migration:
         )
         self.notes.append(
             "Expenditures: %d rows marked as Spatac rows (no RFS item). Explicit zeros written "
-            "where a blank used to mean zero: %d Latest, %d next-year Late-year, %d year-after "
+            "where a blank used to mean zero: %d current-year Late-year, %d next-year Late-year, %d year-after "
             "Late-year estimates. %d estimate formulas carried over, rewritten for the new "
             "columns." % (spatac_rows, zero_rule["M"], zero_rule["P"], zero_rule["S"], restored)
         )
@@ -728,7 +792,7 @@ class Migration:
             "%s%d:%s%d" % (rfs_cols[0], first, rfs_cols[-1], last),
             [
                 [
-                    "=IFERROR(INDEX(RFS_Fv_Values;MATCH($G{r};RFS_Fv_Key;0);MATCH({c}$6;RFS_Fv_Years;0));0)".format(r=r, c=c)
+                    "=IFERROR(INDEX(RFS_Fv_Values;MATCH($G{r};RFS_Fv_Key;0);MATCH({c}${h};RFS_Fv_Years;0));0)".format(r=r, c=c, h=hdr)
                     for c in rfs_cols
                 ]
                 for r in range(first, last + 1)
@@ -738,8 +802,8 @@ class Migration:
             "%s%d:%s%d" % (rev_cols[0], first, rev_cols[-1], last),
             [
                 [
-                    "=IF({c}$6=Cfg_BaseYear;$N{r};IF({c}$6=Cfg_BaseYear+1;$Q{r};IF({c}$6=Cfg_BaseYear+2;$T{r};{f}{r})))".format(
-                        r=r, c=c, f=f
+                    "=IF({c}${h}=Cfg_BaseYear;$N{r};IF({c}${h}=Cfg_BaseYear+1;$Q{r};IF({c}${h}=Cfg_BaseYear+2;$T{r};{f}{r})))".format(
+                        r=r, c=c, f=f, h=hdr
                     )
                     for c, f in zip(rev_cols, rfs_cols)
                 ]
@@ -747,9 +811,10 @@ class Migration:
             ],
         )
 
-        # Styles and formats.
-        b.style("A%d:F%d" % (first, last), "Input")
-        b.style("J%d:M%d" % (first, last), "Input")
+        # Styles and formats. The identity columns A-F are protected (design 13.4): adding or
+        # removing an item means unprotecting the sheet. Approved is fixed for the year.
+        b.style("J%d:J%d" % (first, last), "Fixed")
+        b.style("K%d:M%d" % (first, last), "Input")
         b.style("O%d:P%d" % (first, last), "Input")
         b.style("R%d:S%d" % (first, last), "Input")
         b.style("U%d:V%d" % (first, last), "Input")
@@ -758,8 +823,8 @@ class Migration:
             b.style("%s%d:%s%d" % (c, first, c, last), "Calculated")
         b.fmt("J%d:T%d" % (first, last), MONEY)
         b.fmt("%s%d:%s%d" % (rfs_cols[0], first, rev_cols[-1], last), MONEY)
-        b.fmt("W6:BZ6", YEAR)
-        widths = {"A": 6, "B": 8, "C": 34, "D": 10, "E": 24, "F": 6, "G": 20, "H": 16, "I": 12, "U": 30, "V": 40}
+        b.fmt("W%d:BZ%d" % (hdr, hdr), YEAR)
+        widths = {"A": 6, "B": 8, "C": 34, "D": 10, "E": 24, "F": 6, "G": 20, "H": 16, "I": 8, "U": 30, "V": 40}
         for c in "JKLMNOPQRST":
             widths[c] = 11
         for c in rfs_cols + rev_cols:
@@ -767,12 +832,21 @@ class Migration:
         for c, w in widths.items():
             b.width(c, w)
         b.wrap("U%d:V%d" % (first, last))
+        b.wrap("I%d:I%d" % (first, last))  # the narrower RFS check column
 
-        # Groups (Q46): row number and GL account name, helper keys, each year's inputs, and the
-        # two year blocks.
-        b.group_cols("A", "A", collapse=True)
-        b.group_cols("E", "E", collapse=True)
-        b.group_cols("G", "H", collapse=True)
+        # Boxes round the three year blocks' header areas, like the user's J2:N5 (review copy).
+        for a, z in (("J", "N"), ("O", "Q"), ("R", "T")):
+            box = b.cell("%s2:%s%d" % (a, z, hdr - 1))
+            bd = uno.createUnoStruct("com.sun.star.table.TableBorder2")
+            for side in ("TopLine", "BottomLine", "LeftLine", "RightLine"):
+                setattr(bd, side, solid_border())
+                setattr(bd, "Is%sValid" % side, True)
+            box.TableBorder2 = bd
+
+        # Groups (Q46, review copy): GL account name, Spatac row and helper keys in one
+        # collapsed group; each year's inputs, and the two year blocks. Row # stays visible so
+        # that sorting by it restores the original order (design 13.4).
+        b.group_cols("E", "H", collapse=True)
         b.group_cols("J", "M")
         b.group_cols("O", "P")
         b.group_cols("R", "S")
@@ -784,7 +858,7 @@ class Migration:
         for row, c, text in self.fs_comments:
             letters = col(c)
             target = colmap.get(letters)
-            new_row = 6 if row <= 8 else row - 2
+            new_row = hdr if row <= 8 else row - 1
             if target is None:
                 target = "V"
                 text = "[Comment from old column %s] %s" % (letters, text)
@@ -799,17 +873,18 @@ class Migration:
             ("Exp_RowNumber", "A"), ("Exp_Item", "B"), ("Exp_Element", "C"), ("Exp_GL", "D"),
             ("Exp_GLName", "E"), ("Exp_SpatacRow", "F"), ("Exp_Key", "G"), ("Exp_Key2", "H"),
             ("Exp_Check", "I"), ("Exp_Approved", "J"), ("Exp_Actual", "K"), ("Exp_MidEst", "L"),
-            ("Exp_Latest", "M"), ("Exp_Current", "N"), ("Exp_MidEst1", "O"), ("Exp_LateEst1", "P"),
+            ("Exp_LateEst", "M"), ("Exp_Current", "N"), ("Exp_MidEst1", "O"), ("Exp_LateEst1", "P"),
             ("Exp_Current1", "Q"), ("Exp_MidEst2", "R"), ("Exp_LateEst2", "S"), ("Exp_Current2", "T"),
             ("Exp_Reason", "U"), ("Exp_Notes", "V"),
         ):
             name(n, c)
         name("Exp_RFS", rfs_cols[0], rfs_cols[-1])
         name("Exp_Revised", rev_cols[0], rev_cols[-1])
-        define(doc, "Exp_RFSYears", ref("Expenditures", "%s6:%s6" % (rfs_cols[0], rfs_cols[-1])))
-        define(doc, "Exp_RevisedYears", ref("Expenditures", "%s6:%s6" % (rev_cols[0], rev_cols[-1])))
+        define(doc, "Exp_RFSYears", ref("Expenditures", "%s%d:%s%d" % (rfs_cols[0], hdr, rfs_cols[-1], hdr)))
+        define(doc, "Exp_RevisedYears", ref("Expenditures", "%s%d:%s%d" % (rev_cols[0], hdr, rev_cols[-1], hdr)))
 
-        self.freeze(sheet, colnum("F") - 1, 6)
+        # Frozen through column H and the header row, as in the review copy.
+        self.freeze(sheet, colnum("H"), hdr)
 
     def restore_estimate_formulas(self, b, first, last):
         """Writes the old estimate formulas into their new cells, with their references
@@ -823,7 +898,7 @@ class Migration:
         cell = re.compile(r"(?<![A-Za-z_.$])\$?([A-Z]{1,2})\$?(\d+)(?![\d(])")
         count = 0
         for r in range(first, last + 1):
-            old = r + 2
+            old = r + 1
             for letters, target in newcol.items():
                 f = self.fs_formulas[old - 1][colnum(letters) - 1]
                 if not f.startswith("="):
