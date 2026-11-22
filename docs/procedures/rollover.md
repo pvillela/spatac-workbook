@@ -36,12 +36,25 @@ Change **Base year** (B4) to the new year. Every year heading and RFS lookup mov
 
 ## Medium_Term_Cashflow
 
-1. Type the new year's **opening cash balance** (B5) and **payables** (B6) from the prior year's
+Each year column has its own year, typed in row 3, and keeps its figures when the base year
+changes. Rolling forward means removing the year just ended and adding a new last year. Until
+you do, the red check in A2 says the first year column is not the base year.
+
+1. **Check the old year's planned investments.** Every planned investment for the year just
+   ended (column B, rows 14–18) should have been bought and typed into Schedule_of_Investments
+   as held. Its maturities then come from there. Anything left in column B is lost in the next
+   step.
+2. **Delete column B**, the year just ended. Everything to its right moves one column left, with
+   its year. Column B's opening cash (B5) shows `#REF!` until step 5.
+3. **Insert a column** just left of the grey **▶ End** column (right-click the ▶ End column
+   heading › Insert Columns Before). Never delete the ▶ End column.
+4. **Fill it from the column to its left:** copy that column and paste it into the new one.
+   Then type the new year in row 3 (one more than its neighbour) and clear its yellow cells
+   (payables, the 1- to 4-year investments, the carry-over and the adjustment) or type the
+   planned figures.
+5. Type the new year's **opening cash balance** (B5) and **payables** (B6) from the prior year's
    closing financial statements.
-2. **Move the planned investments one column left.** Copy C14:G17 and paste values only into
-   B14:F17, then clear G14:G17. Do the same for the carry-over (row 22) and the adjustment
-   (row 23).
-3. Update the date in the title (A1).
+6. Check that A2 is empty, then update the date in the title (A1).
 
 ## Schedule_of_Investments
 

@@ -54,7 +54,7 @@ workbook).
 
 ## Medium_Term_Cashflow (`MTC_`)
 
-Each covers columns B–G of its row.
+Each covers columns B–H of its row: the six year columns and the grey **▶ End** column. Insert a new year column just left of ▶ End, so that every name grows to include it; never delete ▶ End.
 
 | Name | Row | Name | Row |
 |---|---|---|---|
@@ -71,9 +71,10 @@ Each covers columns B–G of its row.
 
 Three more names cover areas rather than a single row:
 
-- `MTC_Title` is A1.
-- `MTC_CashSection` is A3:G24.
-- `MTC_ComparisonSection` is A28:G30.
+- `MTC_Title` is A1. A2 is a check that the first year column is the base year and that the
+  years run in steps of one.
+- `MTC_CashSection` is A3:H24.
+- `MTC_ComparisonSection` is A28:H30.
 
 The extraction tool keeps these.
 

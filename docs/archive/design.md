@@ -778,6 +778,15 @@ Rebuilt; this replaces section 4.5 where they differ.
   - Hiding old columns instead was rejected: it grows the workbook and clutters it.
   - The extractor, Schedule_of_Investments' Planned list and `verify.py` are checked to
     follow the names after a delete-and-insert.
+  - *As built (phase 13):* years typed in B3:G3; ▶ End is column H, and every `MTC_*` row
+    name runs B–H. The planned-maturities row (11) reads the grid columns to its left from
+    column A, which is never deleted (`IFERROR` drops A's text labels), so the same formula
+    stands in every year column. The opening cash of the first column stays typed: after the
+    delete it shows `#REF!` until the rollover step that types it. The check is A2.
+  - Before the delete, the old year's planned investments must all have been bought and moved
+    to Held; whatever remains in its grid column is lost. The rollover procedure says so.
+  - `check_blocks.py` performs the rollover in memory and checks the years, each year's
+    inputs and looked-up figures, the absence of errors, the check cell and the Planned list.
 - Excel checklist: add the new items (boundary rows, AutoFilter on a protected sheet, README
   row heights, the what-if validation). The user runs it.
 - **GitHub Pages** (the 404): the Documentation workflow builds but cannot deploy because

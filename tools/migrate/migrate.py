@@ -1030,16 +1030,35 @@ class Migration:
         sheet = doc.Sheets.getByName("Medium_Term_Cashflow")
         b = Builder(doc, sheet)
         yc = [col(2 + k) for k in range(HORIZON)]  # B..G
+        # The ▶ End column (design 13.8, R25): inside every row name, so a year column inserted
+        # just left of it is inside them. At rollover the old year's column is deleted and one
+        # is inserted here.
+        endc = col(2 + HORIZON)  # H
 
         b.value("A1", self.mtc_cell("A", 1)).CellStyle = "Title"
         b.style("A1", "Input")
         b.bold("A1")
         b.cell("A1").CharHeight = 14.0
-        b.formula("B3", "=Cfg_BaseYear")
-        for k in range(1, HORIZON):
-            b.formula("%s3" % yc[k], "=%s3+1" % yc[k - 1])
-        b.style("A3:G3", "Header")
+        # Fixed, typed years: each column keeps its year when the base year changes, so its
+        # typed inputs stay with it. Every formula below works from its own column's heading.
+        for k, c in enumerate(yc):
+            b.value("%s3" % c, float(BASE_YEAR + k))
+        b.value("%s3" % endc, "▶ End")
+        b.style("A3:%s3" % endc, "Header")
         b.fmt("B3:G3", YEAR)
+        b.comment(
+            "%s3" % endc,
+            "Insert new year columns to the left of this column (January rollover). Do not delete it.",
+        )
+        # A check that the years start at the base year and run in steps of one.
+        b.formula(
+            "A2",
+            '=IF(INDEX(MTC_Years;1;1)<>Cfg_BaseYear;"Check: the first year column is not the base year on Settings (see the January rollover).";'
+            'IF(OR(COUNT(MTC_Years)<>%d;MAX(MTC_Years)-MIN(MTC_Years)<>COUNT(MTC_Years)-1);'
+            '"Check: the year columns must be %d years in a row.";""))' % (HORIZON, HORIZON),
+        )
+        b.cell("A2").CharColor = 0xC00000
+        b.bold("A2")
 
         # Layout from the user's review copy (design 13.1): a blank row after the planned
         # maturities, the grid in rows 14-18 and the closing balance in row 20.
@@ -1086,17 +1105,16 @@ class Migration:
             b.formula("%s10" % c, "=SUM(INDEX(Inv_HeldFlows;0;MATCH(%s$3;Inv_Years;0)))" % c)
             # Planned investments maturing this year, from the grid columns of earlier years only:
             # reading the whole grid would make the 5-year balancing row depend on itself.
-            if c == yc[0]:
-                b.value("%s11" % c, 0.0)
-            else:
-                prev = yc[yc.index(c) - 1]
-                b.formula(
-                    "%s11" % c,
-                    "=SUMPRODUCT($B${g}:{p}{h}*((COLUMN($B${g}:{p}{h})-COLUMN($B${g}))+(ROW($B${g}:{p}{h})-ROW($B${g})+1)"
-                    "=(COLUMN({c}{g})-COLUMN($B${g})))*(1+Cfg_NewInvRate)^(ROW($B${g}:{p}{h})-ROW($B${g})+1))".format(
-                        p=prev, c=c, g=grid0, h=grid0 + 4
-                    ),
-                )
+            # The grid columns to the left, from column A, which is never deleted: a purchase in
+            # the year of its heading, for the term of its row, matures in this column's year.
+            # Column A's labels are text, which IFERROR turns into nothing. The same formula in
+            # every column, the first included (design 13.8).
+            prev = col(colnum(c) - 1)
+            b.formula(
+                "%s11" % c,
+                "=SUMPRODUCT(IFERROR($A${g}:{p}{h}*(($A$3:{p}3+ROW($A${g}:{p}{h})-ROW($A${g})+1)={c}$3)"
+                "*(1+Cfg_NewInvRate)^(ROW($A${g}:{p}{h})-ROW($A${g})+1);0))".format(p=prev, c=c, g=grid0, h=grid0 + 4),
+            )
             b.formula("%s%d" % (c, newtot), "=-SUM(%s%d:%s%d)" % (c, grid0, c, grid0 + 4))
             for k in range(4):  # source rows 13-16
                 b.value("%s%d" % (c, grid0 + k), self.mtc_cell(c, 13 + k))
@@ -1141,6 +1159,8 @@ class Migration:
         rule("B%d:G%d" % (closing, closing), "BottomBorder")
         for r in (26, 36):
             b.fill("A%d:G%d" % (r, r), SEPARATOR_COLOR)
+        b.fill("%s3:%s36" % (endc, endc), SEPARATOR_COLOR)
+        b.width(endc, 6)
         b.value("I33", "Based on the assumptions in Projected_Balances;")
         b.value("I34", "go there for longer-term projections.")
         b.width("A", 62)
@@ -1150,27 +1170,27 @@ class Migration:
         g = lambda first, last: ref("Medium_Term_Cashflow", "%s:%s" % (first, last))
         for n, rng in (
             ("MTC_Title", "A1:A1"),
-            ("MTC_Years", "B3:G3"),
-            ("MTC_OpeningCash", "B5:G5"),
-            ("MTC_Payables", "B6:G6"),
-            ("MTC_Contributions", "B8:G8"),
-            ("MTC_Expenditures", "B9:G9"),
-            ("MTC_Maturities", "B10:G10"),
-            ("MTC_PlannedMaturities", "B11:G11"),
-            ("MTC_NewInvTotal", "B%d:G%d" % (newtot, newtot)),
-            ("MTC_NewInv", "B%d:G%d" % (grid0, grid0 + 4)),
-            ("MTC_CarryOver", "B%d:G%d" % (carry, carry)),
-            ("MTC_ClosingCash", "B%d:G%d" % (closing, closing)),
-            ("MTC_Adjustment", "B%d:G%d" % (adj, adj)),
-            ("MTC_MinCash", "B%d:G%d" % (minimum, minimum)),
-            ("MTC_RFSExpenditures", "B28:G28"),
-            ("MTC_RevisedExpenditures", "B29:G29"),
-            ("MTC_ExpVariance", "B30:G30"),
-            ("MTC_RFSBalance", "B32:G32"),
-            ("MTC_ProjectedBalance", "B33:G33"),
-            ("MTC_BalanceVariance", "B34:G34"),
-            ("MTC_CashSection", "A3:G%d" % minimum),
-            ("MTC_ComparisonSection", "A28:G30"),
+            ("MTC_Years", "B3:H3"),
+            ("MTC_OpeningCash", "B5:H5"),
+            ("MTC_Payables", "B6:H6"),
+            ("MTC_Contributions", "B8:H8"),
+            ("MTC_Expenditures", "B9:H9"),
+            ("MTC_Maturities", "B10:H10"),
+            ("MTC_PlannedMaturities", "B11:H11"),
+            ("MTC_NewInvTotal", "B%d:H%d" % (newtot, newtot)),
+            ("MTC_NewInv", "B%d:H%d" % (grid0, grid0 + 4)),
+            ("MTC_CarryOver", "B%d:H%d" % (carry, carry)),
+            ("MTC_ClosingCash", "B%d:H%d" % (closing, closing)),
+            ("MTC_Adjustment", "B%d:H%d" % (adj, adj)),
+            ("MTC_MinCash", "B%d:H%d" % (minimum, minimum)),
+            ("MTC_RFSExpenditures", "B28:H28"),
+            ("MTC_RevisedExpenditures", "B29:H29"),
+            ("MTC_ExpVariance", "B30:H30"),
+            ("MTC_RFSBalance", "B32:H32"),
+            ("MTC_ProjectedBalance", "B33:H33"),
+            ("MTC_BalanceVariance", "B34:H34"),
+            ("MTC_CashSection", "A3:H%d" % minimum),
+            ("MTC_ComparisonSection", "A28:H30"),
         ):
             a, z = rng.split(":")
             define(doc, n, g(a, z))

@@ -17,7 +17,9 @@ icon at the top of the page.
 ## Structure
 
 The plan is the **Medium_Term_Cashflow** tab, with **Schedule_of_Investments** behind it. It
-covers six years, the current year and five more, in columns B to G.
+covers six years, the current year and five more, in columns B to G, each headed by its own
+year. The grey ▶ End column after them marks where a new year column goes at the
+[January rollover](../procedures/rollover.md).
 
 | Row | Content | Source |
 |---|---|---|

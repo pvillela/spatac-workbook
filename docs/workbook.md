@@ -44,8 +44,9 @@ everything through these names too, so do not rename or delete them. The
 
 ## Years
 
-**Settings › Base year** is the current year. Every year heading in the workbook is calculated
-from it, and so is every lookup into the RFS. Changing it in January rolls the workbook forward
+**Settings › Base year** is the current year. Year headings are calculated from it, and so is
+every lookup into the RFS, except on Medium_Term_Cashflow: there each year column has its own
+typed year, so that the planned investments typed under it keep their year. Changing it in January rolls the workbook forward
 a year: see [January rollover](procedures/rollover.md).
 
 ## Estimates are entered only where they change

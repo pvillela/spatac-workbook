@@ -44,8 +44,12 @@ workbook:
 - [ ] Insert a row just below the header row (row 7) of Expenditures and another just above
       ▼ End: Formulas › Name Manager shows `Exp_Item` grown by two rows. Undo.
 - [ ] The README tab's long lines show in full (wrapped, not cut to one line).
-- [ ] Changing Settings › Base year to 2027 moves every year heading, and Expenditures' RFS block
-      shows 2027 first. Undo afterwards.
+- [ ] On a copy: unprotect Medium_Term_Cashflow, delete column B, insert a column before
+      ▶ End and fill it from its left neighbour. Row 11 shows numbers, not errors, and the
+      Planned list on Schedule_of_Investments is still filled. Discard the copy.
+- [ ] Changing Settings › Base year to 2027 moves the year headings, and Expenditures' RFS block
+      shows 2027 first. Medium_Term_Cashflow keeps its years and A2 shows the red check. Undo
+      afterwards.
 
 ## Saving
 
