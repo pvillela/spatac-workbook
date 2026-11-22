@@ -580,7 +580,7 @@ class Migration:
             b.style("B%d" % r, "Input")
             b.fmt("B%d" % r, fmt)
             define(doc, name, ref("Settings", "B%d" % r))
-        b.value("A9", "NOTE: The minimum target is inflated from its year at the RFS inflation rates.")
+        b.value("A9", "NOTE: The minimum target is inflated from its year at the RFS short-term inflation rate.")
         b.width("A", 75)
         b.width("B", 14)
         self.notes.append(
