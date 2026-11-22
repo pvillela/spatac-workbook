@@ -39,8 +39,8 @@ the difference. A blank means no change. Type **0** to record that an item will 
 that year, for example because it was deferred.
 
 The two look different: a **0** shows as `0`, and a blank shows nothing. The same holds in the
-green Current estimate columns, where `0` means the item is now expected to cost nothing that
-year. In the other amount columns (Approved, Actuals, and the RFS and Revised blocks) a zero
+green Current estimate columns: `0` means the item is now expected to cost nothing that year,
+and a blank means it has no amount at all, neither an estimate nor an Approved or RFS amount. In the other amount columns (Approved, Actuals, and the RFS and Revised blocks) a zero
 shows as blank, since there it means the same as no amount.
 
 An estimate can be a formula as well as a number, when that is how it was worked out. For

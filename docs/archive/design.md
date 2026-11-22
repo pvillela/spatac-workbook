@@ -644,6 +644,14 @@ Where this section conflicts with sections 1–12, this section wins.
   `#,##0;-#,##0;""` showed both as an empty cell (e.g. P29 and Q29). A blank cell still shows
   blank. Approved (J), Actuals (K) and the RFS and Revised blocks keep the zero-hiding format:
   there a zero and a blank mean the same thing. Added 2026-11-22, after phase 14.
+- **Current estimates are empty when their inputs are** (N, Q, T): a Current estimate holds
+  an empty string, not 0, when every input it chooses from is empty, so that showing zeros does
+  not fill these columns with spurious ones. N falls back to Approved (J), which may be blank;
+  Q and T fall back to the RFS amount (X, Y), whose lookup gives 0 when the RFS has no amount
+  for the item, and that 0 counts as empty. A typed 0 in a Mid-year or Late-year column, or an
+  Approved 0, still gives 0. The Revised block passes the empty string on; its totals, the
+  variance row, Medium_Term_Cashflow and Projected_Balances read it through `SUM`, which skips
+  it. Formerly N used `N($J)`, which turned a blank Approved into 0.
 - **Row 3**: the label leaves C3; "Vendor total" goes in V3, next to the figures (R11).
 - **Variance vs RFS** (R12): a header-area row under N, Q, T and each Revised-block year
   (AY–BZ): that column's total minus the RFS total for the same year.

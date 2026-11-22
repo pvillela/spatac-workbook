@@ -850,15 +850,19 @@ class Migration:
         b.formulas("G%d:I%d" % (first, last), formulas)
         b.formulas(
             "N%d:N%d" % (first, last),
-            [['=IF($M{r}<>"";$M{r};IF($L{r}<>"";$L{r};N($J{r})))'.format(r=r)] for r in range(first, last + 1)],
+            [['=IF($M{r}<>"";$M{r};IF($L{r}<>"";$L{r};IF($J{r}<>"";$J{r};"")))'.format(r=r)] for r in range(first, last + 1)],
         )
+        # The Current estimates are empty, not 0, when every input they choose from is: a blank
+        # Approved amount, or an RFS lookup that found no amount (its 0). A typed 0 still gives 0
+        # (design 13.4). The Revised block and every total read them through SUM, which skips
+        # the empty string.
         b.formulas(
             "Q%d:Q%d" % (first, last),
-            [['=IF($P{r}<>"";$P{r};IF($O{r}<>"";$O{r};$X{r}))'.format(r=r)] for r in range(first, last + 1)],
+            [['=IF($P{r}<>"";$P{r};IF($O{r}<>"";$O{r};IF($X{r}<>0;$X{r};"")))'.format(r=r)] for r in range(first, last + 1)],
         )
         b.formulas(
             "T%d:T%d" % (first, last),
-            [['=IF($S{r}<>"";$S{r};IF($R{r}<>"";$R{r};$Y{r}))'.format(r=r)] for r in range(first, last + 1)],
+            [['=IF($S{r}<>"";$S{r};IF($R{r}<>"";$R{r};IF($Y{r}<>0;$Y{r};"")))'.format(r=r)] for r in range(first, last + 1)],
         )
         b.formulas(
             "%s%d:%s%d" % (rfs_cols[0], first, rfs_cols[-1], last),
@@ -896,8 +900,8 @@ class Migration:
         b.fmt("J%d:K%d" % (first, last), MONEY)
         # The estimate columns L-T show a zero as 0, so that it cannot be mistaken for a blank
         # (design 13.4): in Mid-year and Late-year a blank means "no change" and a 0 means "will
-        # cost nothing", and the Current estimate columns show the 0 that results. A blank cell
-        # still shows blank.
+        # cost nothing", and the Current estimate columns show the 0 that results. A blank cell,
+        # or a Current estimate with nothing to choose from, still shows blank.
         b.fmt("L%d:T%d" % (first, last), MONEY_ZERO)
         b.fmt("%s%d:%s%d" % (rfs_cols[0], first, rev_cols[-1], last), MONEY)
         b.fmt("W%d:BZ%d" % (yr, yr), YEAR)
