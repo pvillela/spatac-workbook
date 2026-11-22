@@ -600,8 +600,8 @@ Where this section conflicts with sections 1–12, this section wins.
 - All of it is encoded in `migrate.py`, so the workbook is still rebuilt from
   `_nogit/Spatac-20261121.xlsx`. The review copy is a reference only. The user had turned off
   sheet protection to edit it; that is not one of the changes.
-- **Outputs** (R16): `_nogit/Spatac-20261121-restructured-20261122.xlsx` and
-  `_nogit/InvestmentPlan-20261121-20261122.xlsx`.
+- **Outputs** (R16): `_nogit/Spatac-20261122.xlsx` and `_nogit/InvestmentPlan-20261122.xlsx`:
+  only the current date in the name (the user found two date stamps too long).
 
 ### 13.2 Workbook-wide
 
