@@ -3,13 +3,12 @@
 //! [`extract`] reads a Spatac workbook and writes the Investment Plan as a workbook of its own,
 //! for the Board, the Treasurer and the broker (Reserve Fund Investment Policy s.3.2):
 //!
-//! - **Cover**: what the plan is, the source file, when it was generated, the base year, and
-//!   lines to record the meeting that approved it.
+//! - **Cover**: what the plan is, the source file, when it was generated, the base year, lines
+//!   to record the meeting that approved it, and where the reasons for changes from the RFS are
+//!   recorded.
 //! - **Medium_Term_Cashflow**: the cash section and the RFS-versus-Revised comparison. The
 //!   investment-balance comparison and notes are dropped.
 //! - **Schedule_of_Investments**: held and planned investments with their cash flows by year.
-//! - **Changes_from_RFS**: every item whose Revised amounts differ from the RFS within the
-//!   horizon, with its reason; an item without a reason is flagged.
 //!
 //! Formulas that refer only to these two tabs stay formulas. A formula that refers to any other
 //! tab, directly or through a defined name, becomes its cached value. Every cell is locked and
@@ -29,11 +28,10 @@ use umya_spreadsheet::{CellRawValue, Workbook, Worksheet};
 
 pub const MTC: &str = "Medium_Term_Cashflow";
 pub const SCHEDULE: &str = "Schedule_of_Investments";
-pub const EXPENDITURES: &str = "Expenditures";
 const KEPT: [&str; 2] = [MTC, SCHEDULE];
 
-/// The defined names the extraction needs, and why.
-const REQUIRED: [&str; 14] = [
+/// The defined names the extraction needs.
+const REQUIRED: [&str; 7] = [
     "Cfg_BaseYear",
     "MTC_Title",
     "MTC_Years",
@@ -41,13 +39,6 @@ const REQUIRED: [&str; 14] = [
     "MTC_ComparisonSection",
     "Inv_Title",
     "Inv_Totals",
-    "Exp_Item",
-    "Exp_Element",
-    "Exp_GLName",
-    "Exp_RFS",
-    "Exp_RFSYears",
-    "Exp_Revised",
-    "Exp_RevisedYears",
 ];
 
 /// A name's target: its sheet and its rectangle as ((row, col), (row, col)).
@@ -65,8 +56,6 @@ pub struct Summary {
     pub output: PathBuf,
     pub formulas_kept: usize,
     pub formulas_to_values: usize,
-    pub changes: usize,
-    pub changes_without_reason: usize,
 }
 
 /// The output path for a source file: `Spatac-20261121.xlsx` gives `InvestmentPlan-20261121.xlsx`
@@ -91,7 +80,7 @@ pub fn extract(source: &Path, output: &Path, generated_on: &str) -> Result<Summa
             ));
         }
     }
-    for sheet in KEPT.iter().chain([&EXPENDITURES]) {
+    for sheet in KEPT {
         wb.sheet_by_name(sheet)
             .map_err(|_| format!("{} has no {sheet} tab", source.display()))?;
     }
@@ -126,13 +115,6 @@ pub fn extract(source: &Path, output: &Path, generated_on: &str) -> Result<Summa
         lock(&mut ws);
         out.add_sheet(ws).map_err(|e| e.to_string())?;
     }
-
-    // Changes from the RFS.
-    let changes = changes_from_rfs(&wb, &names)?;
-    summary.changes = changes.len();
-    summary.changes_without_reason = changes.iter().filter(|c| c.reason.is_empty()).count();
-    out.add_sheet(changes_sheet(&changes, base_year))
-        .map_err(|e| e.to_string())?;
 
     out.remove_sheet_by_name(&placeholder)
         .map_err(|e| e.to_string())?;
@@ -322,119 +304,6 @@ fn cell_number(wb: &Workbook, t: &Target, dr: u32, dc: u32) -> Option<f64> {
     ws.cell((t.start.1 + dc, t.start.0 + dr))?.value_number()
 }
 
-fn cell_text(wb: &Workbook, t: &Target, dr: u32, dc: u32) -> String {
-    wb.sheet_by_name(&t.sheet)
-        .ok()
-        .and_then(|ws| ws.cell((t.start.1 + dc, t.start.0 + dr)))
-        .map(|c| c.value().trim().to_owned())
-        .unwrap_or_default()
-}
-
-/// One item whose Revised amounts differ from the RFS within the horizon.
-#[derive(Debug)]
-pub struct Change {
-    pub item: String,
-    pub element: String,
-    /// (year, amount) where the RFS amount is not the Revised one and not zero.
-    pub rfs: Vec<(i32, f64)>,
-    pub revised: Vec<(i32, f64)>,
-    /// Revised minus RFS over the horizon.
-    pub net: f64,
-    pub reason: String,
-}
-
-fn changes_from_rfs(
-    wb: &Workbook,
-    names: &BTreeMap<String, Target>,
-) -> Result<Vec<Change>, String> {
-    let horizon: Vec<i32> = {
-        let t = &names["MTC_Years"];
-        (0..=(t.end.1 - t.start.1))
-            .filter_map(|k| cell_number(wb, t, 0, k).map(|y| y as i32))
-            .collect()
-    };
-    let year_cols = |years_name: &str| -> BTreeMap<i32, u32> {
-        let t = &names[years_name];
-        (0..=(t.end.1 - t.start.1))
-            .filter_map(|k| cell_number(wb, t, 0, k).map(|y| (y as i32, k)))
-            .collect()
-    };
-    let (rfs_cols, rev_cols) = (year_cols("Exp_RFSYears"), year_cols("Exp_RevisedYears"));
-    let (item, element, gl_name) = (
-        &names["Exp_Item"],
-        &names["Exp_Element"],
-        &names["Exp_GLName"],
-    );
-    let (rfs, revised) = (&names["Exp_RFS"], &names["Exp_Revised"]);
-    let reason = names.get("Exp_Reason");
-    let rows = item.end.0 - item.start.0 + 1;
-    let mut out = Vec::new();
-    for i in 0..rows {
-        let mut a = Vec::new();
-        let mut b = Vec::new();
-        let mut net = 0.0;
-        for &y in &horizon {
-            let x = rfs_cols
-                .get(&y)
-                .and_then(|&k| cell_number(wb, rfs, i, k))
-                .unwrap_or(0.0);
-            let z = rev_cols
-                .get(&y)
-                .and_then(|&k| cell_number(wb, revised, i, k))
-                .unwrap_or(0.0);
-            if (x - z).abs() >= 0.5 {
-                if x.abs() >= 0.5 {
-                    a.push((y, x));
-                }
-                if z.abs() >= 0.5 {
-                    b.push((y, z));
-                }
-                net += z - x;
-            }
-        }
-        if a.is_empty() && b.is_empty() {
-            continue;
-        }
-        let mut el = cell_text(wb, element, i, 0);
-        if el.is_empty() {
-            el = cell_text(wb, gl_name, i, 0);
-        }
-        out.push(Change {
-            item: cell_text(wb, item, i, 0),
-            element: el,
-            rfs: a,
-            revised: b,
-            net,
-            reason: reason.map(|t| cell_text(wb, t, i, 0)).unwrap_or_default(),
-        });
-    }
-    Ok(out)
-}
-
-fn amounts(list: &[(i32, f64)]) -> String {
-    if list.is_empty() {
-        return "—".to_owned();
-    }
-    list.iter()
-        .map(|(y, v)| format!("{y}: {}", thousands(*v)))
-        .collect::<Vec<_>>()
-        .join("; ")
-}
-
-/// Whole dollars with thousands separators.
-fn thousands(v: f64) -> String {
-    let n = v.round() as i64;
-    let digits = n.unsigned_abs().to_string();
-    let mut s = String::new();
-    for (i, ch) in digits.chars().enumerate() {
-        if i > 0 && (digits.len() - i).is_multiple_of(3) {
-            s.push(',');
-        }
-        s.push(ch);
-    }
-    if n < 0 { format!("-{s}") } else { s }
-}
-
 fn set_text(ws: &mut Worksheet, at: &str, text: &str, bold: bool) {
     let cell = ws.cell_mut(at);
     cell.set_value_string(text);
@@ -452,7 +321,7 @@ fn cover(source: &str, generated_on: &str, base_year: f64) -> Worksheet {
         &mut ws,
         "A2",
         "The Medium-Term Cash Flow schedule required by the Reserve Fund Investment Policy (s.3.2), \
-         with the schedule of investments and the Board's changes to the Reserve Fund Study.",
+         with the schedule of investments.",
         false,
     );
     let rows: [(&str, String); 3] = [
@@ -478,107 +347,37 @@ fn cover(source: &str, generated_on: &str, base_year: f64) -> Worksheet {
     let contents = [
         "Medium_Term_Cashflow — cash, expenditures, maturities and planned investments against the minimum target.",
         "Schedule_of_Investments — investments held and planned, with their cash flows by year.",
-        "Changes_from_RFS — items whose amounts or timing differ from the Reserve Fund Study, with reasons.",
     ];
     for (i, line) in contents.iter().enumerate() {
         set_text(&mut ws, &format!("A{}", 12 + i), line, false);
     }
+    set_text(&mut ws, "A15", "Changes from the Reserve Fund Study", true);
+    set_text(
+        &mut ws,
+        "A16",
+        "The expenditures in this plan differ from the Reserve Fund Study where the Board has changed \
+         the timing or cost of a project. The reasons for those changes are described in the Spatac \
+         workbooks for the current and previous years.",
+        false,
+    );
     ws.column_dimension_mut("A").set_width(42.0);
     ws.column_dimension_mut("B").set_width(60.0);
     ws
 }
 
-fn changes_sheet(changes: &[Change], base_year: f64) -> Worksheet {
-    let mut ws = Worksheet::default();
-    ws.set_name("Changes_from_RFS");
-    set_text(&mut ws, "A1", "CHANGES FROM THE RESERVE FUND STUDY", true);
-    ws.cell_mut("A1").style_mut().font_mut().set_size(14.0);
-    set_text(
-        &mut ws,
-        "A2",
-        &format!(
-            "Items whose Revised amounts differ from the RFS in {}–{}: the RFS amounts and years \
-             replaced, the Revised ones, and the reason.",
-            base_year as i64,
-            base_year as i64 + 5
-        ),
-        false,
-    );
-    let headers = [
-        "Item",
-        "Building element",
-        "RFS",
-        "Revised",
-        "Net change",
-        "Reason",
-    ];
-    for (k, h) in headers.iter().enumerate() {
-        let at = format!("{}4", formula::column_letters(k as u32 + 1));
-        set_text(&mut ws, &at, h, true);
-    }
-    for (i, c) in changes.iter().enumerate() {
-        let r = 5 + i as u32;
-        set_text(&mut ws, &format!("A{r}"), &c.item, false);
-        set_text(&mut ws, &format!("B{r}"), &c.element, false);
-        set_text(&mut ws, &format!("C{r}"), &amounts(&c.rfs), false);
-        set_text(&mut ws, &format!("D{r}"), &amounts(&c.revised), false);
-        let net = ws.cell_mut(format!("E{r}").as_str());
-        net.set_value_number(c.net.round());
-        net.style_mut()
-            .number_format_mut()
-            .set_format_code("#,##0;-#,##0");
-        let reason = if c.reason.is_empty() {
-            "REASON MISSING"
-        } else {
-            &c.reason
-        };
-        set_text(&mut ws, &format!("F{r}"), reason, c.reason.is_empty());
-    }
-    let total = 5 + changes.len() as u32 + 1;
-    set_text(
-        &mut ws,
-        &format!("A{total}"),
-        "Net change over the horizon",
-        true,
-    );
-    let net: f64 = changes.iter().map(|c| c.net).sum();
-    let cell = ws.cell_mut(format!("E{total}").as_str());
-    cell.set_value_number(net.round());
-    cell.style_mut()
-        .number_format_mut()
-        .set_format_code("#,##0;-#,##0");
-    cell.style_mut().font_mut().set_bold(true);
-    for (c, w) in [
-        ("A", 10.0),
-        ("B", 40.0),
-        ("C", 34.0),
-        ("D", 34.0),
-        ("E", 14.0),
-        ("F", 60.0),
-    ] {
-        ws.column_dimension_mut(c).set_width(w);
-    }
-    ws
+/// Today's date as `YYYY-MM-DD`, in the computer's own time zone: an evening run in Toronto is
+/// dated that evening, not the next day as the UTC date would have it.
+pub fn today() -> String {
+    chrono::Local::now().format("%Y-%m-%d").to_string()
 }
 
-/// Today's date as `YYYY-MM-DD`, from the system clock (UTC).
-pub fn today() -> String {
-    let secs = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |d| d.as_secs());
-    let days = (secs / 86_400) as i64;
-    // Howard Hinnant's civil-from-days.
-    let z = days + 719_468;
-    let era = z.div_euclid(146_097);
-    let doe = z - era * 146_097;
-    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
-    let y = yoe + era * 400;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let d = doy - (153 * mp + 2) / 5 + 1;
-    let m = if mp < 10 { mp + 3 } else { mp - 9 };
-    let y = if m <= 2 { y + 1 } else { y };
-    format!("{y:04}-{m:02}-{d:02}")
+/// Checks a date given on the command line: `YYYY-MM-DD`, and a real day.
+pub fn parse_date(text: &str) -> Result<String, String> {
+    chrono::NaiveDate::parse_from_str(text, "%Y-%m-%d")
+        .ok()
+        .filter(|_| text.len() == 10)
+        .map(|d| d.format("%Y-%m-%d").to_string())
+        .ok_or_else(|| format!("{text} is not a date in the form YYYY-MM-DD"))
 }
 
 #[cfg(test)]
@@ -595,10 +394,11 @@ mod tests {
     }
 
     #[test]
-    fn thousands_separators() {
-        assert_eq!(thousands(1234567.4), "1,234,567");
-        assert_eq!(thousands(-587.0), "-587");
-        assert_eq!(thousands(999.0), "999");
+    fn dates_are_checked() {
+        assert_eq!(parse_date("2026-11-21").as_deref(), Ok("2026-11-21"));
+        assert!(parse_date("2026-02-30").is_err());
+        assert!(parse_date("2026-1-5").is_err());
+        assert!(parse_date("21/11/2026").is_err());
     }
 
     #[test]

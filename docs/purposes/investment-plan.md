@@ -84,8 +84,10 @@ the Treasurer and the broker, and it is kept with the approving minutes. It cont
 
 - a **cover** with the source file, the date and lines for the approving meeting;
 - **Medium_Term_Cashflow**, without rows 32–34;
-- **Schedule_of_Investments**;
-- **Changes_from_RFS**, listing each item whose amounts or years differ from the RFS over the
-  horizon, with the reason.
+- **Schedule_of_Investments**.
+
+The reasons for the Board's changes from the RFS are not part of the plan: the cover says they
+are described in the Spatac workbooks for the current and previous years (Expenditures
+column U).
 
 See [spatac-investment-plan](../tools/investment-plan.md).

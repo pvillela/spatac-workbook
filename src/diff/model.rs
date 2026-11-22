@@ -175,6 +175,9 @@ pub fn load(path: &Path, with_styles: bool) -> Result<Book, String> {
             refers_to: formula::tokenize(&dn.address()),
         });
     }
+    // Unlocked cells come from the file itself: umya loses a style's protection (protection.rs).
+    let unlocked = super::protection::unlocked_cells(path)?;
+    let none = BTreeSet::new();
     let mut sheets = Vec::new();
     for ws in wb.sheet_collection() {
         // umya files a workbook-level name under the sheet it refers to; only a name carrying a
@@ -186,18 +189,19 @@ pub fn load(path: &Path, with_styles: bool) -> Result<Book, String> {
                 refers_to: formula::tokenize(&dn.address()),
             });
         }
-        sheets.push(load_sheet(ws, with_styles));
+        let unlocked = unlocked.get(ws.name()).unwrap_or(&none);
+        sheets.push(load_sheet(ws, with_styles, unlocked));
     }
     Ok(Book { sheets, names })
 }
 
-fn load_sheet(ws: &Worksheet, with_styles: bool) -> Sheet {
+fn load_sheet(ws: &Worksheet, with_styles: bool, unlocked_cells: &BTreeSet<(u32, u32)>) -> Sheet {
     let mut cells: BTreeMap<(u32, u32), Cell> = BTreeMap::new();
     let mut arrays: Vec<(u32, u32, String)> = Vec::new();
     for c in ws.cells() {
         let row = c.coordinate().row_num();
         let col = c.coordinate().col_num();
-        let unlocked = c.style().protection().is_some_and(|p| !p.locked());
+        let unlocked = unlocked_cells.contains(&(row, col));
         let (content, cached) = if c.is_formula() {
             let fo = c.formula_obj();
             let array = fo

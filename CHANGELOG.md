@@ -7,7 +7,29 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
-## 0.1.0 - 2026-11-22
+### Changed
+
+- `spatac-investment-plan`: the Changes_from_RFS tab is gone. The cover says instead that the
+  reasons for changes from the RFS are described in the Spatac workbooks for the current and
+  previous years.
+- `spatac-investment-plan`: the cover's "Generated" date is today in the computer's own time
+  zone, not UTC; `--date YYYY-MM-DD` sets it.
+- `xlsx-diff`: neighbouring cells changed the same way across a row, or over a block, are one
+  entry, as runs down a column already were.
+- The workbook restructure (`tools/migrate/`), from the Board's review of 2026-11-21: top
+  alignment and grid borders; Settings last; Expenditures with protected identity columns, a
+  fixed Approved column, a variance row, restored comments, filtering, sorting and ▼ End rows;
+  Projected_Balances rebuilt as the RFS baseline and a what-if that validates RFS_cashflow.
+
+### Fixed
+
+- `xlsx-diff`: a cell unlocked through its cell style was read as locked when its own format
+  set `applyProtection="false"`, as LibreOffice writes it, so saving a workbook in another
+  application reported cells as newly unlocked. The unlocked state is now read from the file's
+  formats.
+- The workbook build kept no frozen panes, and lost comments on formula cells.
+
+## 0.1.0 - 2026-11-21
 
 ### Added
 

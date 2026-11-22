@@ -754,6 +754,14 @@ Rebuilt; this replaces section 4.5 where they differ.
 - `CHANGELOG.md`: 0.1.0 is dated 2026-11-21.
 - `xlsx-diff`: a sheet whose protection was turned off is reported as such; its cells are
   not reported as "Cells unlocked" unless their own Protected flag changed.
+  *As built (phase 12):* the false reports did not come from the sheet protection.
+  umya-spreadsheet drops a cell's protection, including what it inherits from its cell style,
+  when the cell's format says `applyProtection="false"`, which is how LibreOffice writes its
+  own unlocked input cells. `src/diff/protection.rs` reads the unlocked state from the file's
+  formats instead: a format's own `<protection>` decides, else its cell style's, else locked.
+- `spatac-investment-plan`: `chrono` (local date) and `xlsx-diff`: `zip` (reading the formats)
+  are declared as direct dependencies; both were already linked through umya-spreadsheet, with
+  the same features, so no crate was added to the notices.
 - `xlsx-diff`: identical changes are grouped across a row as well as down a column.
 - **Rollover of Medium_Term_Cashflow (R25)**: the manual one-column-left copy of the grid,
   carry-over and adjustment rows (rollover.md, Medium_Term_Cashflow step 2) is replaced by

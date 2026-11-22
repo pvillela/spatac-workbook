@@ -6,6 +6,9 @@ license = "MIT OR Apache-2.0"
 description = "Utilities and documentation to support Antiquary RF project tracking and investment planning."
 
 [dependencies]
+# The local date for the Investment Plan's cover, on Linux and Windows alike. Already linked
+# through umya-spreadsheet, so it adds no crate.
+chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 # Command-line parsing for both binaries.
 clap = { version = "4.5", features = ["derive"] }
 # Finds cell references in formula text, which is what lets a formula be compared after the rows
@@ -18,6 +21,10 @@ similar = "2.6"
 # reproduce the reference workbook exactly. rust_xlsxwriter models both as whole pixels and cannot
 # represent the template's 13.8pt rows or 1.39-wide spacers.
 umya-spreadsheet = "3.1.1"
+# Reads the cell formats of an .xlsx file, to find which cells are unlocked: umya-spreadsheet
+# loses protection inherited from a cell style. Already linked through umya-spreadsheet, with the
+# same features, so it adds no crate.
+zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
 
 [build-dependencies]
 # Verifies that the generated third-party notices match the dependency graph they were made from.

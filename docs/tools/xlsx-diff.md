@@ -29,8 +29,8 @@ a formatted page in VS Code, on GitHub, or in any Markdown viewer.
   - hidden rows, columns and tabs;
   - frozen panes.
 - **Cell changes:** every cell whose formula, constant or comment changed, with its address in
-  both versions and the old and new content. A change made the same way down a column (a
-  formula filled down, say) is listed once, with the range and a count.
+  both versions and the old and new content. A change made the same way to neighbouring cells
+  (a formula filled down or across, say) is listed once, with the range and a count.
 
 **Formulas are compared as written, after allowing for moved rows.** When a row is inserted,
 every formula below it, and every formula pointing past it, has its references shifted by the

@@ -8,10 +8,9 @@ use std::process::ExitCode;
 
 /// Extracts the Investment Plan from a Spatac workbook into a separate workbook.
 ///
-/// The output holds a cover sheet, the Medium_Term_Cashflow and Schedule_of_Investments tabs,
-/// and a list of changes from the Reserve Fund Study. Formulas that refer to other tabs become
-/// their values; every cell is locked. Save the source workbook (so its values are up to date)
-/// before running this.
+/// The output holds a cover sheet and the Medium_Term_Cashflow and Schedule_of_Investments tabs.
+/// Formulas that refer to other tabs become their values; every cell is locked. Save the source
+/// workbook (so its values are up to date) before running this.
 #[derive(Parser)]
 #[command(version, about, long_about)]
 struct Args {
@@ -25,6 +24,10 @@ struct Args {
     /// Replace the output file if it exists.
     #[arg(long)]
     force: bool,
+    /// The date to show as "Generated" on the cover, as YYYY-MM-DD. Defaults to today, in this
+    /// computer's time zone.
+    #[arg(long, value_parser = investment_plan::parse_date)]
+    date: Option<String>,
     /// Print the third-party notices and exit.
     #[arg(long)]
     third_party_notices: bool,
@@ -56,16 +59,13 @@ fn main() -> ExitCode {
         );
         return ExitCode::FAILURE;
     }
-    match investment_plan::extract(&source, &output, &investment_plan::today()) {
+    let date = args.date.unwrap_or_else(investment_plan::today);
+    match investment_plan::extract(&source, &output, &date) {
         Ok(s) => {
             println!("Wrote {}", s.output.display());
             println!(
                 "  {} formulas kept, {} replaced by their values",
                 s.formulas_kept, s.formulas_to_values
-            );
-            println!(
-                "  {} changes from the RFS, {} without a reason",
-                s.changes, s.changes_without_reason
             );
             ExitCode::SUCCESS
         }

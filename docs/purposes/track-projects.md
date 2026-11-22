@@ -56,9 +56,8 @@ RFS amounts after that. It is what Medium_Term_Cashflow and Projected_Balances u
 3. Write the reason in column U, in a line the Board can read ("Deferred to 2028: covered by the
    P1 refurbishment"). Details and sources go in Working notes, column V.
 
-Every item whose Revised amounts differ from the RFS in the next six years appears in the
-Investment Plan's **Changes from the RFS** list with its reason. A missing reason shows as
-REASON MISSING.
+The reasons are the record of the Board's changes from the RFS: the Investment Plan's cover
+refers readers to them.
 
 ## Adding a row
 

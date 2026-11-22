@@ -7,8 +7,8 @@
 //! - for each tab present in both: inserted, deleted and moved rows and columns, then every cell
 //!   whose formula, constant or comment changed. Formulas are compared after their references
 //!   have been rewritten through the row and column alignment, so a formula that only moved, or
-//!   whose references shifted with an inserted row, is not reported. Cells changed the same way
-//!   down a column are reported as one entry;
+//!   whose references shifted with an inserted row, is not reported. Neighbouring cells changed
+//!   the same way, down a column or across a row, are reported as one entry;
 //! - merged cells, conditional formats, data validation, sheet protection, unlocked cells,
 //!   hidden rows, columns and tabs, and frozen panes;
 //! - with [`Options::values`], recalculated results of formulas that did not change;
@@ -22,6 +22,7 @@ pub mod compare;
 pub mod formula;
 pub mod markdown;
 pub mod model;
+pub mod protection;
 
 pub use compare::{Options, Report};
 

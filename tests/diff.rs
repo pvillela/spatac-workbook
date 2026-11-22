@@ -112,6 +112,29 @@ fn filled_formula_change_is_one_entry() {
 }
 
 #[test]
+fn change_across_a_row_or_a_block_is_one_entry() {
+    let mut new = base();
+    let ws = new.sheet_mut(0).unwrap();
+    // The same constant across D1:F1, and one formula filled across and down H2:J4.
+    for c in 4..=6u32 {
+        ws.cell_mut((c, 1)).set_value_string("n/a");
+    }
+    for r in 2..=4u32 {
+        for c in 8..=10u32 {
+            ws.cell_mut((c, r)).set_formula(format!("$A{r}*2"));
+        }
+    }
+    let r = run("across", &base(), &new, Options::default());
+    let s = sheet(&r, "Data");
+    let entries: Vec<(Option<&str>, u32)> = s
+        .cells
+        .iter()
+        .map(|c| (c.new.as_deref(), c.count))
+        .collect();
+    assert_eq!(entries, [(Some("D1:F1"), 3), (Some("H2:J4"), 9)], "{s:#?}");
+}
+
+#[test]
 fn cross_sheet_reference_follows_an_insert_in_the_other_sheet() {
     let mut old = base();
     let other = old.new_sheet("Report").unwrap();

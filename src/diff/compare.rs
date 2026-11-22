@@ -110,7 +110,7 @@ impl ChangeKind {
     }
 }
 
-/// One cell's change, or a run of cells down a column that changed in the same way.
+/// One cell's change, or a block of neighbouring cells that changed in the same way.
 #[derive(Clone, Debug)]
 pub struct CellChange {
     pub kind: ChangeKind,
@@ -997,50 +997,133 @@ fn describe_content(cell: &Cell) -> String {
     }
 }
 
-/// Groups single-cell entries that run down a column, changed in the same way.
+/// A rectangle of cells: (first row, first column, last row, last column).
+type Rect = (u32, u32, u32, u32);
+
+fn rect_name(r: Option<Rect>) -> Option<String> {
+    r.map(|(r1, c1, r2, c2)| {
+        if (r1, c1) == (r2, c2) {
+            cell_name(r1, c1)
+        } else {
+            format!("{}:{}", cell_name(r1, c1), cell_name(r2, c2))
+        }
+    })
+}
+
+/// What joins two runs across a row: kind, shape, and the old and new (first row, last row,
+/// column) at which one ends or the other must start.
+type RunKey = (u8, String, Option<(u32, u32, u32)>, Option<(u32, u32, u32)>);
+
+/// A run of cells changed in the same way, while grouping.
+struct Run {
+    raw: Raw,
+    old: Option<Rect>,
+    new: Option<Rect>,
+    count: u32,
+}
+
+/// Groups single-cell entries changed in the same way: first into runs down a column, then runs
+/// of the same rows in adjacent columns into one rectangle, so that a change copied across a
+/// row is one entry too.
 fn group(mut raws: Vec<Raw>) -> Vec<CellChange> {
     let pos = |r: &Raw| r.new.or(r.old).unwrap_or((0, 0));
     raws.sort_by_key(|r| {
         let (row, col) = pos(r);
         (col, row, r.kind as u8)
     });
-    let mut out: Vec<(CellChange, Raw)> = Vec::new();
+    let cell = |at: Option<(u32, u32)>| at.map(|(r, c)| (r, c, r, c));
+
+    // Down each column.
+    let mut runs: Vec<Run> = Vec::new();
     for raw in raws {
-        if let Some((last, prev)) = out.last_mut() {
-            let follows = |a: Option<(u32, u32)>, b: Option<(u32, u32)>| match (a, b) {
-                (Some((r1, c1)), Some((r2, c2))) => c1 == c2 && r2 == r1 + 1,
+        if let Some(prev) = runs.last_mut() {
+            let follows = |range: Option<Rect>, at: Option<(u32, u32)>| match (range, at) {
+                (Some((_, c1, r2, c2)), Some((r, c))) => c1 == c2 && c == c2 && r == r2 + 1,
                 (None, None) => true,
                 _ => false,
             };
-            if prev.kind == raw.kind
-                && prev.shape == raw.shape
+            if prev.raw.kind == raw.kind
+                && prev.raw.shape == raw.shape
                 && follows(prev.old, raw.old)
                 && follows(prev.new, raw.new)
             {
-                last.count += 1;
-                let extend = |range: &mut Option<String>, at: Option<(u32, u32)>| {
-                    if let (Some(text), Some((r, c))) = (range.as_mut(), at) {
-                        let start = text.split(':').next().unwrap_or_default().to_owned();
-                        *text = format!("{start}:{}", cell_name(r, c));
-                    }
-                };
-                extend(&mut last.old, raw.old);
-                extend(&mut last.new, raw.new);
-                *prev = raw;
+                prev.count += 1;
+                if let (Some(r), Some((row, _))) = (prev.old.as_mut(), raw.old) {
+                    r.2 = row;
+                }
+                if let (Some(r), Some((row, _))) = (prev.new.as_mut(), raw.new) {
+                    r.2 = row;
+                }
                 continue;
             }
         }
-        let change = CellChange {
-            kind: raw.kind,
-            old: raw.old.map(|(r, c)| cell_name(r, c)),
-            new: raw.new.map(|(r, c)| cell_name(r, c)),
+        runs.push(Run {
+            old: cell(raw.old),
+            new: cell(raw.new),
             count: 1,
-            before: raw.before.clone(),
-            after: raw.after.clone(),
-        };
-        out.push((change, raw));
+            raw,
+        });
     }
-    out.into_iter().map(|(c, _)| c).collect()
+
+    // Across a row: a run joins the run in the column to its left with the same rows.
+    let first = |r: &Run| r.new.or(r.old).unwrap_or_default();
+    runs.sort_by_key(|r| {
+        let (r1, c1, r2, _) = first(r);
+        (r1, r2, c1, r.raw.kind as u8)
+    });
+    let mut out: Vec<Run> = Vec::new();
+    // Where each group ends, so the run starting in the next column can find it.
+    let mut open: HashMap<RunKey, usize> = HashMap::new();
+    let ends = |r: Option<Rect>| r.map(|(r1, _, r2, c2)| (r1, r2, c2));
+    let before = |r: Option<Rect>| r.map(|(r1, c1, r2, _)| (r1, r2, c1.wrapping_sub(1)));
+    for run in runs {
+        let key = (
+            run.raw.kind as u8,
+            run.raw.shape.clone(),
+            before(run.old),
+            before(run.new),
+        );
+        if let Some(i) = open.remove(&key) {
+            let g = &mut out[i];
+            g.count += run.count;
+            if let (Some(r), Some(n)) = (g.old.as_mut(), run.old) {
+                r.3 = n.3;
+            }
+            if let (Some(r), Some(n)) = (g.new.as_mut(), run.new) {
+                r.3 = n.3;
+            }
+            let k = (
+                g.raw.kind as u8,
+                g.raw.shape.clone(),
+                ends(g.old),
+                ends(g.new),
+            );
+            open.insert(k, i);
+            continue;
+        }
+        let k = (
+            run.raw.kind as u8,
+            run.raw.shape.clone(),
+            ends(run.old),
+            ends(run.new),
+        );
+        open.insert(k, out.len());
+        out.push(run);
+    }
+    out.sort_by_key(|r| {
+        let (r1, c1, _, _) = first(r);
+        (c1, r1, r.raw.kind as u8)
+    });
+    out.into_iter()
+        .map(|r| CellChange {
+            kind: r.raw.kind,
+            old: rect_name(r.old),
+            new: rect_name(r.new),
+            count: r.count,
+            before: r.raw.before,
+            after: r.raw.after,
+        })
+        .collect()
 }
 
 /// Consecutive runs in an ascending list.

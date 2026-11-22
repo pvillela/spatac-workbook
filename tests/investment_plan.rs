@@ -131,9 +131,7 @@ fn run(test: &str) -> Workbook {
     let src: PathBuf = d.join("Spatac-20261121.xlsx");
     let out = d.join("InvestmentPlan-20261121.xlsx");
     umya_spreadsheet::writer::xlsx::write(&spatac_shaped(), &src).unwrap();
-    let summary = extract(&src, &out, "2026-11-21").unwrap();
-    assert_eq!(summary.changes, 1, "{summary:?}");
-    assert_eq!(summary.changes_without_reason, 0);
+    extract(&src, &out, "2026-11-21").unwrap();
     umya_spreadsheet::reader::xlsx::read(&out).unwrap()
 }
 
@@ -143,12 +141,7 @@ fn tabs_and_order() {
     let names: Vec<&str> = wb.sheet_collection().iter().map(|s| s.name()).collect();
     assert_eq!(
         names,
-        [
-            "Cover",
-            "Medium_Term_Cashflow",
-            "Schedule_of_Investments",
-            "Changes_from_RFS"
-        ]
+        ["Cover", "Medium_Term_Cashflow", "Schedule_of_Investments"]
     );
     let cover = wb.sheet_by_name("Cover").unwrap();
     let text: Vec<String> = cover
@@ -159,6 +152,13 @@ fn tabs_and_order() {
     assert!(text.iter().any(|t| t == "Spatac-20261121.xlsx"), "{text:?}");
     assert!(text.iter().any(|t| t == "2026-11-21"));
     assert!(text.iter().any(|t| t == "2026"));
+    assert!(
+        text.iter().any(|t| t.contains(
+            "reasons for those changes are described in the Spatac workbooks for the current and \
+             previous years"
+        )),
+        "{text:?}"
+    );
 }
 
 #[test]
@@ -189,17 +189,6 @@ fn rows_outside_the_plan_are_dropped() {
     let mtc = wb.sheet_by_name("Medium_Term_Cashflow").unwrap();
     assert!(mtc.cell("A20").is_none_or(|c| c.value().is_empty()));
     assert!(mtc.cell("B20").is_none_or(|c| c.value().is_empty()));
-}
-
-#[test]
-fn changes_list_the_move_with_its_reason() {
-    let wb = run("changes");
-    let ch = wb.sheet_by_name("Changes_from_RFS").unwrap();
-    assert_eq!(ch.value("A5"), "1.1");
-    assert_eq!(ch.value("C5"), "2027: 100");
-    assert_eq!(ch.value("D5"), "2028: 100");
-    assert_eq!(ch.value("F5"), "Deferred one year");
-    assert_eq!(ch.value("A6"), "", "the unchanged item is not listed");
 }
 
 #[test]

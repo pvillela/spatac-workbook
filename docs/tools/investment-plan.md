@@ -13,6 +13,8 @@ name. Options:
 
 - `-o FILE`: write somewhere else, or when the source's name has no date.
 - `--force`: replace an existing output file.
+- `--date YYYY-MM-DD`: the date to show as "Generated" on the cover. Without it, the cover shows
+  today's date in the computer's own time zone.
 
 **Save the workbook before running it.** The tool reads the values the workbook last
 calculated. It never changes the source.
@@ -21,10 +23,9 @@ calculated. It never changes the source.
 
 | Tab | Content |
 |---|---|
-| Cover | What the plan is, the source file, the date generated and the base year, with lines to record the meeting that approved it and the minutes reference. |
+| Cover | What the plan is, the source file, the date generated and the base year, with lines to record the meeting that approved it and the minutes reference. It says that the reasons for changes from the RFS are described in the Spatac workbooks for the current and previous years. |
 | Medium_Term_Cashflow | The cash section and the RFS-versus-Revised comparison. |
 | Schedule_of_Investments | Held and planned investments, with their cash flows by year. |
-| Changes_from_RFS | Every item whose Revised amounts differ from the RFS over the six-year horizon: the RFS years and amounts, the revised ones, the net change and the reason. A missing reason shows as **REASON MISSING**. |
 
 Formulas that refer only to the two cash-flow tabs stay formulas, so totals can still be traced.
 Formulas that refer to any other tab become their values. Every cell is locked and every tab
@@ -35,11 +36,7 @@ protected, without a password.
 ```
 Wrote InvestmentPlan-20261121.xlsx
   1377 formulas kept, 61 replaced by their values
-  55 changes from the RFS, 0 without a reason
 ```
-
-Before sending the plan out, make the last number zero: give every changed item a reason in
-Expenditures column U, save, and extract again.
 
 ## When it refuses
 
