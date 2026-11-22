@@ -20,6 +20,7 @@ import uno  # noqa: F401  (registers the com.sun.star import hook)
 from com.sun.star.table import CellRangeAddress
 from com.sun.star.util import CellProtection
 
+from reasons import reason_for
 from uno_session import Session
 
 BASE_YEAR = 2026
@@ -627,6 +628,26 @@ class Migration:
         b.values("R%d:S%d" % (first, last), [[n[2], n[3]] for n in notes])
         b.values("V%d:V%d" % (first, last), [[n[4]] for n in notes])
         restored = self.restore_estimate_formulas(b, first, last)
+
+        # Reasons for change, inferred from the old Working notes (reasons.py); a doubt becomes a
+        # comment on the reason cell.
+        written = doubts = 0
+        for k, row in enumerate(identity):
+            r = first + k
+            label = trim(lo_text(row[2])) or trim(lo_text(row[4]))
+            found = reason_for(trim(lo_text(row[1])), label)
+            if found is None:
+                continue
+            reason, doubt = found
+            b.value("U%d" % r, reason)
+            written += 1
+            if doubt:
+                b.comment("U%d" % r, doubt)
+                doubts += 1
+        self.notes.append(
+            "Expenditures: %d reasons for change inferred from the Working notes; %d carry a "
+            "comment with a doubt to resolve." % (written, doubts)
+        )
         self.notes.append(
             "Expenditures: %d rows marked as Spatac rows (no RFS item). Explicit zeros written "
             "where a blank used to mean zero: %d Latest, %d next-year Late-year, %d year-after "
