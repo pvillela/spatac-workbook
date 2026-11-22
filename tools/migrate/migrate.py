@@ -13,6 +13,7 @@ The migration reproduces today's results. Known bugs are preserved here and fixe
 """
 
 import argparse
+import re
 import sys
 
 import uno  # noqa: F401  (registers the com.sun.star import hook)
@@ -389,6 +390,9 @@ class Migration:
     def read_source(self, src):
         sh = src.Sheets
         self.fs = read_block(sh.getByName("fvalues_spatac"), "A1:AP255")
+        self.fs_formulas = [
+            list(r) for r in sh.getByName("fvalues_spatac").getCellRangeByName("A1:AP255").getFormulaArray()
+        ]
         self.fs_comments = read_annotations(sh.getByName("fvalues_spatac"))
         self.mtc = read_block(sh.getByName("Medium_Term_Cashflow"), "A1:M69")
         self.inv = read_block(sh.getByName("Schedule_of_Investments"), "A1:T46")
@@ -622,11 +626,12 @@ class Migration:
         b.values("O%d:P%d" % (first, last), [[n[0], n[1]] for n in notes])
         b.values("R%d:S%d" % (first, last), [[n[2], n[3]] for n in notes])
         b.values("V%d:V%d" % (first, last), [[n[4]] for n in notes])
+        restored = self.restore_estimate_formulas(b, first, last)
         self.notes.append(
             "Expenditures: %d rows marked as Spatac rows (no RFS item). Explicit zeros written "
             "where a blank used to mean zero: %d Latest, %d next-year Late-year, %d year-after "
-            "Late-year estimates. Formulas in old column L (=MAX(I,J), =J) and in N30, O70, Q70, "
-            "O208 became their values." % (spatac_rows, zero_rule["M"], zero_rule["P"], zero_rule["S"])
+            "Late-year estimates. %d estimate formulas carried over, rewritten for the new "
+            "columns." % (spatac_rows, zero_rule["M"], zero_rule["P"], zero_rule["S"], restored)
         )
 
         formulas = []
@@ -737,6 +742,42 @@ class Migration:
         define(doc, "Exp_RevisedYears", ref("Expenditures", "%s6:%s6" % (rev_cols[0], rev_cols[-1])))
 
         self.freeze(sheet, colnum("F") - 1, 6)
+
+    def restore_estimate_formulas(self, b, first, last):
+        """Writes the old estimate formulas into their new cells, with their references
+        rewritten: the old input columns I-L become J-M, the old pasted 2025 and 2026 RFS
+        columns (G, H) become lookups of that item's RFS amount for that year, and the old
+        inflation cell becomes RFS_ShortInflation. A reference to anything else stops the
+        migration, rather than carrying over a formula that would point at the wrong cell."""
+        newcol = {"I": "J", "J": "K", "K": "L", "L": "M", "N": "O", "O": "R", "P": "P", "Q": "S"}
+        rfs_year = {"G": 2025, "H": 2026}
+        inflation = re.compile(r"\$?'?cashflow_spatac'?\.\$?K\$?7")
+        cell = re.compile(r"(?<![A-Za-z_.$])\$?([A-Z]{1,2})\$?(\d+)(?![\d(])")
+        count = 0
+        for r in range(first, last + 1):
+            old = r + 2
+            for letters, target in newcol.items():
+                f = self.fs_formulas[old - 1][colnum(letters) - 1]
+                if not f.startswith("="):
+                    continue
+                text = inflation.sub("RFS_ShortInflation", f)
+
+                def rewrite(m):
+                    c, row = m.group(1), int(m.group(2))
+                    if row != old:
+                        raise RuntimeError("fvalues_spatac!%s%d refers to another row: %s" % (letters, old, f))
+                    if c in rfs_year:
+                        return (
+                            "IFERROR(INDEX(RFS_Fv_Values;MATCH($G%d;RFS_Fv_Key;0);MATCH(%d;RFS_Fv_Years;0));0)"
+                            % (r, rfs_year[c])
+                        )
+                    if c in newcol:
+                        return "%s%d" % (newcol[c], r)
+                    raise RuntimeError("fvalues_spatac!%s%d refers to column %s: %s" % (letters, old, c, f))
+
+                b.formula("%s%d" % (target, r), cell.sub(rewrite, text))
+                count += 1
+        return count
 
     def freeze(self, sheet, cols, rows):
         ctrl = self.doc.CurrentController

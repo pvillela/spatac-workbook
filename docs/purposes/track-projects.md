@@ -31,6 +31,11 @@ Estimates are entered **only for items whose estimate changed**. Type the new fu
 the difference. A blank means no change. Type **0** to record that an item will cost nothing
 that year, for example because it was deferred.
 
+An estimate can be a formula as well as a number, when that is how it was worked out. For
+example, `=MAX(J7,K7)` keeps the Latest estimate at the approved amount until actual spending
+exceeds it, then follows actual spending. A cell holding a formula counts as entered, even when
+the formula's result is zero.
+
 The **Revised** block takes the three Current estimate columns for the first three years and the
 RFS amounts after that. It is what Medium_Term_Cashflow and Projected_Balances use.
 

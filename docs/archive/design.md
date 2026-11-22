@@ -87,6 +87,9 @@ Measured in this devcontainer:
 
 ### 3.5 Inputs and protection (Q6)
 
+- An input cell may hold a formula as well as a number: a formula is how a spreadsheet records
+  how an amount was worked out. "Blank" in the Current estimate rules means an empty cell.
+  (An earlier draft said estimate cells hold no formulas; the user overruled it after phase 7.)
 - Input cells use a named `Input` cell style and are unlocked. Computed columns that sit
   next to inputs use a distinct `Calculated` style.
 - Sheets are protected **without a password**, to prevent accidental edits only.
@@ -160,9 +163,10 @@ Removed:
 - The item list is typed, not formula-generated, so inputs stay attached to their rows
   (Q35).
 - Green conditional-format row highlighting is removed.
-- Migration of today's `=MAX(I,J)` / `=J` formulas in column L: wherever their value
-  differs from the fallback rule, it becomes a typed Latest estimate. Results are
-  preserved.
+- The estimate formulas of the old sheet are carried over with their references rewritten:
+  column L's `=MAX(I,J)` / `=J` become `=MAX(J,K)` / `=K` in the Latest estimate; N30, O70 and
+  Q70 look up the item's RFS amount for the year they named (2025 or 2026) instead of the
+  pasted RFS columns; O208 keeps its constant expression. Results are preserved.
 - Usability on laptop screens shared over Zoom is to be judged by the user after the
   build (Q45). If it fails, the fallback is a separate "Meeting view" tab.
 

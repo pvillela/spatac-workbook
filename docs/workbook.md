@@ -51,7 +51,8 @@ a year: see [January rollover](procedures/rollover.md).
 On Expenditures, the Mid-year, Latest and Late-year estimate columns hold an entry only for
 items whose estimate changed:
 
-- Type the **new full amount**, never a difference.
+- Type the **new full amount**, never a difference. It can be a formula, such as
+  `=MAX(J7,K7)`.
 - A **blank** cell means "no change": the item keeps its previous estimate.
 - A **0** means the item is now expected to cost nothing that year, for example because it was
   deferred.
