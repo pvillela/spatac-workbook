@@ -16,7 +16,7 @@ show. Copy them while they still show the old years, which means before changing
 
 ## Expenditures
 
-1. **Approved for the new year.** Copy the next-year **Current estimate** (column Q, rows 8–251)
+1. **Approved for the new year.** Copy the next-year **Current estimate** (column Q, from row 8 down to the row above ▼ End)
    and paste **values only** into **Approved** (column J).
    - Excel: Paste Special › Values.
    - LibreOffice: Paste Special › Values Only.
@@ -45,8 +45,11 @@ Change **Base year** (B4) to the new year. Every year heading and RFS lookup mov
 
 ## Schedule_of_Investments
 
-1. For each investment that matured last year, clear its yellow cells (A–E and G).
-2. Type each investment bought last year into an empty yellow row.
+1. For each investment that matured last year, clear its yellow cells (A–E and G), or delete
+   its row.
+2. Type each investment bought last year into an empty yellow row. If none is left, insert rows
+   just above the grey **▼ End of held investments** row and copy the formulas in F and H–X
+   from the row above. Never delete the Held label row or the ▼ End row.
 3. Update the "as at" date in the title (A1).
 
 ## Projected_Balances

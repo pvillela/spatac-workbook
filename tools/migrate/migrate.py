@@ -5,17 +5,20 @@ Usage (LibreOffice's bundled Python carries the `uno` module):
     /opt/libreoffice26.2/program/python tools/migrate/migrate.py SOURCE.xlsx OUTPUT.xlsx
 
 SOURCE is the pre-restructure workbook (Spatac-20261121.xlsx). It is opened read-only; nothing is
-written to it. OUTPUT is a new workbook built from scratch, with the vendor RFS tabs copied across
+written to it. OUTPUT is a new workbook, built from scratch, with the vendor RFS tabs copied across
 and every Spatac tab rebuilt with defined names, input styles and formulas that follow the design.
+OUTPUT must not exist yet: the build never overwrites a file.
 
 The migration reproduces today's results. Known bugs are preserved here and fixed separately
 (phase 4, `--fix` options).
 """
 
 import argparse
+import os
 import posixpath
 import re
 import sys
+import tempfile
 import xml.etree.ElementTree as ET
 import zipfile
 
@@ -48,6 +51,23 @@ GRID_WIDTH = 26
 GRID_STYLE = 1
 GRID_COLOR = 0x666666
 VERT_TOP = 1  # com.sun.star.table.CellVertJustify.TOP
+
+# The Expenditures item sort key (design 13.5). The item number (text, e.g. 5.3.1a) gets four
+# extra dots so that each FIND finds one; each part becomes its digits padded to four, then its
+# letter suffix. Missing parts are empty, so 5.3 sorts before 5.3.1.
+_PART = 'IF({s}="";"";"."&RIGHT("0000"&LEFT({s};LEN({s})-ISERROR(VALUE(RIGHT({s};1))));4)&MID({s};LEN({s})-ISERROR(VALUE(RIGHT({s};1)))+1;9))'
+# LET names must not look like cell addresses (p1, s1 would be cells).
+_WORDS = ["one", "two", "three", "four"]
+SORT_KEY = (
+    '=IF(TRIM($B{r}&"")="";"";LET(rest_zero;TRIM($B{r}&"")&"....";'
+    + "".join(
+        "pos_{w};FIND(\".\";rest_{p});part_{w};LEFT(rest_{p};pos_{w}-1);rest_{w};MID(rest_{p};pos_{w}+1;99);".format(
+            w=w, p=(["zero"] + _WORDS)[i]
+        )
+        for i, w in enumerate(_WORDS)
+    )
+    + "MID(" + "&".join(_PART.format(s="part_" + w) for w in _WORDS) + ";2;99)))"
+)
 
 # Red negatives, as the user set on the Medium_Term_Cashflow variance rows.
 MONEY_RED = "#,##0;[RED]-#,##0"
@@ -207,6 +227,33 @@ def define(doc, name, content):
     names.addNewByName(name, content, origin, 0)
 
 
+def allow_autofilter(src, dst, sheet_names):
+    """Copies the .xlsx `src` to `dst`, letting the AutoFilter be used on the named protected
+    tabs (OOXML sheetProtection autoFilter="false")."""
+    with zipfile.ZipFile(src) as z:
+        book = ET.fromstring(z.read("xl/workbook.xml"))
+        rels = ET.fromstring(z.read("xl/_rels/workbook.xml.rels"))
+        main = "http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+        rid = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
+        target = {r.get("Id"): r.get("Target") for r in rels}
+        parts = set()
+        for sh in book.find("{%s}sheets" % main):
+            if sh.get("name") in sheet_names:
+                parts.add("xl/" + target[sh.get(rid)].lstrip("/").replace("xl/", "", 1))
+        if len(parts) != len(sheet_names):
+            raise RuntimeError("tabs not found: %s" % sheet_names)
+        with zipfile.ZipFile(dst, "x", zipfile.ZIP_DEFLATED) as out:
+            for info in z.infolist():
+                data = z.read(info.filename)
+                if info.filename in parts:
+                    text = data.decode("utf-8")
+                    new, n = re.subn(r"<sheetProtection ([^>]*?)/>", r'<sheetProtection \1 autoFilter="false"/>', text)
+                    if n != 1 or "autoFilter=" in re.search(r"<sheetProtection [^>]*?/>", text).group(0):
+                        raise RuntimeError("unexpected sheet protection in %s" % info.filename)
+                    data = new.encode("utf-8")
+                out.writestr(info, data)
+
+
 def ref(sheet, rng):
     """Absolute Calc reference: ref('Settings', 'B3') -> $Settings.$B$3."""
     def absolute(part):
@@ -358,7 +405,13 @@ class Migration:
         self.order_and_protect()
 
         doc.calculateAll()
-        self.s.save_xlsx(doc, self.out_path)
+        # LibreOffice cannot set the "use AutoFilter" protection option through its API, so the
+        # file is saved to a temporary path and written to the output once, with the option
+        # set (design 13.5).
+        with tempfile.TemporaryDirectory(prefix="spatac-migrate-") as tmp:
+            saved = os.path.join(tmp, "out.xlsx")
+            self.s.save_xlsx(doc, saved)
+            allow_autofilter(saved, self.out_path, ["Expenditures"])
         doc.close(True)
         src.close(True)
         return self.notes
@@ -585,9 +638,22 @@ class Migration:
         doc.Sheets.insertNewByName("Expenditures", 2)
         sheet = doc.Sheets.getByName("Expenditures")
         b = Builder(doc, sheet)
-        # Rows: 3 vendor totals, 4 totals, 5 variance vs RFS, 6 provenance notes, 7 headers.
-        hdr = 7
-        first, last = 8, 251  # data rows (old 9..252)
+        # Rows: 3 vendor totals, 4 totals, 5 variance vs RFS, 6 provenance notes (and the years
+        # of the RFS and Revised blocks), 7 headers, then the items and the ▼ End row.
+        # The row-block names run from the header row to the ▼ End row, so a row inserted just
+        # below the header or just above ▼ End is inside them (design 13.5). The years sit in
+        # row 6 rather than in the header row, so that no name takes in a number that is not
+        # an amount.
+        hdr, yr = 7, 6
+        first = 8
+        # The items: old rows 9 onward, through the last one in use. The old trailing blank
+        # rows are dropped; new items are inserted above ▼ End.
+        old_last = max(
+            old for old in range(9, 253) if any(not is_blank(self.fs_cell(c, old)) for c in "ABCDE")
+        )
+        last = old_last - 1
+        end = last + 1  # the ▼ End row
+        sort_col = col(colnum("BZ") + 1)  # CA: the item sort key
         rfs0, rev0 = colnum("W"), colnum("AY")
         rfs_cols = [col(rfs0 + k) for k in range(RFS_YEARS)]
         rev_cols = [col(rev0 + k) for k in range(RFS_YEARS)]
@@ -612,18 +678,18 @@ class Migration:
         for k, c in enumerate(rfs_cols):
             b.formula(
                 "%s3" % c,
-                "=IFERROR(-INDEX(RFS_Fv_Totals;1;MATCH(%s$%d;RFS_Fv_Years;0));0)" % (c, hdr),
+                "=IFERROR(-INDEX(RFS_Fv_Totals;1;MATCH(%s$%d;RFS_Fv_Years;0));0)" % (c, yr),
             )
         # Totals only where they mean something: the change-only estimate columns (L, M, O, P,
         # R, S) hold amounts for changed items only, so they get none (design 13.4).
         for c in ["J", "K", "N", "Q", "T"] + rfs_cols + rev_cols:
-            b.formula("%s4" % c, "=SUM(%s%d:%s%d)" % (c, first, c, last))
+            b.formula("%s4" % c, "=SUM(%s%d:%s%d)" % (c, hdr, c, end))
         # Variance: each Current estimate and Revised total against the RFS total of its year.
         rfs_total = "INDEX($%s$4:$%s$4;MATCH(%%s;Exp_RFSYears;0))" % (rfs_cols[0], rfs_cols[-1])
         for c, k in (("N", 0), ("Q", 1), ("T", 2)):
             b.formula("%s5" % c, "=%s4-%s" % (c, rfs_total % ("Cfg_BaseYear+%d" % k)))
         for c in rev_cols:
-            b.formula("%s5" % c, "=%s4-%s" % (c, rfs_total % ("%s$%d" % (c, hdr))))
+            b.formula("%s5" % c, "=%s4-%s" % (c, rfs_total % ("%s$%d" % (c, yr))))
         b.fmt("J3:BZ5", MONEY_ZERO)
         for c in ["N", "Q", "T"]:
             b.fmt("%s5" % c, MONEY_RED)
@@ -676,13 +742,18 @@ class Migration:
         offset = {"J": 0, "K": 0, "L": 0, "M": 0, "N": 0, "O": 1, "P": 1, "Q": 1, "R": 2, "S": 2, "T": 2}
         for c, t in year_headers.items():
             b.formula("%s%d" % (c, hdr), '=(Cfg_BaseYear+%d)&" %s"' % (offset[c], t))
-        b.formula("W%d" % hdr, "=Cfg_BaseYear")
-        b.formula("AY%d" % hdr, "=Cfg_BaseYear")
+        b.formula("W%d" % yr, "=Cfg_BaseYear")
+        b.formula("AY%d" % yr, "=Cfg_BaseYear")
         for k in range(1, RFS_YEARS):
-            b.formula("%s%d" % (rfs_cols[k], hdr), "=%s%d+1" % (rfs_cols[k - 1], hdr))
-            b.formula("%s%d" % (rev_cols[k], hdr), "=%s%d+1" % (rev_cols[k - 1], hdr))
-        b.style("A%d:BZ%d" % (hdr, hdr), "Header")
-        b.wrap("A%d:BZ%d" % (hdr, hdr))
+            b.formula("%s%d" % (rfs_cols[k], yr), "=%s%d+1" % (rfs_cols[k - 1], yr))
+            b.formula("%s%d" % (rev_cols[k], yr), "=%s%d+1" % (rev_cols[k - 1], yr))
+        for k in range(RFS_YEARS):
+            b.formula("%s%d" % (rfs_cols[k], hdr), '="RFS "&%s$%d' % (rfs_cols[k], yr))
+            b.formula("%s%d" % (rev_cols[k], hdr), '="Revised "&%s$%d' % (rev_cols[k], yr))
+        b.value("%s%d" % (sort_col, hdr), "Item sort key")
+        b.style("A%d:%s%d" % (hdr, sort_col, hdr), "Header")
+        b.style("W%d:BZ%d" % (yr, yr), "Header")
+        b.wrap("A%d:%s%d" % (hdr, sort_col, hdr))
         b.height(hdr, 42)
 
         # Data rows.
@@ -792,7 +863,7 @@ class Migration:
             "%s%d:%s%d" % (rfs_cols[0], first, rfs_cols[-1], last),
             [
                 [
-                    "=IFERROR(INDEX(RFS_Fv_Values;MATCH($G{r};RFS_Fv_Key;0);MATCH({c}${h};RFS_Fv_Years;0));0)".format(r=r, c=c, h=hdr)
+                    "=IFERROR(INDEX(RFS_Fv_Values;MATCH($G{r};RFS_Fv_Key;0);MATCH({c}${h};RFS_Fv_Years;0));0)".format(r=r, c=c, h=yr)
                     for c in rfs_cols
                 ]
                 for r in range(first, last + 1)
@@ -803,7 +874,7 @@ class Migration:
             [
                 [
                     "=IF({c}${h}=Cfg_BaseYear;$N{r};IF({c}${h}=Cfg_BaseYear+1;$Q{r};IF({c}${h}=Cfg_BaseYear+2;$T{r};{f}{r})))".format(
-                        r=r, c=c, f=f, h=hdr
+                        r=r, c=c, f=f, h=yr
                     )
                     for c, f in zip(rev_cols, rfs_cols)
                 ]
@@ -823,7 +894,7 @@ class Migration:
             b.style("%s%d:%s%d" % (c, first, c, last), "Calculated")
         b.fmt("J%d:T%d" % (first, last), MONEY)
         b.fmt("%s%d:%s%d" % (rfs_cols[0], first, rev_cols[-1], last), MONEY)
-        b.fmt("W%d:BZ%d" % (hdr, hdr), YEAR)
+        b.fmt("W%d:BZ%d" % (yr, yr), YEAR)
         widths = {"A": 6, "B": 8, "C": 34, "D": 10, "E": 24, "F": 6, "G": 20, "H": 16, "I": 8, "U": 30, "V": 40}
         for c in "JKLMNOPQRST":
             widths[c] = 11
@@ -864,10 +935,32 @@ class Migration:
                 text = "[Comment from old column %s] %s" % (letters, text)
             b.comment("%s%d" % (target, new_row), text)
 
-        # Names.
+        # Item sort key (design 13.5): the item number with each part padded, so that a text
+        # sort puts 2.1 before 10.1 and 5.3.1a after 5.3.1. Up to four parts, each a number
+        # of up to four digits with an optional letter suffix.
+        b.formulas(
+            "%s%d:%s%d" % (sort_col, first, sort_col, last),
+            [[SORT_KEY.format(r=r)] for r in range(first, last + 1)],
+        )
+        b.style("%s%d:%s%d" % (sort_col, first, sort_col, last), "Calculated")
+        b.width(sort_col, 14)
+        b.group_cols(sort_col, sort_col, collapse=True)
+
+        # The ▼ End row: inside every row-block name, no amounts and no sort keys, so any sort
+        # leaves it at the bottom.
+        b.value("C%d" % end, "▼ End of items: insert new rows above this line")
+        b.fill("A%d:%s%d" % (end, sort_col, end), SEPARATOR_COLOR)
+        b.bold("C%d" % end)
+
+        # AutoFilter on the header row, usable while the tab is protected (allow_autofilter).
+        udb = doc.getPropertyValue("UnnamedDatabaseRanges")
+        udb.setByTable(b.cell("A%d:%s%d" % (hdr, sort_col, end)).RangeAddress)
+        udb.getByTable(sheet.RangeAddress.Sheet).AutoFilter = True
+
+        # Names: from the header row to the ▼ End row.
         def name(n, letters_from, letters_to=None):
             letters_to = letters_to or letters_from
-            define(doc, n, ref("Expenditures", "%s%d:%s%d" % (letters_from, first, letters_to, last)))
+            define(doc, n, ref("Expenditures", "%s%d:%s%d" % (letters_from, hdr, letters_to, end)))
 
         for n, c in (
             ("Exp_RowNumber", "A"), ("Exp_Item", "B"), ("Exp_Element", "C"), ("Exp_GL", "D"),
@@ -875,13 +968,13 @@ class Migration:
             ("Exp_Check", "I"), ("Exp_Approved", "J"), ("Exp_Actual", "K"), ("Exp_MidEst", "L"),
             ("Exp_LateEst", "M"), ("Exp_Current", "N"), ("Exp_MidEst1", "O"), ("Exp_LateEst1", "P"),
             ("Exp_Current1", "Q"), ("Exp_MidEst2", "R"), ("Exp_LateEst2", "S"), ("Exp_Current2", "T"),
-            ("Exp_Reason", "U"), ("Exp_Notes", "V"),
+            ("Exp_Reason", "U"), ("Exp_Notes", "V"), ("Exp_SortKey", sort_col),
         ):
             name(n, c)
         name("Exp_RFS", rfs_cols[0], rfs_cols[-1])
         name("Exp_Revised", rev_cols[0], rev_cols[-1])
-        define(doc, "Exp_RFSYears", ref("Expenditures", "%s%d:%s%d" % (rfs_cols[0], hdr, rfs_cols[-1], hdr)))
-        define(doc, "Exp_RevisedYears", ref("Expenditures", "%s%d:%s%d" % (rev_cols[0], hdr, rev_cols[-1], hdr)))
+        define(doc, "Exp_RFSYears", ref("Expenditures", "%s%d:%s%d" % (rfs_cols[0], yr, rfs_cols[-1], yr)))
+        define(doc, "Exp_RevisedYears", ref("Expenditures", "%s%d:%s%d" % (rev_cols[0], yr, rev_cols[-1], yr)))
 
         # Frozen through column H and the header row, as in the review copy.
         self.freeze(sheet, colnum("H"), hdr)
@@ -1102,6 +1195,10 @@ class Migration:
         b = Builder(doc, sheet)
         yc = [col(colnum("N") + k) for k in range(SCHEDULE_YEARS)]  # N..X
         held0, held1 = 7, 7 + HELD_ROWS - 1  # 7..46
+        # Block boundaries (design 13.5): the "Held" label row above the first held investment
+        # and the ▼ End row below the last are inside the Held names, so a row inserted just
+        # below the label or just above ▼ End is inside them.
+        held_top, held_end = held0 - 1, held1 + 1  # 6, 47
         plan_hdr = held1 + 2  # 48
         plan0, plan1 = plan_hdr + 1, plan_hdr + PLANNED_ROWS  # 49..78
         total = plan1 + 2  # 80
@@ -1187,9 +1284,12 @@ class Migration:
         flows = '=IF($J{r}="";0;IF({c}$5=$L{r};$J{r};IF(AND({c}$5>$K{r};{c}$5<$L{r});$H{r};0)))'
         b.formulas("N%d:X%d" % (held0, held1), [[flows.format(r=r, c=c) for c in yc] for r in range(held0, held1 + 1)])
         b.formulas("N%d:X%d" % (plan0, plan1), [[flows.format(r=r, c=c) for c in yc] for r in range(plan0, plan1 + 1)])
+        b.value("A%d" % held_end, "▼ End of held investments: insert new rows above this line")
+        b.fill("A%d:X%d" % (held_end, held_end), SEPARATOR_COLOR)
+        b.bold("A%d" % held_end)
         b.value("A%d" % total, "Total cash flows")
         for c in yc:
-            b.formula("%s%d" % (c, total), "=SUM(%s%d:%s%d)" % (c, held0, c, plan1))
+            b.formula("%s%d" % (c, total), "=SUM(%s%d:%s%d)" % (c, held_top, c, plan1))
         b.bold("A%d:X%d" % (total, total))
         del rows
 
@@ -1212,13 +1312,13 @@ class Migration:
             ("Inv_AnnualInterest", "H"), ("Inv_MaturityValue", "I"), ("Inv_LastYearCash", "J"),
             ("Inv_PurchaseYear", "K"), ("Inv_DueYear", "L"),
         ):
-            define(doc, n, span("%s%d" % (c, held0), "%s%d" % (c, plan1)))
+            define(doc, n, span("%s%d" % (c, held_top), "%s%d" % (c, plan1)))
         define(doc, "Inv_Title", span("A1", "A1"))
-        define(doc, "Inv_Held", span("A%d" % held0, "X%d" % held1))
+        define(doc, "Inv_Held", span("A%d" % held_top, "X%d" % held_end))
         define(doc, "Inv_Planned", span("A%d" % plan0, "X%d" % plan1))
         define(doc, "Inv_Years", span("N5", "X5"))
-        define(doc, "Inv_YearFlows", span("N%d" % held0, "X%d" % plan1))
-        define(doc, "Inv_HeldFlows", span("N%d" % held0, "X%d" % held1))
+        define(doc, "Inv_YearFlows", span("N%d" % held_top, "X%d" % plan1))
+        define(doc, "Inv_HeldFlows", span("N%d" % held_top, "X%d" % held_end))
         define(doc, "Inv_PlannedFlows", span("N%d" % plan0, "X%d" % plan1))
         define(doc, "Inv_Totals", span("N%d" % total, "X%d" % total))
         self.freeze(sheet, 1, 5)

@@ -33,6 +33,15 @@ workbook:
       refused.
 - [ ] Review › Unprotect Sheet works without a password.
 - [ ] After unprotecting Expenditures, the + and − buttons fold and unfold the column groups.
+- [ ] On the protected Expenditures tab, the filter buttons in row 7 work: filter column D on
+      one GL account, then clear the filter.
+- [ ] Unprotect Expenditures and sort by column D (GL account), then by **Item sort key**
+      (column CA): the grey ▼ End row stays at the bottom, and row 4's totals do not change.
+      Sort by **Row #** (column A): the original order returns. The cell comments move with
+      their rows. Protect again.
+- [ ] Insert a row just below the header row (row 7) of Expenditures and another just above
+      ▼ End: Formulas › Name Manager shows `Exp_Item` grown by two rows. Undo.
+- [ ] The README tab's long lines show in full (wrapped, not cut to one line).
 - [ ] Changing Settings › Base year to 2027 moves every year heading, and Expenditures' RFS block
       shows 2027 first. Undo afterwards.
 

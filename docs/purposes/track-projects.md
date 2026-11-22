@@ -62,10 +62,37 @@ REASON MISSING.
 
 ## Adding a row
 
+The item number, element, GL account and the other columns A–F are fixed, so adding or
+removing an item needs the tab unprotected.
+
 1. Unprotect Expenditures.
-2. Insert a row between two existing item rows, so that the defined names grow to include it.
-3. Copy the row above, then clear its yellow cells: copying brings along the formulas in G–I,
-   N, Q, T and the RFS and Revised blocks.
+2. Insert a row anywhere between the header row and the grey **▼ End** row, for example just
+   above ▼ End. The defined names grow to include it (see
+   [Inserting rows](../reference/names.md#inserting-rows)). Never delete the header row or the
+   ▼ End row.
+3. Copy a neighbouring item row into it, then clear its yellow cells: copying brings along the
+   formulas in G–I, N, Q, T, the RFS and Revised blocks and the item sort key (CA).
 4. Type the item number, element or GL account name, GL account, and **S** in column F if it is
    a Spatac row.
-5. Protect the tab again.
+5. Type a **Row #** in column A between those of its neighbours, such as 125.5, so that sorting
+   by Row # puts it back in its place.
+6. Protect the tab again.
+
+## Filtering and sorting
+
+**Filtering** works while the tab is protected. Each heading in row 7 has a filter button: use
+it to show, for example, only one GL account or only the items with a reason for change.
+
+**Sorting** needs the tab unprotected: Excel will not sort rows that contain protected cells
+on a protected tab.
+
+1. Unprotect Expenditures.
+2. Use a heading's filter button, or Data › Sort, to sort by the column you want:
+   - **GL account:** column D.
+   - **Item number:** use **Item sort key** (column CA, folded at the far right), not column B.
+     Column B holds text, so it would put 10.1 before 2.1.
+3. To restore the original order, sort by **Row #** (column A).
+4. Protect the tab again.
+
+Sorting never moves the ▼ End row: it has no row number, item, GL account or sort key, so it
+stays at the bottom. The totals and the plan are the same in any order.

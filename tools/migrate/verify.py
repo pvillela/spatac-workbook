@@ -40,6 +40,7 @@ ALLOWED = {
     "ROW", "ROWS", "SUM", "SUMIFS", "SUMPRODUCT", "TEXT", "TRIM", "VALUE", "XLOOKUP", "XMATCH",
     "YEAR", "TRANSPOSE", "SEQUENCE", "SORT", "UNIQUE", "COUNT", "COUNTA", "COUNTIF", "SUMIF",
     "LEN", "LEFT", "RIGHT", "MID", "CONCATENATE", "DATE", "MONTH", "DAY", "ISBLANK", "NOT",
+    "FIND",  # the Expenditures item sort key (design 13.5)
 }
 SPATAC_TABS = [
     "README", "Settings", "Expenditures", "Medium_Term_Cashflow", "Schedule_of_Investments",

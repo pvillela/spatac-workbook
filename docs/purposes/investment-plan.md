@@ -39,7 +39,7 @@ covers six years, the current year and five more, in columns B to G.
 
 **Schedule_of_Investments** has one row per investment:
 
-- **Held** (rows 7–46): each investment actually held. Type its name, due date, purchase date,
+- **Held** (rows 7–46, between the Held label and the grey ▼ End row): each investment actually held. Type its name, due date, purchase date,
   book value, rate and compounding (**A**: interest paid annually; **C**: interest paid at
   maturity).
 - **Planned** (rows 49–78): filled automatically, one row for each non-zero amount in

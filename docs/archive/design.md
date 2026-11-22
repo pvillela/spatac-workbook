@@ -664,7 +664,7 @@ This replaces the marker-row proposal of the 2026-11-21 handoff.
   The Planned section moves down on inserts; its formulas must stay relative (the `AGGREGATE`
   k is `ROWS(M$49:M49)`-style). This is checked after the change.
 - Deleting the header row or the ▼ End row breaks the scheme; the docs say so.
-- **Filtering**: AutoFilter on Expenditures row 6, allowed while the sheet is protected.
+- **Filtering**: AutoFilter on the Expenditures header row, allowed while the sheet is protected.
 - **Sorting** needs the sheet unprotected, because Excel will not sort a range containing
   protected cells on a protected sheet. The docs give the steps: unprotect, sort, protect.
 - **Item sort key**: a helper column in the folded group gives item numbers a sortable form
@@ -673,6 +673,28 @@ This replaces the marker-row proposal of the 2026-11-21 handoff.
   sorting by Row # restores the original order. It is never renumbered automatically.
 - Checked in LibreOffice by the build checks; an Excel check is added to
   `docs/procedures/excel-checklist.md`.
+
+**As built (phase 10).** Where these differ from the bullets above, they win.
+
+- Expenditures rows: 3 vendor totals, 4 totals, 5 variance, 6 provenance notes, 7 headers,
+  items from 8, then ▼ End (row 250 for the November 2026 workbook). The AutoFilter covers
+  row 7 through ▼ End.
+- **The years of the RFS and Revised blocks are in row 6**, not the header row:
+  `Exp_RFSYears` and `Exp_RevisedYears` point there. The header row is inside the block
+  names, and a number there would be added in by every column sum (`SUM(INDEX(Exp_Revised;
+  0;k))`). The header cells read "RFS 2026", "Revised 2026" as text.
+- On Schedule_of_Investments the top boundary is the "Held" label row (6), which sits between
+  the headers and the first held investment; ▼ End is row 47.
+- The **old trailing blank item rows are dropped**: with ▼ End, new items are inserted above
+  it, and blank rows would sort among the items. The Held section keeps its empty input rows.
+- The **item sort key** is column CA (`Exp_SortKey`), in its own folded group, so that no
+  existing column moves. Its formula uses `LET` and `FIND`; `FIND` is added to the allowed
+  functions (3.3). It pads each dot-separated part to four digits and keeps a letter suffix.
+- The AutoFilter protection option cannot be set through LibreOffice's API: the build saves to
+  a temporary file and writes the output once with `autoFilter="false"` on Expenditures'
+  sheet protection. LibreOffice keeps the option on a round trip. The output must be a new
+  file.
+- `tools/migrate/check_blocks.py` performs the inserts and sorts on an in-memory copy.
 
 ### 13.6 Projected_Balances (R15, R22, R23, R26)
 

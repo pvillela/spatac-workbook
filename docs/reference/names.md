@@ -1,8 +1,22 @@
 # Defined names
 
 Every name is workbook-wide. The prefix says which tab it points at. Do not rename or delete a
-name: formulas and the command-line tools depend on them. When inserting rows, insert them
-**inside** a named block, between its first and last row, so the name grows to include them.
+name: formulas and the command-line tools depend on them.
+
+## Inserting rows
+
+A name grows when a row is inserted **inside** it. Each list of rows on Expenditures and the
+Held section of Schedule_of_Investments is framed so that this happens wherever you insert:
+
+- **At the top**, the frame is the row above the first entry: the header row on Expenditures
+  (row 7), the "Held" label on Schedule_of_Investments (row 6). It is part of the names, so a
+  row inserted just below it is inside them.
+- **At the bottom**, the frame is the grey **▼ End** row, which is also part of the names.
+  Insert new rows **above** it. A row inserted below ▼ End is outside the names.
+
+The frame rows hold no amounts, so totals and lookups are unaffected. **Do not delete the header
+row, the Held label or a ▼ End row**: the names would then stop at the first or last entry
+again, and an insert at that edge would fall outside them.
 
 ## Settings (`Cfg_`)
 
@@ -15,7 +29,8 @@ name: formulas and the command-line tools depend on them. When inserting rows, i
 
 ## Expenditures (`Exp_`)
 
-Each column name covers the item rows (8–251).
+Each column name runs from the header row (7) through the ▼ End row (250 in the November 2026
+workbook).
 
 | Name | Column | Name | Column |
 |---|---|---|---|
@@ -28,6 +43,7 @@ Each column name covers the item rows (8–251).
 | `Exp_Key` | G | `Exp_MidEst2`, `Exp_LateEst2`, `Exp_Current2` | R, S, T |
 | `Exp_Key2` | H | `Exp_Reason` | U |
 | `Exp_Check` | I | `Exp_Notes` | V |
+| | | `Exp_SortKey` | CA (folded): the item number in a form that sorts correctly |
 
 | Name | Range | Meaning |
 |---|---|---|
@@ -65,12 +81,12 @@ The extraction tool keeps these.
 
 | Name | Range | Meaning |
 |---|---|---|
-| `Inv_Name` … `Inv_DueYear` | columns A–L, rows 7–78 | Each investment field, held and planned. |
-| `Inv_Held` | A7:X46 | The held investments. |
+| `Inv_Name` … `Inv_DueYear` | columns A–L, rows 6–78 | Each investment field, held and planned. |
+| `Inv_Held` | A6:X47 | The held investments, from the Held label to ▼ End. |
 | `Inv_Planned` | A49:X78 | The planned investments. |
 | `Inv_Years` | N5:X5 | The years of the cash-flow columns. |
-| `Inv_YearFlows` | N7:X78 | Cash flows, held and planned. |
-| `Inv_HeldFlows` | N7:X46 | Cash flows, held only. |
+| `Inv_YearFlows` | N6:X78 | Cash flows, held and planned. |
+| `Inv_HeldFlows` | N6:X47 | Cash flows, held only. |
 | `Inv_PlannedFlows` | N49:X78 | Cash flows, planned only. |
 | `Inv_Totals` | N80:X80 | Total cash flows per year. |
 | `Inv_Title` | A1 | The title. |
