@@ -453,6 +453,7 @@ class Migration:
         lines = [
             ("SPATAC WORKBOOK", "Title"),
             ("Reserve fund project tracking and investment planning for the Antiquary (MTCC No. 1360).", None),
+            ("Documentation: https://pvillela.github.io/spatac-workbook/ — what each tab is for, how to use it, and the January and new-RFS procedures.", None),
             ("", None),
             ("Tabs", "Header"),
             ("Settings — the base year, the minimum target cash balance and the rate assumed for planned investments.", None),

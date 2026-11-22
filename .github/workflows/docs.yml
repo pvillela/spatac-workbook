@@ -1,0 +1,45 @@
+name: Documentation
+
+# Builds the mdBook in docs/ on every push and pull request, so a broken link is found when it is
+# made; publishes it to GitHub Pages from main only. Pages must be enabled for the repository with
+# "GitHub Actions" as its source (Settings > Pages) before the first publish can succeed.
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    name: Build the book
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check the links between pages
+        run: python3 scripts/check-doc-links.py
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: mdbook@0.4.52
+      - name: Build
+        # mdBook copies every file under docs/ into the output, including the design record in
+        # docs/archive, which is for maintainers and not part of the published book.
+        run: |
+          mdbook build
+          rm -rf book/archive
+      - uses: actions/upload-pages-artifact@v4
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        with:
+          path: book
+
+  deploy:
+    name: Publish to GitHub Pages
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-26.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

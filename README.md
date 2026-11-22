@@ -15,6 +15,20 @@ investments. This repository holds:
 
 The workbooks themselves are not in this repository.
 
+## Documentation
+
+The guide to the workbook and the tools is published at
+<https://pvillela.github.io/spatac-workbook/>. Its sources are the Markdown files in `docs/`,
+built with [mdBook](https://rust-lang.github.io/mdBook/):
+
+```
+mdbook build        # writes book/
+mdbook serve        # previews at http://localhost:3000
+python3 scripts/check-doc-links.py
+```
+
+`docs/archive/` holds the design record, for maintainers. It is not part of the published book.
+
 ## Building
 
 ```

@@ -1,0 +1,12 @@
+[book]
+title = "Spatac Workbook"
+description = "Using the Spatac workbook and its tools for reserve fund project tracking and investment planning."
+language = "en"
+src = "docs"
+
+[build]
+build-dir = "book"
+
+[output.html]
+git-repository-url = "https://github.com/pvillela/spatac-workbook"
+no-section-label = true
