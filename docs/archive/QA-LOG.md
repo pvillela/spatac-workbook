@@ -419,3 +419,105 @@ column, with fixed typed year headings and a base-year check cell (R25).
 **Claude:** asked whether the Projected_Balances past-year actuals columns stay.
 **User:** "Comparisons of past years with the RFS should be in prior years' workbooks, so I
 agree with your drop recommendation." (R26)
+
+### After phases 8–14 (2026-11-22, continued)
+
+**User:** "Revert text about minimum cash targets to align with existing formulas"
+**Claude:** Settings A9 now says the minimum target is inflated from its year at the RFS
+short-term inflation rate, as the formulas do.
+
+**User:** "These names with 2 date stamps are too long. Keep only the current date."
+**Claude:** asked whether to copy the outputs to the short names or rebuild.
+**User:** "Copy and I will delete the long- named ones"
+
+**User:** "In Expenditures tab, columns L, M, N, O, P, Q, R, S, T, a zero value needs to be
+formatted visibly as a zero and should not look the same as a blank or empty cell. Case in
+point: cells P29 and Q29. Fix the formatting and document it clearly." Then: "Otherwise, it's
+impossible to tell visually, without clicking on the tan-coloured cell, why Q29 doesn't pick
+the value from O29."
+**Claude:** L–T now show a zero as `0` and a blank as nothing.
+**User:** "call it Spatac-20261122a.xlsx", then: "That's my standard versioning convention for
+binary files." and "or files that are not under git."
+
+**User:** "Now, columns N, Q, and T look ugly and noisy, with lots of spurious zeroes." Then,
+interrupting Claude's change back to hiding zeros there: "The formulas for N, Q, and T should
+place an empty cell or an empty string and not a zero if the inputs are empty cells or empty
+strings."
+**Claude:** N, Q and T return an empty string when all their inputs are empty; an RFS lookup's
+0 for a missing amount counts as empty. The zeros shown fell from 188/228/224 to 7/3/1.
+
+**User:** "Columns A and B in the Expenditures tab should be centered; otherwise, the values abut
+each other and look like a single string. Also, The Expenditures tab title should move to
+column A, now that A is visible." During the change: "Actually, I'm looking at the origial sheet
+and those columns are left-aligned. I think that's better."
+**Claude:** title in A1; A and B left-aligned on the item rows.
+
+**User:** "It's still 20261122 here. You forgot I'm in ET, not UTC."
+**Claude:** copied the build to `Spatac-20261122c.xlsx`; dates are now taken from
+`TZ=America/New_York date`.
+
+**User:** "I don't recall having received an answer to questions in the defects file about some
+mysterious columns."
+**Claude:** explained the Spatac row (F) and the RFS check (I), and that the README's Spatac row
+wording did not match the build's rule.
+**User:** "The answer to "What is the 'RFS check' column? Can it be made narrower?" doesn't seem
+to take the "Spatac row" column into account."
+**Claude:** the two work as a pair: every row with a GL account and no RFS amounts got an S, so
+the check starts clear and catches rows that stop matching later. Gap: an S made stale by a new
+RFS hides the row from the check.
+**User:** "Fix that reverse S gap and update all docs accordingly."
+**Claude:** the check also flags "In RFS: clear S"; README, analyse-rfs, new-rfs, track-projects,
+the checklist and the design record updated.
+
+**User:** "That formula is impossibly complex. I'm concerned that this workbook is very brittle
+and some of the logic is very hard to understand. Also, it's not clear to me what the purpose of
+the Python scripts is, especially as compared to the Rust CLI tools."
+**Claude:** found that the day's builds a–d had been made without the phase 4 `--fix` options,
+so they carried the old bugs; rebuilt as `Spatac-20261122e.xlsx`. Answered at length.
+**User:** "Your answer to my questions is too long. I need a concise, clear answer."
+**Claude:** agreed on both concerns; the Python is one-off build-and-test scaffolding run by
+Claude, the Rust tools are the user's own. ➡️ Simplify the hardest formulas, then freeze one
+final build as the master, edited by hand in Excel, and retire `tools/migrate/`.
+**User:** "Yes" (to a list of formulas to simplify).
+
+**Claude:** listed items 1–6: remove the item sort key; split the RFS check; sum the Planned list
+for row 11; fixed Planned rows per grid cell; helper columns for the what-if; a build safeguard.
+**User:** "Another thing you can and should do is use the LET function when feasible to make
+complex formulas more easily understood. Also, I understand there is a new function in Excel
+that is like a multi-case switch, which can be used instead of deeply nested IFs. If that works
+in Cals, we should use it."
+**Claude:** `IFS`, `SWITCH` and `LET` work in LibreOffice and survive `.xlsx`; revised list of
+seven items (the RFS check as one `LET`/`IFS` formula; `IFS`/`SWITCH` for nested IFs; the phase
+4 fixes made permanent).
+**User:** "I don't understand item 4. The what-if formulas in Projected_Balances are
+incomprehensible. I don't see the need for this complexity. My original formulas were very
+simple. Helper columns aren't necessarily bad if they improve readability."
+**Claude:** explained item 4; proposed the what-if on the old simulator's pattern, with Opening
+balance, Interest rate and Increase helper columns, and the RFS figures copied into the years
+before the start.
+**User:** "Item 4 proposal sounds good in terms of simplicity. Does it play well during new-year
+roll-over?"
+**Claude:** yes; each Planned row reads its grid cell by position.
+**User:** "The docs should mention the transient #REF."
+**User:** "Copying the RFS figures is confusing, I prefer blanks. Does that complicate things?"
+**Claude:** a little: the rows stay blank before the start year, keyed on one column.
+**User:** "OK. My only remaining question about the seven items is item 7. I don't understand
+what you mean by making phase 4 fixes permanent."
+**Claude:** the build would always apply the two fixes, with no options and no code for the old
+bugs; `verify.py` would always expect their 13 differences.
+**User:** "OK."
+**Claude:** implemented design 13.10. Two departures, reported: summing the Planned list for
+row 11 would be circular, so row 11 uses `LET` instead; and the transient `#REF!` comes from the
+deleted opening cash, through the 5-year rows and closing balances, not from the Planned rows
+reading a missing column. Outputs `Spatac-20261122f.xlsx` and `InvestmentPlan-20261122a.xlsx`.
+
+**User:** "Is there a glossary of all the named ranges and what they mean?"
+**Claude:** yes, `docs/reference/names.md`, complete but for two rows that abbreviate 15 names
+with "…". Offered to list them.
+**User:** "There is no need to list them individually if the glossary describes their formation
+rule."
+**Claude:** it did not; the rule (prefix plus a short form of the heading, with the exception
+`Inv_Amount` for Book value) is now stated.
+
+**User:** "Update the Q&A document, create a handoff document for today, similar to yesterday's,
+and commit."
