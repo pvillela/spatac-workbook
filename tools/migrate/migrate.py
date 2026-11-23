@@ -57,8 +57,9 @@ MONEY_RED = "#,##0;[RED]-#,##0"
 
 # Hides a zero: for amounts where 0 and blank mean the same thing.
 MONEY = '#,##0;-#,##0;""'
-# Shows a zero as 0: for amounts where a blank means something else.
-MONEY_ZERO = "#,##0;-#,##0;0"
+# Shows a zero as 0: for amounts where a blank means something else. One section, as in the
+# legacy workbook: a tiny negative such as -0.33 then shows as 0, not -0.
+MONEY_ZERO = "#,##0"
 PERCENT = "0.00%"
 DATE = "YYYY-MM-DD"
 YEAR = "0"

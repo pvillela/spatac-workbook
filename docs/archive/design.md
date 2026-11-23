@@ -644,8 +644,8 @@ Where this section conflicts with sections 1–12, this section wins.
 - **Row 4 totals** are blank for the change-only columns L, M, O, P, R and S (R10). Approved,
   Actuals and the three Current estimate columns keep their totals.
 - **Zeros show as 0** in the estimate columns L–T (Mid-year, Late-year and Current estimate
-  of all three years), with the number format `#,##0;-#,##0;0`. A blank there means "no
-  change" and a 0 means "will cost nothing", so the two must look different; the old format
+  of all three years), with the number format `#,##0` (until 2026-11-23 `#,##0;-#,##0;0`,
+  which showed -0.33 as -0). A blank there means "no change" and a 0 means "will cost nothing", so the two must look different; the old format
   `#,##0;-#,##0;""` showed both as an empty cell (e.g. P29 and Q29). A blank cell still shows
   blank. Approved (J), Actuals (K) and the RFS and Revised blocks keep the zero-hiding format:
   there a zero and a blank mean the same thing. Added 2026-11-22, after phase 14.
