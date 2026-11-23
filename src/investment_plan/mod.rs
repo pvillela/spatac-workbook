@@ -58,13 +58,16 @@ pub struct Summary {
     pub formulas_to_values: usize,
 }
 
-/// The output path for a source file: `Spatac-20261121.xlsx` gives `InvestmentPlan-20261121.xlsx`
-/// in the same directory. `None` when the source name carries no `YYYYMMDD` date.
+/// The output path for a source file `Spatac-<suffix>.xlsx`: `InvestmentPlan-<suffix>.xlsx` in the
+/// same directory, so `Spatac-20261123b.xlsx` gives `InvestmentPlan-20261123b.xlsx`. `None` when the
+/// source is not named that way.
 pub fn default_output(source: &Path) -> Option<PathBuf> {
-    static DATE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(\d{8})").expect("valid pattern"));
-    let name = source.file_name()?.to_string_lossy();
-    let date = DATE.captures(&name)?.get(1)?.as_str().to_owned();
-    Some(source.with_file_name(format!("InvestmentPlan-{date}.xlsx")))
+    let name = source.file_name()?.to_str()?;
+    let suffix = name.strip_prefix("Spatac-")?.strip_suffix(".xlsx")?;
+    if suffix.is_empty() {
+        return None;
+    }
+    Some(source.with_file_name(format!("InvestmentPlan-{suffix}.xlsx")))
 }
 
 /// Extracts the Investment Plan from `source` into `output`.
@@ -385,12 +388,23 @@ mod tests {
     use super::*;
 
     #[test]
-    fn output_name_follows_the_source_date() {
+    fn output_name_follows_the_source_suffix() {
         assert_eq!(
             default_output(Path::new("/x/Spatac-20261121.xlsx")),
             Some(PathBuf::from("/x/InvestmentPlan-20261121.xlsx"))
         );
+        assert_eq!(
+            default_output(Path::new("/x/Spatac-20261123b.xlsx")),
+            Some(PathBuf::from("/x/InvestmentPlan-20261123b.xlsx"))
+        );
+        assert_eq!(
+            default_output(Path::new("Spatac-20261121-review.xlsx")),
+            Some(PathBuf::from("InvestmentPlan-20261121-review.xlsx"))
+        );
         assert_eq!(default_output(Path::new("Spatac.xlsx")), None);
+        assert_eq!(default_output(Path::new("Spatac-.xlsx")), None);
+        assert_eq!(default_output(Path::new("Budget-20261121.xlsx")), None);
+        assert_eq!(default_output(Path::new("Spatac-20261121.ods")), None);
     }
 
     #[test]

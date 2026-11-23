@@ -17,8 +17,8 @@ struct Args {
     /// The Spatac workbook, e.g. Spatac-20261121.xlsx.
     #[arg(required_unless_present = "third_party_notices")]
     source: Option<PathBuf>,
-    /// Where to write the plan. Defaults to InvestmentPlan-YYYYMMDD.xlsx beside the source,
-    /// with the date taken from the source's name.
+    /// Where to write the plan. Defaults to InvestmentPlan-SUFFIX.xlsx beside a source named
+    /// Spatac-SUFFIX.xlsx.
     #[arg(short, long)]
     output: Option<PathBuf>,
     /// Replace the output file if it exists.
@@ -46,7 +46,7 @@ fn main() -> ExitCode {
         Some(o) => o,
         None => {
             eprintln!(
-                "spatac-investment-plan: {} has no YYYYMMDD date in its name; give --output",
+                "spatac-investment-plan: {} is not named Spatac-SUFFIX.xlsx; give --output",
                 source.display()
             );
             return ExitCode::FAILURE;

@@ -8,10 +8,11 @@ and to the Treasurer and the broker.
 spatac-investment-plan Spatac-20261121.xlsx
 ```
 
-This writes `InvestmentPlan-20261121.xlsx` beside the source, with the date taken from the source's
-name. Options:
+This writes `InvestmentPlan-20261121.xlsx` beside the source. The plan's name keeps everything after
+`Spatac-` in the source's name: `Spatac-20261123b.xlsx` gives `InvestmentPlan-20261123b.xlsx`.
+Options:
 
-- `-o FILE`: write somewhere else, or when the source's name has no date.
+- `-o FILE`: write somewhere else, or when the source is not named `Spatac-<suffix>.xlsx`.
 - `--force`: replace an existing output file.
 - `--date YYYY-MM-DD`: the date to show as "Generated" on the cover. Without it, the cover shows
   today's date in the computer's own time zone.
