@@ -617,8 +617,8 @@ class Migration:
             ("", None),
             ("Expenditures tab: Estimates", "Header"),
             ("Mid-year and Late-year estimates are entered only for items whose estimate changed: type the new full amount, never a difference. Blank means no change; the Current estimate columns show the result for every item.", None),
-            ("Spatac row — S marks an item Spatac added that is not in the RFS, such as a project the RFS does not foresee. These rows are exempt from the RFS check.", None),
-            ("RFS check — flags a row whose item and GL account are not in RFS_info (\"Not in RFS\"), or whose item and element have no amounts in RFS_fvalues (\"No RFS amounts\"). Blank means the row matches the RFS. Check it after pasting a new RFS.", None),
+            ("Spatac row — S marks a row with no amounts in the RFS, such as a GL account split out of an RFS item or a project the RFS does not foresee. It tells the RFS check that the difference is expected; it changes nothing else.", None),
+            ("RFS check — flags a row without S whose item and GL account are not in RFS_info (\"Not in RFS\"), or whose item and element have no amounts in RFS_fvalues (\"No RFS amounts\"), and a row with S whose item and element do have RFS amounts (\"In RFS: clear S\"). Blank means the row is as expected. Rows without a GL account are not checked. Check it after pasting a new RFS or adding a row.", None),
             ("Item number, building element and GL account are fixed: unprotect the sheet to add or remove an item.", None),
             ("", None),
             ("Notice for Excel users", "Header"),
@@ -843,8 +843,11 @@ class Migration:
             row = [
                 '=TRIM($B{r}&"")&"|"&TRIM($C{r}&"")',
                 '=TRIM($B{r}&"")&"|"&IFERROR(TEXT(VALUE($D{r}&"");"0000.0000");"")',
-                '=IF(OR($D{r}="";$F{r}<>"");"";IF(ISNA(MATCH($H{r};RFS_Info_Key;0));"Not in RFS";'
-                'IF(ISNA(MATCH($G{r};RFS_Fv_Key;0));"No RFS amounts";"")))',
+                # The RFS check works both ways round (design 13.4): a row without S must match
+                # the RFS, and a row with S must not, or its S is stale.
+                '=IF($D{r}="";"";IF($F{r}<>"";IF(ISNA(MATCH($G{r};RFS_Fv_Key;0));"";"In RFS: clear S");'
+                'IF(ISNA(MATCH($H{r};RFS_Info_Key;0));"Not in RFS";'
+                'IF(ISNA(MATCH($G{r};RFS_Fv_Key;0));"No RFS amounts";""))))',
             ]
             formulas.append([f.format(r=r) for f in row])
         b.formulas("G%d:I%d" % (first, last), formulas)

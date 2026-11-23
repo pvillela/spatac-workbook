@@ -24,6 +24,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   so that "will cost nothing" (0) and "no change" (blank) look different. The Current
   estimate columns N, Q and T are empty, not 0, when the item has no estimate, Approved or RFS
   amount.
+- Expenditures: the RFS check also flags a Spatac row (S) that the RFS covers, "In RFS: clear
+  S", so a stale S no longer hides the row from the check.
 - Expenditures: Row # and Item (columns A and B) are left-aligned, as in the original sheet, and the title is in A1.
 
 ### Fixed

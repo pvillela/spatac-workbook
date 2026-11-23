@@ -38,11 +38,22 @@ each year, how far the Revised amounts depart from the RFS.
 
 ## The RFS check column
 
-Expenditures column **I** (RFS check) flags a row the RFS no longer supports:
+Expenditures column **I** (RFS check) works with column **F** (Spatac row). An **S** in F says
+that the row is not expected to have RFS amounts, such as a GL account split out of an RFS item
+or a project the RFS does not foresee. The check flags a row that disagrees with its S:
 
-- **Not in RFS**: the row's item number and GL account are not in RFS_info.
-- **No RFS amounts**: the item is in RFS_info, but its number and description were not found in
-  RFS_fvalues, so its RFS amounts show as zero.
+- Rows without S must match the RFS:
+  - **Not in RFS**: the row's item number and GL account are not in RFS_info.
+  - **No RFS amounts**: the item is in RFS_info, but its number and description were not found
+    in RFS_fvalues, so its RFS amounts show as zero.
+- Rows with S must not:
+  - **In RFS: clear S**: the row's item number and description do have amounts in RFS_fvalues,
+    so the S is stale. The amounts are already used, since the lookup ignores the S; clear the
+    S so that the row is checked again.
 
-Spatac's own rows, marked **S** in column F, are not checked. The flags matter mostly after a
-new RFS has been pasted in: see [A new Reserve Fund Study](../procedures/new-rfs.md).
+A blank means the row is as expected. Rows without a GL account are not checked. The S affects
+nothing but this check.
+
+When the workbook was built, every row with a GL account and no RFS amounts was marked S, so the
+check starts clear. The flags matter after a new RFS has been pasted in (see
+[A new Reserve Fund Study](../procedures/new-rfs.md)) and after a row is added.

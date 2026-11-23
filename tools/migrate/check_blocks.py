@@ -17,6 +17,9 @@ The workbook is opened read-only and changed only in memory:
    up by one, the first year column is deleted, and a column is inserted left of ▶ End and
    filled from its neighbour. Each remaining year must keep its typed inputs and its looked-up
    figures, no Spatac tab may show an error, and the year check must be clear.
+4. On a fresh copy, the Expenditures RFS check (design 13.4): it must be clear on every row; an
+   S typed on a row the RFS covers must show "In RFS: clear S", and an S cleared from a Spatac
+   row must show "No RFS amounts" or "Not in RFS".
 
 Exits 1 on any failure.
 """
@@ -218,6 +221,31 @@ def check_rollover(s, path, check):
     d.close(True)
 
 
+def check_rfs_flags(s, path, check):
+    d = s.open(path)
+    d.calculateAll()
+    exp = d.Sheets.getByName("Expenditures")
+    end = end_row_of(exp, 2)
+    top = d.NamedRanges.getByName("Exp_Item").ReferredCells.RangeAddress.StartRow + 1
+    rows = exp.getCellRangeByPosition(0, top, 8, end - 2).getDataArray()
+    flagged = [top + 1 + k for k, row in enumerate(rows) if row[8] != ""]
+    check(not flagged, "the RFS check is clear on every row %s" % flagged[:5])
+    spatac = next(top + 1 + k for k, row in enumerate(rows) if row[5] == "S" and row[3] != "")
+    covered = next(top + 1 + k for k, row in enumerate(rows) if row[5] == "" and row[3] != "")
+    exp.unprotect("")
+    exp.getCellRangeByName("F%d" % covered).setString("S")
+    exp.getCellRangeByName("F%d" % spatac).setString("")
+    d.calculateAll()
+    now = exp.getCellRangeByName("I%d" % covered).getString()
+    check(now == "In RFS: clear S", "an S on row %d, which the RFS covers, is flagged %r" % (covered, now))
+    now = exp.getCellRangeByName("I%d" % spatac).getString()
+    check(
+        now in ("No RFS amounts", "Not in RFS"),
+        "Spatac row %d without its S is flagged %r" % (spatac, now),
+    )
+    d.close(True)
+
+
 def main():
     if len(sys.argv) != 2:
         print(__doc__)
@@ -227,6 +255,7 @@ def main():
         check_inserts(s, sys.argv[1], check)
         check_sorts(s, sys.argv[1], check)
         check_rollover(s, sys.argv[1], check)
+        check_rfs_flags(s, sys.argv[1], check)
     print("Failures: %d" % len(check.failures))
     return 1 if check.failures else 0
 

@@ -8,7 +8,7 @@ for it.
 
 | Columns | Content |
 |---|---|
-| A–F | The item: row number, item number, building element, GL account, GL account name (folded), and **S** for a Spatac row (folded; one with no RFS item, such as a GL account split out of an item). These columns are fixed: unprotect the tab to change them. |
+| A–F | The item: row number, item number, building element, GL account, GL account name (folded), and **S** for a Spatac row (folded; one with no RFS amounts, such as a GL account split out of an RFS item or a project the RFS does not foresee). These columns are fixed: unprotect the tab to change them. |
 | G–I | Lookup keys (folded) and the [RFS check](analyse-rfs.md#the-rfs-check-column). |
 | J–N | **Current year.** Approved (approved by the Board the previous November; grey, fixed for the year), Actuals to date, Mid-year estimate, Late-year estimate, and the calculated **Current estimate**. |
 | O–Q | **Next year.** Mid-year estimate, Late-year estimate, **Current estimate**. |
@@ -77,7 +77,8 @@ removing an item needs the tab unprotected.
 3. Copy a neighbouring item row into it, then clear its yellow cells: copying brings along the
    formulas in G–I, N, Q, T, the RFS and Revised blocks and the item sort key (CA).
 4. Type the item number, element or GL account name, GL account, and **S** in column F if it is
-   a Spatac row.
+   a Spatac row. The [RFS check](analyse-rfs.md#the-rfs-check-column) in column I flags the
+   row if the S is missing or not needed.
 5. Type a **Row #** in column A between those of its neighbours, such as 125.5, so that sorting
    by Row # puts it back in its place.
 6. Protect the tab again.

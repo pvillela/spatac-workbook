@@ -33,8 +33,10 @@ before pasting. The [reference](../reference/names.md) lists every `RFS_` name.
 The new study should keep the current item numbers and GL accounts, but a few may change. Two
 check columns show where:
 
-- **Expenditures column I** flags rows whose item and GL account are no longer in RFS_info
-  ("Not in RFS"), or whose item and description are not in RFS_fvalues ("No RFS amounts").
+- **Expenditures column I** flags rows without S whose item and GL account are no longer in
+  RFS_info ("Not in RFS"), or whose item and description are not in RFS_fvalues ("No RFS
+  amounts"), and rows with S that the study now covers ("In RFS: clear S"). See
+  [The RFS check column](../purposes/analyse-rfs.md#the-rfs-check-column).
 - **RFS_info column K** flags RFS items with no row on Expenditures.
 
 For each flag:
@@ -45,6 +47,10 @@ For each flag:
   [Adding a row](../purposes/track-projects.md#adding-a-row).
 - **An item was dropped:** if Spatac still expects to spend on it, mark the row **S** in column
   F. Otherwise clear its inputs, or delete the row.
+- **A Spatac row is now in the study** ("In RFS: clear S"): clear the **S** in column F. If the
+  row now duplicates an RFS item's own row, merge the two instead.
+
+Column F is protected: unprotect Expenditures to change it, and protect it again afterwards.
 
 When both columns are clear, every RFS item has its row and every row finds its amounts. Then
 check, on Expenditures, that row 3 (the vendor's totals) equals row 4 (the items added up) in

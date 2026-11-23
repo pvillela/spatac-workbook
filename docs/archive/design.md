@@ -158,7 +158,8 @@ Removed:
   decimals, because `RFS_info` stores it numerically, e.g. `9220.101`.
 - **New-RFS checks (Q38).**
   - One column flags Expenditures rows whose item + GL account is absent from
-    `RFS_info`. Spatac rows are exempt.
+    `RFS_info`. Spatac rows are exempt. (Superseded by 13.4: the check also flags a Spatac
+    row the RFS covers.)
   - Another flags `RFS_info` items with no Expenditures row.
 - The item list is typed, not formula-generated, so inputs stay attached to their rows
   (Q35).
@@ -664,6 +665,14 @@ Where this section conflicts with sections 1–12, this section wins.
 - **Boxes** round O2:Q5 (next year) and R2:T5 (year after), like the user's box round J2:N5
   (R17).
 - The **RFS check** column is made narrower (R17).
+- **The RFS check works both ways round.** At build every row with a GL account and no RFS
+  amounts is marked S, so the check starts clear. A row without S is flagged "Not in RFS" or
+  "No RFS amounts" as before; a row with S whose item and element have RFS amounts is flagged
+  "In RFS: clear S". Formerly an S exempted the row from every check, so an S made stale by a
+  new RFS went unnoticed; its amounts were still used, since the lookup ignores F, but the S
+  kept the row from ever being checked again. The S affects nothing but this check.
+  `check_blocks.py` toggles an S each way and expects the flags. README's Spatac row text
+  now matches the rule (no RFS amounts), not "an item Spatac added". Added 2026-11-22.
 - **Comments** (R14): the 12 comments of the old `fvalues_spatac` tab are restored on the
   matching cells of the new layout. Three of them (I3, N221, P221) are Excel threaded comments;
   their text follows "Comment:" after Excel's legacy stub, and only that text is kept (e.g.
