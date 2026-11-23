@@ -81,7 +81,7 @@ The extraction tool keeps these.
 
 | Name | Range | Meaning |
 |---|---|---|
-| `Inv_Name` … `Inv_DueYear` | columns A–L, rows 6–78 | Each investment field, held and planned. |
+| `Inv_Name` … `Inv_DueYear` | columns A–L, rows 6–78 | Each investment field, held and planned: one name per column, `Inv_` and a short form of its heading (`Inv_Name`, `Inv_Due`, `Inv_Purchased`, … `Inv_DueYear`). Exception: Book value (D) is `Inv_Amount`. |
 | `Inv_Held` | A6:X47 | The held investments, from the Held label to ▼ End. |
 | `Inv_Planned` | A49:X78 | The planned investments. |
 | `Inv_Years` | N5:X5 | The years of the cash-flow columns. |
@@ -104,7 +104,7 @@ The extraction tool keeps these.
 | `PB_CatchUp` | B9:B11 | Increases in the three years after it. |
 | `PB_SubsequentIncrease` | B12 | The increase after those. |
 | `PB_Lowest` | G5:I10 | The 30-year lows. |
-| `PB_Year`; `PB_RFSCost` … `PB_RFSMarginPV` | columns A; B–H, rows 15–64 | The years; the RFS baseline. |
+| `PB_Year`; `PB_RFSCost` … `PB_RFSMarginPV` | columns A; B–H, rows 15–64 | The years; the RFS baseline: one name per column, `PB_RFS` and a short form of its heading (`PB_RFSCost`, `PB_RFSInterest`, … `PB_RFSMarginPV`). |
 | `PB_Opening`, `PB_Cost`, `PB_Increase`, `PB_Contributions`, `PB_Rate`, `PB_Interest`, `PB_Balance`, `PB_Variance`, `PB_Margin`, `PB_MarginInflated`, `PB_MarginPV`, `PB_PerUnitMonth` | columns J–U, rows 15–64 | The what-if. `PB_Variance` is the difference from the RFS balance. |
 | `PB_Inflator` | column W, rows 15–64 | The inflation factor from the study year. |
 
