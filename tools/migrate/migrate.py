@@ -659,9 +659,9 @@ class Migration:
         rfs_cols = [col(rfs0 + k) for k in range(RFS_YEARS)]
         rev_cols = [col(rev0 + k) for k in range(RFS_YEARS)]
 
-        # Titles and group labels. The title is the user's B1 from the review copy; A1 is
-        # left empty now that column A is visible.
-        b.value("B1", "EXPENDITURES").CellStyle = "Title"
+        # Titles and group labels. The title is in A1, now that column A is visible; it spills
+        # into the empty B1 and C1.
+        b.value("A1", "EXPENDITURES").CellStyle = "Title"
         b.formula("J2", '=Cfg_BaseYear&" — current year"')
         b.formula("O2", '=(Cfg_BaseYear+1)&" — next year"')
         b.formula("R2", '=(Cfg_BaseYear+2)&" — year after"')
@@ -897,6 +897,11 @@ class Migration:
         b.style("G%d:I%d" % (first, last), "Calculated")
         for c in "NQT":
             b.style("%s%d:%s%d" % (c, first, c, last), "Calculated")
+        # Row # (A) and Item (B) are left-aligned, as in the original sheet. Numbers otherwise
+        # align right, so A's number abutted B's and the two read as a single string.
+        b.sheet.getCellRangeByName("A%d:B%d" % (first, last)).HoriJustify = uno.Enum(
+            "com.sun.star.table.CellHoriJustify", "LEFT"
+        )
         b.fmt("J%d:K%d" % (first, last), MONEY)
         # The estimate columns L-T show a zero as 0, so that it cannot be mistaken for a blank
         # (design 13.4): in Mid-year and Late-year a blank means "no change" and a 0 means "will

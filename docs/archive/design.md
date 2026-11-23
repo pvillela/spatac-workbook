@@ -595,7 +595,7 @@ Where this section conflicts with sections 1–12, this section wins.
   the items the user added or changed in it, and only for those (R2): README and Settings
   text, the Medium_Term_Cashflow row changes (blank row inserted after row 11, closing balance
   moved up to row 20, the rows below renumbered), cell formats on every tab, and on
-  Expenditures the B1 title, freeze panes (6 rows, 8 columns), the column groups and hidden
+  Expenditures the title, freeze panes (6 rows, 8 columns), the column groups and hidden
   column F. Everything else stays as the current build makes it.
 - All of it is encoded in `migrate.py`, so the workbook is still rebuilt from
   `_nogit/Spatac-20261121.xlsx`. The review copy is a reference only. The user had turned off
@@ -652,6 +652,12 @@ Where this section conflicts with sections 1–12, this section wins.
   Approved 0, still gives 0. The Revised block passes the empty string on; its totals, the
   variance row, Medium_Term_Cashflow and Projected_Balances read it through `SUM`, which skips
   it. Formerly N used `N($J)`, which turned a blank Approved into 0.
+- **Columns A and B left-aligned** (Row # and Item), on every item row, as in the original
+  sheet. Numbers otherwise align right, so a right-aligned Row # abutted the Item beside it
+  and the two read as a single string. Centring was tried and rejected in favour of the
+  original's left alignment.
+- **Title in A1**: the review copy's B1 title moves to A1, now that column A is visible.
+  Added 2026-11-23.
 - **Row 3**: the label leaves C3; "Vendor total" goes in V3, next to the figures (R11).
 - **Variance vs RFS** (R12): a header-area row under N, Q, T and each Revised-block year
   (AY–BZ): that column's total minus the RFS total for the same year.
