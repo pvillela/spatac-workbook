@@ -657,7 +657,7 @@ Where this section conflicts with sections 1–12, this section wins.
   and the two read as a single string. Centring was tried and rejected in favour of the
   original's left alignment.
 - **Title in A1**: the review copy's B1 title moves to A1, now that column A is visible.
-  Added 2026-11-23.
+  Added 2026-11-22.
 - **Row 3**: the label leaves C3; "Vendor total" goes in V3, next to the figures (R11).
 - **Variance vs RFS** (R12): a header-area row under N, Q, T and each Revised-block year
   (AY–BZ): that column's total minus the RFS total for the same year.
