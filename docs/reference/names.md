@@ -43,7 +43,6 @@ workbook).
 | `Exp_Key` | G | `Exp_MidEst2`, `Exp_LateEst2`, `Exp_Current2` | R, S, T |
 | `Exp_Key2` | H | `Exp_Reason` | U |
 | `Exp_Check` | I | `Exp_Notes` | V |
-| | | `Exp_SortKey` | CA (folded): the item number in a form that sorts correctly |
 
 | Name | Range | Meaning |
 |---|---|---|
@@ -98,6 +97,7 @@ The extraction tool keeps these.
 |---|---|---|
 | `PB_Start` | B4 | Where the what-if starts: **Current year** or **RFS**. |
 | `PB_StartYear` | D4 | The year it starts in. |
+| `PB_StartBalance` | D5 | The balance it starts from: the RFS opening balance, or B5. |
 | `PB_OpeningBalance` | B5 | The opening balance of the current year. |
 | `PB_ExpBasis`, `PB_ContribBasis` | B6, B7 | The what-if's expenditures (**Revised** or **RFS**) and contributions (**Increases** or **RFS**). |
 | `PB_ContribFixedThrough` | B8 | Last year of contributions per the RFS schedule. |
@@ -105,8 +105,8 @@ The extraction tool keeps these.
 | `PB_SubsequentIncrease` | B12 | The increase after those. |
 | `PB_Lowest` | G5:I10 | The 30-year lows. |
 | `PB_Year`; `PB_RFSCost` … `PB_RFSMarginPV` | columns A; B–H, rows 15–64 | The years; the RFS baseline. |
-| `PB_Cost`, `PB_Increase`, `PB_Contributions`, `PB_Interest`, `PB_Balance`, `PB_Variance`, `PB_Margin`, `PB_MarginInflated`, `PB_MarginPV`, `PB_PerUnitMonth` | columns J–S, rows 15–64 | The what-if. `PB_Variance` is the difference from the RFS balance. |
-| `PB_Inflator` | column U, rows 15–64 | The inflation factor from the study year. |
+| `PB_Opening`, `PB_Cost`, `PB_Increase`, `PB_Contributions`, `PB_Rate`, `PB_Interest`, `PB_Balance`, `PB_Variance`, `PB_Margin`, `PB_MarginInflated`, `PB_MarginPV`, `PB_PerUnitMonth` | columns J–U, rows 15–64 | The what-if. `PB_Variance` is the difference from the RFS balance. |
+| `PB_Inflator` | column W, rows 15–64 | The inflation factor from the study year. |
 
 ## RFS tabs (`RFS_`)
 

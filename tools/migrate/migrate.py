@@ -9,8 +9,8 @@ written to it. OUTPUT is a new workbook, built from scratch, with the vendor RFS
 and every Spatac tab rebuilt with defined names, input styles and formulas that follow the design.
 OUTPUT must not exist yet: the build never overwrites a file.
 
-The migration reproduces today's results. Known bugs are preserved here and fixed separately
-(phase 4, `--fix` options).
+The two phase 4 bug fixes are always applied: investments paying interest at maturity compound
+over their own term, and the Medium_Term_Cashflow closing balance counts the adjustment once.
 """
 
 import argparse
@@ -51,23 +51,6 @@ GRID_WIDTH = 26
 GRID_STYLE = 1
 GRID_COLOR = 0x666666
 VERT_TOP = 1  # com.sun.star.table.CellVertJustify.TOP
-
-# The Expenditures item sort key (design 13.5). The item number (text, e.g. 5.3.1a) gets four
-# extra dots so that each FIND finds one; each part becomes its digits padded to four, then its
-# letter suffix. Missing parts are empty, so 5.3 sorts before 5.3.1.
-_PART = 'IF({s}="";"";"."&RIGHT("0000"&LEFT({s};LEN({s})-ISERROR(VALUE(RIGHT({s};1))));4)&MID({s};LEN({s})-ISERROR(VALUE(RIGHT({s};1)))+1;9))'
-# LET names must not look like cell addresses (p1, s1 would be cells).
-_WORDS = ["one", "two", "three", "four"]
-SORT_KEY = (
-    '=IF(TRIM($B{r}&"")="";"";LET(rest_zero;TRIM($B{r}&"")&"....";'
-    + "".join(
-        "pos_{w};FIND(\".\";rest_{p});part_{w};LEFT(rest_{p};pos_{w}-1);rest_{w};MID(rest_{p};pos_{w}+1;99);".format(
-            w=w, p=(["zero"] + _WORDS)[i]
-        )
-        for i, w in enumerate(_WORDS)
-    )
-    + "MID(" + "&".join(_PART.format(s="part_" + w) for w in _WORDS) + ";2;99)))"
-)
 
 # Red negatives, as the user set on the Medium_Term_Cashflow variance rows.
 MONEY_RED = "#,##0;[RED]-#,##0"
@@ -377,11 +360,10 @@ def read_comments(path, sheet_name):
 
 
 class Migration:
-    def __init__(self, session, src_path, out_path, fixes):
+    def __init__(self, session, src_path, out_path):
         self.s = session
         self.src_path = src_path
         self.out_path = out_path
-        self.fixes = fixes
         self.notes = []  # what the migration changed in the data, for the report
 
     def run(self):
@@ -654,7 +636,6 @@ class Migration:
         )
         last = old_last - 1
         end = last + 1  # the ▼ End row
-        sort_col = col(colnum("BZ") + 1)  # CA: the item sort key
         rfs0, rev0 = colnum("W"), colnum("AY")
         rfs_cols = [col(rfs0 + k) for k in range(RFS_YEARS)]
         rev_cols = [col(rev0 + k) for k in range(RFS_YEARS)]
@@ -751,10 +732,9 @@ class Migration:
         for k in range(RFS_YEARS):
             b.formula("%s%d" % (rfs_cols[k], hdr), '="RFS "&%s$%d' % (rfs_cols[k], yr))
             b.formula("%s%d" % (rev_cols[k], hdr), '="Revised "&%s$%d' % (rev_cols[k], yr))
-        b.value("%s%d" % (sort_col, hdr), "Item sort key")
-        b.style("A%d:%s%d" % (hdr, sort_col, hdr), "Header")
+        b.style("A%d:BZ%d" % (hdr, hdr), "Header")
         b.style("W%d:BZ%d" % (yr, yr), "Header")
-        b.wrap("A%d:%s%d" % (hdr, sort_col, hdr))
+        b.wrap("A%d:BZ%d" % (hdr, hdr))
         b.height(hdr, 42)
 
         # Data rows.
@@ -844,16 +824,26 @@ class Migration:
                 '=TRIM($B{r}&"")&"|"&TRIM($C{r}&"")',
                 '=TRIM($B{r}&"")&"|"&IFERROR(TEXT(VALUE($D{r}&"");"0000.0000");"")',
                 # The RFS check works both ways round (design 13.4): a row without S must match
-                # the RFS, and a row with S must not, or its S is stale.
-                '=IF($D{r}="";"";IF($F{r}<>"";IF(ISNA(MATCH($G{r};RFS_Fv_Key;0));"";"In RFS: clear S");'
-                'IF(ISNA(MATCH($H{r};RFS_Info_Key;0));"Not in RFS";'
-                'IF(ISNA(MATCH($G{r};RFS_Fv_Key;0));"No RFS amounts";""))))',
+                # the RFS, and a row with S must not, or its S is stale. Laid out on several
+                # lines, as it shows in the formula bar (design 13.10).
+                "=LET(\n"
+                '  has_gl; $D{r}<>"";\n'
+                '  spatac; $F{r}<>"";\n'
+                "  has_amounts; ISNUMBER(MATCH($G{r}; RFS_Fv_Key; 0));\n"
+                "  in_info; ISNUMBER(MATCH($H{r}; RFS_Info_Key; 0));\n"
+                "  IFS(\n"
+                '    NOT(has_gl); "";\n'
+                '    AND(spatac; has_amounts); "In RFS: clear S";\n'
+                '    spatac; "";\n'
+                '    NOT(in_info); "Not in RFS";\n'
+                '    NOT(has_amounts); "No RFS amounts";\n'
+                '    TRUE(); ""))',
             ]
             formulas.append([f.format(r=r) for f in row])
         b.formulas("G%d:I%d" % (first, last), formulas)
         b.formulas(
             "N%d:N%d" % (first, last),
-            [['=IF($M{r}<>"";$M{r};IF($L{r}<>"";$L{r};IF($J{r}<>"";$J{r};"")))'.format(r=r)] for r in range(first, last + 1)],
+            [['=IFS($M{r}<>"";$M{r};$L{r}<>"";$L{r};$J{r}<>"";$J{r};TRUE();"")'.format(r=r)] for r in range(first, last + 1)],
         )
         # The Current estimates are empty, not 0, when every input they choose from is: a blank
         # Approved amount, or an RFS lookup that found no amount (its 0). A typed 0 still gives 0
@@ -861,11 +851,11 @@ class Migration:
         # the empty string.
         b.formulas(
             "Q%d:Q%d" % (first, last),
-            [['=IF($P{r}<>"";$P{r};IF($O{r}<>"";$O{r};IF($X{r}<>0;$X{r};"")))'.format(r=r)] for r in range(first, last + 1)],
+            [['=IFS($P{r}<>"";$P{r};$O{r}<>"";$O{r};$X{r}<>0;$X{r};TRUE();"")'.format(r=r)] for r in range(first, last + 1)],
         )
         b.formulas(
             "T%d:T%d" % (first, last),
-            [['=IF($S{r}<>"";$S{r};IF($R{r}<>"";$R{r};IF($Y{r}<>0;$Y{r};"")))'.format(r=r)] for r in range(first, last + 1)],
+            [['=IFS($S{r}<>"";$S{r};$R{r}<>"";$R{r};$Y{r}<>0;$Y{r};TRUE();"")'.format(r=r)] for r in range(first, last + 1)],
         )
         b.formulas(
             "%s%d:%s%d" % (rfs_cols[0], first, rfs_cols[-1], last),
@@ -877,11 +867,13 @@ class Migration:
                 for r in range(first, last + 1)
             ],
         )
+        # Revised: by how many years the column is after the base year, the current year's,
+        # next year's or the year after's Current estimate; later years, the RFS amount.
         b.formulas(
             "%s%d:%s%d" % (rev_cols[0], first, rev_cols[-1], last),
             [
                 [
-                    "=IF({c}${h}=Cfg_BaseYear;$N{r};IF({c}${h}=Cfg_BaseYear+1;$Q{r};IF({c}${h}=Cfg_BaseYear+2;$T{r};{f}{r})))".format(
+                    "=SWITCH({c}${h}-Cfg_BaseYear;0;$N{r};1;$Q{r};2;$T{r};{f}{r})".format(
                         r=r, c=c, f=f, h=yr
                     )
                     for c, f in zip(rev_cols, rfs_cols)
@@ -953,26 +945,16 @@ class Migration:
                 text = "[Comment from old column %s] %s" % (letters, text)
             b.comment("%s%d" % (target, new_row), text)
 
-        # Item sort key (design 13.5): the item number with each part padded, so that a text
-        # sort puts 2.1 before 10.1 and 5.3.1a after 5.3.1. Up to four parts, each a number
-        # of up to four digits with an optional letter suffix.
-        b.formulas(
-            "%s%d:%s%d" % (sort_col, first, sort_col, last),
-            [[SORT_KEY.format(r=r)] for r in range(first, last + 1)],
-        )
-        b.style("%s%d:%s%d" % (sort_col, first, sort_col, last), "Calculated")
-        b.width(sort_col, 14)
-        b.group_cols(sort_col, sort_col, collapse=True)
-
-        # The ▼ End row: inside every row-block name, no amounts and no sort keys, so any sort
-        # leaves it at the bottom.
+        # The ▼ End row: inside every row-block name, with no amounts and no Row #, so a sort
+        # by Row # or by an amount leaves it at the bottom. (The item sort key that once sat in
+        # column CA is gone, design 13.10: sorting by Row # restores the item order.)
         b.value("C%d" % end, "▼ End of items: insert new rows above this line")
-        b.fill("A%d:%s%d" % (end, sort_col, end), SEPARATOR_COLOR)
+        b.fill("A%d:BZ%d" % (end, end), SEPARATOR_COLOR)
         b.bold("C%d" % end)
 
         # AutoFilter on the header row, usable while the tab is protected (allow_autofilter).
         udb = doc.getPropertyValue("UnnamedDatabaseRanges")
-        udb.setByTable(b.cell("A%d:%s%d" % (hdr, sort_col, end)).RangeAddress)
+        udb.setByTable(b.cell("A%d:BZ%d" % (hdr, end)).RangeAddress)
         udb.getByTable(sheet.RangeAddress.Sheet).AutoFilter = True
 
         # Names: from the header row to the ▼ End row.
@@ -986,7 +968,7 @@ class Migration:
             ("Exp_Check", "I"), ("Exp_Approved", "J"), ("Exp_Actual", "K"), ("Exp_MidEst", "L"),
             ("Exp_LateEst", "M"), ("Exp_Current", "N"), ("Exp_MidEst1", "O"), ("Exp_LateEst1", "P"),
             ("Exp_Current1", "Q"), ("Exp_MidEst2", "R"), ("Exp_LateEst2", "S"), ("Exp_Current2", "T"),
-            ("Exp_Reason", "U"), ("Exp_Notes", "V"), ("Exp_SortKey", sort_col),
+            ("Exp_Reason", "U"), ("Exp_Notes", "V"),
         ):
             name(n, c)
         name("Exp_RFS", rfs_cols[0], rfs_cols[-1])
@@ -1072,9 +1054,12 @@ class Migration:
         # A check that the years start at the base year and run in steps of one.
         b.formula(
             "A2",
-            '=IF(INDEX(MTC_Years;1;1)<>Cfg_BaseYear;"Check: the first year column is not the base year on Settings (see the January rollover).";'
-            'IF(OR(COUNT(MTC_Years)<>%d;MAX(MTC_Years)-MIN(MTC_Years)<>COUNT(MTC_Years)-1);'
-            '"Check: the year columns must be %d years in a row.";""))' % (HORIZON, HORIZON),
+            "=LET(\n"
+            "  years; MTC_Years;\n"
+            "  IFS(\n"
+            '    INDEX(years; 1; 1)<>Cfg_BaseYear; "Check: the first year column is not the base year on Settings (see the January rollover).";\n'
+            '    OR(COUNT(years)<>%d; MAX(years)-MIN(years)<>COUNT(years)-1); "Check: the year columns must be %d years in a row.";\n'
+            '    TRUE(); ""))' % (HORIZON, HORIZON),
         )
         b.cell("A2").CharColor = 0xC00000
         b.bold("A2")
@@ -1082,8 +1067,7 @@ class Migration:
         # Layout from the user's review copy (design 13.1): a blank row after the planned
         # maturities, the grid in rows 14-18 and the closing balance in row 20.
         # Phase 4 fix: the carry-over sits below the closing balance, then the adjustment.
-        fixed = "closing" in self.fixes
-        carry, adj, minimum = (22, 23, 24) if fixed else (19, 22, 24)
+        carry, adj, minimum = 22, 23, 24
         newtot, grid0, closing = 13, 14, 20  # grid0..grid0+4: the 1- to 5-year rows
         labels = {
             5: self.mtc_cell("A", 5),
@@ -1100,7 +1084,7 @@ class Migration:
             grid0 + 4: "5-year maturity (balancing figure)",
             carry: "Additional cash carry-over",
             closing: "Closing cash balance",
-            adj: "Adjustment to minimum cash balance" if fixed else "Adjustment to cash balance",
+            adj: "Adjustment to minimum cash balance",
             minimum: "Minimum closing cash balance (Settings, inflated)",
             28: "RFS expenditures",
             29: "Revised expenditures",
@@ -1123,16 +1107,22 @@ class Migration:
             b.formula("%s9" % c, "=-SUM(INDEX(Exp_Revised;0;MATCH(%s$3;Exp_RevisedYears;0)))" % c)
             b.formula("%s10" % c, "=SUM(INDEX(Inv_HeldFlows;0;MATCH(%s$3;Inv_Years;0)))" % c)
             # Planned investments maturing this year, from the grid columns of earlier years only:
-            # reading the whole grid would make the 5-year balancing row depend on itself.
-            # The grid columns to the left, from column A, which is never deleted: a purchase in
-            # the year of its heading, for the term of its row, matures in this column's year.
+            # reading the whole grid, or the Planned list on Schedule_of_Investments, would make
+            # the 5-year balancing row depend on itself. The grid columns to the left, from
+            # column A, which is never deleted: an amount bought in the year of its column, for
+            # the term of its row, matures in this column's year at its compounded value.
             # Column A's labels are text, which IFERROR turns into nothing. The same formula in
-            # every column, the first included (design 13.8).
+            # every column, the first included (design 13.8, 13.10).
             prev = col(colnum(c) - 1)
             b.formula(
                 "%s11" % c,
-                "=SUMPRODUCT(IFERROR($A${g}:{p}{h}*(($A$3:{p}3+ROW($A${g}:{p}{h})-ROW($A${g})+1)={c}$3)"
-                "*(1+Cfg_NewInvRate)^(ROW($A${g}:{p}{h})-ROW($A${g})+1);0))".format(p=prev, c=c, g=grid0, h=grid0 + 4),
+                "=LET(\n"
+                "  amounts; $A${g}:{p}{h};\n"
+                "  bought; $A$3:{p}3;\n"
+                "  term; ROW($A${g}:{p}{h})-ROW($A${g})+1;\n"
+                "  SUMPRODUCT(IFERROR(amounts*(bought+term={c}$3)*(1+Cfg_NewInvRate)^term; 0)))".format(
+                    p=prev, c=c, g=grid0, h=grid0 + 4
+                ),
             )
             b.formula("%s%d" % (c, newtot), "=-SUM(%s%d:%s%d)" % (c, grid0, c, grid0 + 4))
             for k in range(4):  # source rows 13-16
@@ -1149,10 +1139,7 @@ class Migration:
             # Phase 4 fix: the balancing figure already leaves the carry-over and the adjustment
             # in cash, so the closing balance adds nothing more. The old formula added the
             # adjustment a second time.
-            if fixed:
-                b.formula("%s%d" % (c, closing), "=SUM({c}5:{c}{n})".format(c=c, n=newtot))
-            else:
-                b.formula("%s%d" % (c, closing), "=SUM({c}5:{c}{n})+{c}{a}".format(c=c, n=newtot, a=adj))
+            b.formula("%s%d" % (c, closing), "=SUM({c}5:{c}{n})".format(c=c, n=newtot))
             b.value("%s%d" % (c, adj), self.mtc_cell(c, 22))
             b.style("%s%d" % (c, adj), "Input")
             b.formula(
@@ -1268,9 +1255,7 @@ class Migration:
                 data.append([None] * 7)
         b.values("A%d:E%d" % (held0, held1), [row[:5] for row in data])
         b.values("G%d:G%d" % (held0, held1), [[row[6]] for row in data])
-        compound = "^5"  # phase 4 fix: the investment's own term
-        if "compounding" in self.fixes:
-            compound = "^$F{r}"
+        compound = "^$F{r}"  # phase 4 fix: the investment's own term, not always 5 years
         held = []
         for r in range(held0, held1 + 1):
             held.append(
@@ -1289,37 +1274,46 @@ class Migration:
         b.style("A%d:E%d" % (held0, held1), "Input")
         b.style("G%d:G%d" % (held0, held1), "Input")
 
-        # Planned rows, filled from the Medium_Term_Cashflow grid (term x purchase year).
-        b.value("A%d" % plan_hdr, "Planned (filled automatically from the planned new investments on Medium_Term_Cashflow)")
+        # Planned rows, filled from the Medium_Term_Cashflow grid (term x purchase year). Each
+        # row belongs to one grid cell, by its fixed Grid # in column M (design 13.10): Grid # 1
+        # is the 1-year term in the first year column, 5 the 5-year term there, 6 the 1-year
+        # term in the second year column, and so on. A row is blank when its grid cell is empty,
+        # so the list has gaps; each formula is a plain lookup. At rollover the grid's columns
+        # move left and each row shows the cell now in its place.
+        assert PLANNED_ROWS == 5 * HORIZON
+        b.value("A%d" % plan_hdr, "Planned (filled automatically from the planned new investments on Medium_Term_Cashflow; one row for each cell of its grid)")
         b.bold("A%d" % plan_hdr)
         planned = []
         for r in range(plan0, plan1 + 1):
-            k = r - plan0 + 1
             planned.append(
                 [
-                    '=IF($M{r}="";"";"Planned "&$F{r}&"-year investment, bought "&$K{r})',  # A
-                    '=IF($M{r}="";"";INDEX(MTC_NewInv;$F{r};INT(($M{r}-1)/ROWS(MTC_NewInv))+1))',  # D
-                    '=IF($M{r}="";"";Cfg_NewInvRate)',  # E
-                    '=IF($M{r}="";"";MOD($M{r}-1;ROWS(MTC_NewInv))+1)',  # F
-                    '=IF($M{r}="";"";"C")',  # G
-                    '=IF($M{r}="";"";0)',  # H
-                    '=IF($M{r}="";"";$D{r}*(1+$E{r})^$F{r})',  # I
-                    '=IF($M{r}="";"";$I{r}+$H{r})',  # J
-                    '=IF($M{r}="";"";INDEX(MTC_Years;1;INT(($M{r}-1)/ROWS(MTC_NewInv))+1))',  # K
-                    '=IF($M{r}="";"";$K{r}+$F{r})',  # L
-                    "=IFERROR(AGGREGATE(15;6;((COLUMN(MTC_NewInv)-COLUMN(INDEX(MTC_NewInv;1;1)))*ROWS(MTC_NewInv)"
-                    "+ROW(MTC_NewInv)-ROW(INDEX(MTC_NewInv;1;1))+1)/(MTC_NewInv<>0);%d);\"\")" % k,  # M
+                    '=IF($D{r}="";"";"Planned "&$F{r}&"-year investment, bought "&$K{r})',  # A
+                    "=LET(\n"
+                    "  term; MOD($M{r}-1; ROWS(MTC_NewInv))+1;\n"
+                    "  year_column; INT(($M{r}-1)/ROWS(MTC_NewInv))+1;\n"
+                    "  amount; INDEX(MTC_NewInv; term; year_column);\n"
+                    '  IF(amount=0; ""; amount))',  # D
+                    '=IF($D{r}="";"";Cfg_NewInvRate)',  # E
+                    '=IF($D{r}="";"";MOD($M{r}-1;ROWS(MTC_NewInv))+1)',  # F
+                    '=IF($D{r}="";"";"C")',  # G
+                    '=IF($D{r}="";"";0)',  # H
+                    '=IF($D{r}="";"";$D{r}*(1+$E{r})^$F{r})',  # I
+                    '=IF($D{r}="";"";$I{r}+$H{r})',  # J
+                    '=IF($D{r}="";"";INDEX(MTC_Years;1;INT(($M{r}-1)/ROWS(MTC_NewInv))+1))',  # K
+                    '=IF($D{r}="";"";$K{r}+$F{r})',  # L
                 ]
             )
-            planned[-1] = [f.format(r=r) if "{r}" in f else f for f in planned[-1]]
+            planned[-1] = [f.format(r=r) for f in planned[-1]]
         b.formulas("A%d:A%d" % (plan0, plan1), [[p[0]] for p in planned])
         b.formulas("D%d:L%d" % (plan0, plan1), [p[1:10] for p in planned])
-        b.formulas("M%d:M%d" % (plan0, plan1), [[p[10]] for p in planned])
+        b.values("M%d:M%d" % (plan0, plan1), [[float(r - plan0 + 1)] for r in range(plan0, plan1 + 1)])
         b.style("A%d:M%d" % (plan0, plan1), "Calculated")
 
         # Year columns for both sections.
         rows = list(range(held0, held1 + 1)) + list(range(plan0, plan1 + 1))
-        flows = '=IF($J{r}="";0;IF({c}$5=$L{r};$J{r};IF(AND({c}$5>$K{r};{c}$5<$L{r});$H{r};0)))'
+        # A year's cash flow: the last-year cash flow (principal and interest) in the due year,
+        # the annual interest in the years between purchase and due, else nothing.
+        flows = '=IFS($J{r}="";0;{c}$5=$L{r};$J{r};AND({c}$5>$K{r};{c}$5<$L{r});$H{r};TRUE();0)'
         b.formulas("N%d:X%d" % (held0, held1), [[flows.format(r=r, c=c) for c in yc] for r in range(held0, held1 + 1)])
         b.formulas("N%d:X%d" % (plan0, plan1), [[flows.format(r=r, c=c) for c in yc] for r in range(plan0, plan1 + 1)])
         b.value("A%d" % held_end, "▼ End of held investments: insert new rows above this line")
@@ -1385,11 +1379,11 @@ class Migration:
         last30 = first + 29  # the first 30 years of the RFS
 
         b.value("A1", "PROJECTED RESERVE FUND BALANCES").CellStyle = "Title"
-        b.value("A2", "The RFS's own projection (columns B-H, from RFS_cashflow) and a what-if projection (columns J-S).")
+        b.value("A2", "The RFS's own projection (columns B-H, from RFS_cashflow) and a what-if projection (columns J-U).")
         b.value(
             "A3",
             "To check the vendor's arithmetic, set the three what-if choices to RFS: the difference "
-            "from the RFS balance (column O) is then zero in every year.",
+            "from the RFS balance (column Q) is then zero in every year.",
         )
 
         # What-if inputs.
@@ -1438,6 +1432,10 @@ class Migration:
         b.formula("D4", '=IF(PB_Start="RFS";RFS_StudyYear;Cfg_BaseYear)')
         b.fmt("D4", YEAR)
         define(doc, "PB_StartYear", ref("Projected_Balances", "D4"))
+        b.value("C5", "with")
+        b.formula("D5", '=IF(PB_Start="RFS";RFS_OpeningBalance;PB_OpeningBalance)')
+        b.fmt("D5", MONEY_ZERO)
+        define(doc, "PB_StartBalance", ref("Projected_Balances", "D5"))
 
         b.value("D8", "Historical inflation rate 2021–2024")
         b.value("E8", num(self.sim_cell("T", 4)))
@@ -1450,9 +1448,9 @@ class Migration:
         b.value("H4", "Amount")
         b.value("I4", "Year")
         lows = (
-            ("What-if: margin over minimum", "P"),
-            ("What-if: margin over inflated minimum", "Q"),
-            ("What-if: margin over minimum (PV)", "R"),
+            ("What-if: margin over minimum", "R"),
+            ("What-if: margin over inflated minimum", "S"),
+            ("What-if: margin over minimum (PV)", "T"),
             ("RFS: margin over minimum", "F"),
             ("RFS: margin over inflated minimum", "G"),
             ("RFS: margin over minimum (PV)", "H"),
@@ -1470,36 +1468,40 @@ class Migration:
         # The year table.
         b.value("B%d" % (hdr - 1), "RFS (from RFS_cashflow; read only)")
         b.value("J%d" % (hdr - 1), "What-if")
-        b.bold("A%d:S%d" % (hdr - 1, hdr - 1))
+        b.bold("A%d:U%d" % (hdr - 1, hdr - 1))
         heads = {
             "A": "Year",
             "B": "RFS expected costs", "C": "RFS interest", "D": "RFS contributions",
             "E": "RFS balance", "F": "RFS margin over minimum",
             "G": "RFS margin over inflated minimum", "H": "RFS margin over minimum (PV)",
-            "J": "Expenditures", "K": "Contribution increase", "L": "Contributions",
-            "M": "Interest", "N": "Closing balance", "O": "Difference from RFS balance",
-            "P": "Margin over minimum", "Q": "Margin over inflated minimum",
-            "R": "Margin over minimum (PV)", "S": "Contribution per unit per month",
-            "U": "Inflator",
+            "J": "Opening balance", "K": "Expenditures", "L": "Contribution increase",
+            "M": "Contributions", "N": "Interest rate", "O": "Interest", "P": "Closing balance",
+            "Q": "Difference from RFS balance", "R": "Margin over minimum",
+            "S": "Margin over inflated minimum", "T": "Margin over minimum (PV)",
+            "U": "Contribution per unit per month", "W": "Inflator",
         }
         for c, h in heads.items():
             b.value("%s%d" % (c, hdr), h)
-        b.style("A%d:U%d" % (hdr, hdr), "Header")
-        b.wrap("A%d:U%d" % (hdr, hdr))
+        b.style("A%d:W%d" % (hdr, hdr), "Header")
+        b.wrap("A%d:W%d" % (hdr, hdr))
         b.height(hdr, 42)
 
-        rate = "IF($A{r}<=RFS_StudyYear+3;RFS_ShortInterest;RFS_LongInterest)"
+        # The what-if (design 13.10). A row is in the projection from the start year on; before
+        # that its Opening balance is blank, and every other what-if column is blank with it.
+        # Each year: Opening balance + Expenditures (negative) + Contributions + Interest =
+        # Closing balance, as in the old simulator.
         rows = []
         for r in range(first, last + 1):
             p = r - 1
             firstrow = r == first
             if firstrow:
-                opening = 'IF(PB_Start="RFS";RFS_OpeningBalance;PB_OpeningBalance)'
-                prev_contrib = "RFS_PresentContribution"
+                opening = '=IF($A{r}<PB_StartYear;"";PB_StartBalance)'
+                contributions = '=IFS($J{r}="";"";$L{r}="";$D{r};TRUE();RFS_PresentContribution*(1+$L{r}))'
             else:
-                opening = 'IF($A{r}=PB_StartYear;IF(PB_Start="RFS";RFS_OpeningBalance;PB_OpeningBalance);$N%d)' % p
-                prev_contrib = 'IF($L%d="";$D%d;$L%d)' % (p, p, p)
-            active = "$A{r}>=PB_StartYear"
+                opening = '=IFS($A{r}<PB_StartYear;"";$A{r}=PB_StartYear;PB_StartBalance;TRUE();$P%d)' % p
+                contributions = (
+                    '=IFS($J{r}="";"";$L{r}="";$D{r};TRUE();IF($M{p}="";$D{p};$M{p})*(1+$L{r}))'.replace("{p}", str(p))
+                )
             row = [
                 "=RFS_StudyYear" if firstrow else "=$A%d+1" % p,  # A
                 "=IFERROR(INDEX(RFS_Cf_Cost;MATCH($A{r};RFS_Cf_Year;0));0)",  # B
@@ -1507,46 +1509,59 @@ class Migration:
                 "=IFERROR(INDEX(RFS_Cf_Contrib;MATCH($A{r};RFS_Cf_Year;0));0)",  # D
                 "=IFERROR(INDEX(RFS_Cf_Balance;MATCH($A{r};RFS_Cf_Year;0));0)",  # E
                 "=$E{r}-RFS_MinBalance",  # F
-                "=$E{r}-RFS_MinBalance*$U{r}",  # G
-                "=$E{r}/$U{r}-RFS_MinBalance",  # H
+                "=$E{r}-RFS_MinBalance*$W{r}",  # G
+                "=$E{r}/$W{r}-RFS_MinBalance",  # H
                 "",  # I: spacer
-                # J: the RFS cost, or the Revised amounts for the years the Revised block covers.
-                '=IF(NOT(%s);"";IF(OR(PB_ExpBasis="RFS";ISNA(MATCH($A{r};Exp_RevisedYears;0)));$B{r};'
-                "-SUM(INDEX(Exp_Revised;0;MATCH($A{r};Exp_RevisedYears;0)))))" % active,
-                # K: the increase, after the years that follow the RFS schedule.
-                '=IF(OR(NOT(%s);PB_ContribBasis="RFS";$A{r}<=PB_ContribFixedThrough);"";'
-                "IF($A{r}-PB_ContribFixedThrough<=3;INDEX(PB_CatchUp;$A{r}-PB_ContribFixedThrough);"
-                "PB_SubsequentIncrease))" % active,
-                '=IF(NOT(%s);"";IF($K{r}="";$D{r};%s*(1+$K{r})))' % (active, prev_contrib),  # L
-                '=IF(NOT(%s);"";%s*%s)' % (active, opening, rate),  # M
-                '=IF(NOT(%s);"";%s+$J{r}+$M{r}+$L{r})' % (active, opening),  # N
-                '=IF($N{r}="";"";$N{r}-$E{r})',  # O
-                '=IF($N{r}="";"";$N{r}-RFS_MinBalance)',  # P
-                '=IF($N{r}="";"";$N{r}-RFS_MinBalance*$U{r})',  # Q
-                '=IF($N{r}="";"";$N{r}/$U{r}-RFS_MinBalance)',  # R
-                '=IF($L{r}="";"";$L{r}/12/RFS_Units)',  # S
-                "",  # T: spacer
-                "=(1+RFS_ShortInflation)^($A{r}-RFS_StudyYear)",  # U
+                opening,  # J: Opening balance
+                # K: Expenditures: the RFS cost, or the Revised amounts for the years the
+                # Revised block covers.
+                "=LET(\n"
+                "  revised_column; MATCH($A{r}; Exp_RevisedYears; 0);\n"
+                "  IFS(\n"
+                '    $J{r}=""; "";\n'
+                '    OR(PB_ExpBasis="RFS"; ISNA(revised_column)); $B{r};\n'
+                "    TRUE(); -SUM(INDEX(Exp_Revised; 0; revised_column))))",
+                # L: Contribution increase: none while contributions follow the RFS schedule,
+                # then the three catch-up increases, then the subsequent increase.
+                "=LET(\n"
+                "  years_after; $A{r}-PB_ContribFixedThrough;\n"
+                "  IFS(\n"
+                '    $J{r}=""; "";\n'
+                '    PB_ContribBasis="RFS"; "";\n'
+                '    years_after<=0; "";\n'
+                "    years_after<=3; INDEX(PB_CatchUp; years_after);\n"
+                "    TRUE(); PB_SubsequentIncrease))",
+                contributions,  # M: Contributions: the RFS's, or last year's plus the increase
+                '=IF($J{r}="";"";IF($A{r}<=RFS_StudyYear+3;RFS_ShortInterest;RFS_LongInterest))',  # N: Interest rate
+                '=IF($J{r}="";"";$J{r}*$N{r})',  # O: Interest
+                '=IF($J{r}="";"";$J{r}+$K{r}+$M{r}+$O{r})',  # P: Closing balance
+                '=IF($P{r}="";"";$P{r}-$E{r})',  # Q: Difference from RFS balance
+                '=IF($P{r}="";"";$P{r}-RFS_MinBalance)',  # R
+                '=IF($P{r}="";"";$P{r}-RFS_MinBalance*$W{r})',  # S
+                '=IF($P{r}="";"";$P{r}/$W{r}-RFS_MinBalance)',  # T
+                '=IF($M{r}="";"";$M{r}/12/RFS_Units)',  # U
+                "",  # V: spacer
+                "=(1+RFS_ShortInflation)^($A{r}-RFS_StudyYear)",  # W
             ]
             rows.append([f.format(r=r) if f else "" for f in row])
-        b.formulas("A%d:U%d" % (first, last), rows)
+        b.formulas("A%d:W%d" % (first, last), rows)
 
-        b.style("J%d:S%d" % (first, last), "Calculated")
+        b.style("J%d:U%d" % (first, last), "Calculated")
         b.fmt("A%d:A%d" % (first, last), YEAR)
         b.fmt("B%d:H%d" % (first, last), MONEY_ZERO)
-        b.fmt("J%d:J%d" % (first, last), MONEY_ZERO)
-        b.fmt("K%d:K%d" % (first, last), PERCENT)
-        b.fmt("L%d:R%d" % (first, last), MONEY_ZERO)
-        b.fmt("O%d:O%d" % (first, last), MONEY_RED)
-        b.fmt("S%d:S%d" % (first, last), "#,##0.00")
-        b.fmt("U%d:U%d" % (first, last), "0.0000")
+        b.fmt("J%d:T%d" % (first, last), MONEY_ZERO)
+        for c in "LN":
+            b.fmt("%s%d:%s%d" % (c, first, c, last), PERCENT)
+        b.fmt("Q%d:Q%d" % (first, last), MONEY_RED)
+        b.fmt("U%d:U%d" % (first, last), "#,##0.00")
+        b.fmt("W%d:W%d" % (first, last), "0.0000")
         b.width("A", 52)
-        for k in range(2, 22):
+        for k in range(2, 24):
             b.width(col(k), 13)
         b.width("I", 2)
-        b.width("T", 2)
+        b.width("V", 2)
         b.width("G", 30)
-        b.group_cols("U", "U", collapse=True)
+        b.group_cols("W", "W", collapse=True)
         self.notes.append(
             "Projected_Balances: rebuilt as the RFS baseline and a what-if projection (design "
             "13.6). The typed 2024 closing balance and 2025 actual expenditures are dropped; the "
@@ -1558,10 +1573,10 @@ class Migration:
         for n, c in (
             ("PB_Year", "A"), ("PB_RFSCost", "B"), ("PB_RFSInterest", "C"), ("PB_RFSContrib", "D"),
             ("PB_RFSBalance", "E"), ("PB_RFSMargin", "F"), ("PB_RFSMarginInflated", "G"),
-            ("PB_RFSMarginPV", "H"), ("PB_Cost", "J"), ("PB_Increase", "K"),
-            ("PB_Contributions", "L"), ("PB_Interest", "M"), ("PB_Balance", "N"),
-            ("PB_Variance", "O"), ("PB_Margin", "P"), ("PB_MarginInflated", "Q"),
-            ("PB_MarginPV", "R"), ("PB_PerUnitMonth", "S"), ("PB_Inflator", "U"),
+            ("PB_RFSMarginPV", "H"), ("PB_Opening", "J"), ("PB_Cost", "K"), ("PB_Increase", "L"),
+            ("PB_Contributions", "M"), ("PB_Rate", "N"), ("PB_Interest", "O"), ("PB_Balance", "P"),
+            ("PB_Variance", "Q"), ("PB_Margin", "R"), ("PB_MarginInflated", "S"),
+            ("PB_MarginPV", "T"), ("PB_PerUnitMonth", "U"), ("PB_Inflator", "W"),
         ):
             define(doc, n, span(c))
         self.freeze(sheet, 1, hdr)
@@ -1596,16 +1611,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("source")
     ap.add_argument("output")
-    ap.add_argument(
-        "--fix",
-        action="append",
-        default=[],
-        choices=["compounding", "closing"],
-        help="apply a phase 4 bug fix (repeatable)",
-    )
     args = ap.parse_args()
     with Session() as s:
-        notes = Migration(s, args.source, args.output, set(args.fix)).run()
+        notes = Migration(s, args.source, args.output).run()
     print("Wrote %s" % args.output)
     for n in notes:
         print("- " + n)

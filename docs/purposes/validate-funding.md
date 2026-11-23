@@ -12,12 +12,20 @@ Projected_Balances has one row per year of the study, 2024 to 2073 for the 2024 
 
 - **Columns B–H, the RFS:** the vendor's own figures, read from RFS_cashflow: expected costs,
   interest, contributions and balance, and the balance's margins over the minimum. Read only.
-- **Columns J–S, the what-if:** the same calculation redone in the workbook, from the choices in
-  B4:B12 (yellow, top left). Column O is its **difference from the RFS balance**.
+- **Columns J–U, the what-if:** the same calculation redone in the workbook, from the choices in
+  B4:B12 (yellow, top left). Column Q is its **difference from the RFS balance**.
 
-The what-if computes, for each year: the opening balance (the previous year's closing balance);
-interest on it, at the study's short-term rate for its first four years and the long-term rate
-after; plus contributions, less expenditures. That is the vendor's method.
+The what-if computes, for each year, one column at a time. That is the vendor's method.
+
+| Column | |
+|---|---|
+| J Opening balance | The previous year's closing balance; in the start year, the starting balance (D5). Blank before the start year, and so is the rest of the row. |
+| K Expenditures | The Revised or RFS expenditures (negative). |
+| L Contribution increase | The increase for the year, if contributions are not following the RFS. |
+| M Contributions | The RFS contributions, or last year's grown by the increase. |
+| N Interest rate | The study's short-term rate for its first four years, the long-term rate after. |
+| O Interest | Opening balance × interest rate. |
+| P Closing balance | Opening balance + expenditures + contributions + interest. |
 
 ## Re-doing the vendor's arithmetic
 
@@ -29,12 +37,12 @@ Set the what-if to the vendor's assumptions:
 | B6 Expenditures | **RFS**: the study's expected costs. |
 | B7 Contributions | **RFS**: the study's contributions. |
 
-Column O should then be **zero in every year**. A year that is not means the vendor's balance
+Column Q should then be **zero in every year**. A year that is not means the vendor's balance
 does not follow from its own costs, contributions and interest rates. Raise it with the vendor.
 
 To check the vendor's contribution increases as well, set B7 to **Increases**, B8 to the study
 year (2024), and B9:B11 to the study's three catch-up increases (RFS_cashflow K9:K11). B12
-already follows the study's subsequent increase. Column O should again be zero.
+already follows the study's subsequent increase. Column Q should again be zero.
 
 Set the choices back to **Current year**, **Revised** and **Increases** afterwards.
 
@@ -75,4 +83,4 @@ fund on Spatac's plan rather than the vendor's:
 - Contributions follow the RFS schedule through B8, then grow by the increases in B9:B12. See
   [Estimating future contribution increases](contribution-increases.md).
 
-Column O then shows how far Spatac's plan departs from the vendor's in each year.
+Column Q then shows how far Spatac's plan departs from the vendor's in each year.

@@ -44,8 +44,10 @@ year. The grey ▶ End column after them marks where a new year column goes at t
 - **Held** (rows 7–46, between the Held label and the grey ▼ End row): each investment actually held. Type its name, due date, purchase date,
   book value, rate and compounding (**A**: interest paid annually; **C**: interest paid at
   maturity).
-- **Planned** (rows 49–78): filled automatically, one row for each non-zero amount in
-  Medium_Term_Cashflow rows 14–18.
+- **Planned** (rows 49–78): filled automatically, one row for each cell of the
+  Medium_Term_Cashflow grid (rows 14–18, six year columns: 30 cells). Column M (folded) holds
+  the row's **Grid #**: 1–5 are the 1- to 5-year terms in the first year column, 6–10 those in
+  the second, and so on. A row is blank when its grid cell is empty, so the list has gaps.
 - **Year columns** (N onward): each investment's cash flows. An annual-interest investment pays
   its interest in each year after purchase and before maturity. In the maturity year it pays
   back its value plus that year's interest.

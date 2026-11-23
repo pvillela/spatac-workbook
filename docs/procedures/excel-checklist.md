@@ -21,12 +21,14 @@ workbook:
 - [ ] **Medium_Term_Cashflow row 20** (closing cash): 1,039,813 · 1,061,208 · 1,082,190 ·
       1,104,081 · 1,126,162 · 1,148,686.
 - [ ] **Medium_Term_Cashflow row 10** (held maturities, 2026): 655,399.
-- [ ] **Schedule_of_Investments rows 49 onward:** the planned investments, starting "Planned
-      2-year investment, bought 2026". The list must be filled, not blank: it relies on
-      `AGGREGATE`.
+- [ ] **Schedule_of_Investments rows 49–78:** the planned investments, one row per grid cell,
+      with gaps; row 50 reads "Planned 2-year investment, bought 2026". No cell shows an error.
+- [ ] **Formulas with `LET`, `IFS` and `SWITCH`** calculate (Excel 2021 or later), for example
+      Expenditures I8 and BC8, Medium_Term_Cashflow B11 and Projected_Balances K17. Their line
+      breaks show in the formula bar when it is expanded.
 - [ ] **Expenditures row 4:** totals in the RFS block equal row 3.
 - [ ] **Projected_Balances G4:I10:** the lowest margins show amounts and years, not errors.
-- [ ] **Projected_Balances validation:** choose **RFS** in the dropdowns B4, B6 and B7: column O
+- [ ] **Projected_Balances validation:** choose **RFS** in the dropdowns B4, B6 and B7: column Q
       shows 0 in every year. Undo afterwards.
 
 ## Behaviour
@@ -41,8 +43,8 @@ workbook:
       in F11: I11 shows "In RFS: clear S". Undo, and protect the tab again.
 - [ ] On the protected Expenditures tab, the filter buttons in row 7 work: filter column D on
       one GL account, then clear the filter.
-- [ ] Unprotect Expenditures and sort by column D (GL account), then by **Item sort key**
-      (column CA): the grey ▼ End row stays at the bottom, and row 4's totals do not change.
+- [ ] Unprotect Expenditures and sort by column D (GL account): the grey ▼ End row stays at
+      the bottom, and row 4's totals do not change.
       Sort by **Row #** (column A): the original order returns. The cell comments move with
       their rows. Protect again.
 - [ ] Insert a row just below the header row (row 7) of Expenditures and another just above

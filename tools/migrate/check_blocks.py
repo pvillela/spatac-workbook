@@ -10,13 +10,14 @@ The workbook is opened read-only and changed only in memory:
    Expenditures items and of the Schedule_of_Investments Held section. Every row-block name must
    grow, and Medium_Term_Cashflow, Projected_Balances, the Expenditures totals and the Planned
    list must not change.
-2. On a fresh copy, the Expenditures items are sorted by GL account and by the item sort key.
+2. On a fresh copy, the Expenditures items are sorted by GL account and by item number.
    ▼ End must stay last and the results must not change. Sorting by Row # must then restore
    every value.
 3. On a fresh copy, the January rollover of Medium_Term_Cashflow (design 13.8): the base year goes
    up by one, the first year column is deleted, and a column is inserted left of ▶ End and
    filled from its neighbour. Each remaining year must keep its typed inputs and its looked-up
-   figures, no Spatac tab may show an error, and the year check must be clear.
+   figures, no Spatac tab may show an error, the year check must be clear, and each Planned row
+   must show its own grid cell (design 13.10), before and after.
 4. On a fresh copy, the Expenditures RFS check (design 13.4): it must be clear on every row; an
    S typed on a row the RFS covers must show "In RFS: clear S", and an S cleared from a Spatac
    row must show "No RFS amounts" or "Not in RFS".
@@ -119,15 +120,10 @@ def check_sorts(s, path, check):
     d.calculateAll()
     exp = d.Sheets.getByName("Expenditures")
     exp.unprotect("")
-    key_col = d.NamedRanges.getByName("Exp_SortKey").ReferredCells.RangeAddress.StartColumn
+    last_col = d.NamedRanges.getByName("Exp_Revised").ReferredCells.RangeAddress.EndColumn
     hdr = d.NamedRanges.getByName("Exp_Item").ReferredCells.RangeAddress.StartRow
     end = end_row_of(exp, 2)
-    rng = exp.getCellRangeByPosition(0, hdr, key_col, end - 1)
-    keys = {r[1]: r[key_col] for r in rng.getDataArray()[1:-1]}
-    for k in ("1", "2.1", "10.1", "3.10a", "5.3.1", "5.3.1a", "15.5a", "18.3.1"):
-        print("   sort key %-8s %s" % (k, keys.get(k)))
-    check(keys["2.1"] < keys["10.1"] < keys["18.3.1"], "sort keys order 2.1, 10.1, 18.3.1")
-    check(keys["5.3.1"] < keys["5.3.1a"], "sort keys order 5.3.1 before 5.3.1a")
+    rng = exp.getCellRangeByPosition(0, hdr, last_col, end - 1)
     before = rng.getDataArray()
     base = snapshot(d)
 
@@ -145,7 +141,7 @@ def check_sorts(s, path, check):
         rng.sort(desc)
         d.calculateAll()
 
-    for column, what in ((3, "GL account"), (key_col, "item sort key")):
+    for column, what in ((3, "GL account"), (1, "item number")):
         sort_by(column)
         check(rng.getDataArray()[-1][2].startswith("▼ End"), "sorted by %s: ▼ End is still last" % what)
         now = snapshot(d)
@@ -167,6 +163,25 @@ def by_year(sheet, years_row, rows, years):
     return out
 
 
+def check_planned_rows(d, check, when):
+    """Each Planned row shows its own grid cell: Grid # k is term (k-1) mod 5 + 1 in year
+    column (k-1) div 5 + 1, and the row is blank when that cell is empty (design 13.10)."""
+    names = d.NamedRanges
+    grid = names.getByName("MTC_NewInv").ReferredCells.getDataArray()
+    planned = names.getByName("Inv_Planned").ReferredCells.getDataArray()
+    wrong = []
+    for row in planned:
+        k = int(row[12])
+        cell = grid[(k - 1) % len(grid)][(k - 1) // len(grid)]
+        if isinstance(cell, float) and cell != 0:
+            ok = isinstance(row[3], float) and abs(row[3] - cell) <= 0.005
+        else:
+            ok = row[3] == ""
+        if not ok:
+            wrong.append((k, row[3], cell))
+    check(not wrong, "%s: each Planned row shows its own grid cell %s" % (when, wrong[:5]))
+
+
 def check_rollover(s, path, check):
     d = s.open(path)
     d.calculateAll()
@@ -181,6 +196,7 @@ def check_rollover(s, path, check):
     looked_up = [rows_of(n) for n in ("MTC_Contributions", "MTC_Maturities", "MTC_RFSExpenditures")]
     kept = set(range(base + 1, base + 6))
     before = by_year(mtc, years_row, inputs + looked_up, kept)
+    check_planned_rows(d, check, "before the rollover")
     opening_next = by_year(mtc, years_row, [rows_of("MTC_OpeningCash")], {base + 1})
 
     for name in ("Medium_Term_Cashflow", "Settings"):
@@ -218,6 +234,7 @@ def check_rollover(s, path, check):
     planned = names.getByName("Inv_Planned").ReferredCells.getDataArray()
     listed = sum(1 for row in planned if row[0] != "")
     check(listed == nonzero, "the Planned list has the %d grid amounts (%d listed)" % (nonzero, listed))
+    check_planned_rows(d, check, "after the rollover")
     d.close(True)
 
 

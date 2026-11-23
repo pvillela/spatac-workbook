@@ -24,6 +24,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   so that "will cost nothing" (0) and "no change" (blank) look different. The Current
   estimate columns N, Q and T are empty, not 0, when the item has no estimate, Approved or RFS
   amount.
+- Workbook formulas simplified (design 13.10): `LET`, `IFS` and `SWITCH` replace nested IFs
+  and long expressions; the Expenditures item sort key is gone (sort by Row #); the Planned
+  investments list has one fixed row per grid cell; the Projected_Balances what-if has Opening
+  balance and Interest rate columns, so the difference from the RFS balance is now column Q.
+- `tools/migrate/migrate.py` always applies the phase 4 fixes; its `--fix` options and
+  `verify.py --expect-changes` are gone.
 - Expenditures: the RFS check also flags a Spatac row (S) that the RFS covers, "In RFS: clear
   S", so a stale S no longer hides the row from the check.
 - Expenditures: Row # and Item (columns A and B) are left-aligned, as in the original sheet, and the title is in A1.

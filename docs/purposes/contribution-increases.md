@@ -2,7 +2,7 @@
 
 The current funding plan fixes contributions until the next RFS. After that, the next study
 will set new increases, and it helps to know ahead of time roughly what they will need to be.
-**Projected_Balances** answers this. Its what-if projection (columns J–S) projects the fund on
+**Projected_Balances** answers this. Its what-if projection (columns J–U) projects the fund on
 Spatac's plan with the contribution increases you choose, and shows how close the balance comes
 to the minimum.
 
@@ -18,8 +18,8 @@ to the minimum.
 | B9–B11 | The increase in each of the first three years after that: the next study's catch-up period. |
 | B12 | The annual increase after those three years. It defaults to the current study's subsequent increase. |
 
-Column K shows the increase applied in each year, and column L the resulting contributions;
-column S gives them per unit per month.
+Column L shows the increase applied in each year, and column M the resulting contributions;
+column U gives them per unit per month.
 
 ## The result
 

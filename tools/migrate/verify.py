@@ -17,8 +17,8 @@ Both workbooks are recalculated in LibreOffice, then:
 4. No formula cell on a Spatac tab may hold an error.
 
 Exits 1 on any failure. The only differences tolerated are listed in EXPECTED, each with its
-reason. Anything else is either explained by a phase 4 fix (pass `--expect-changes`, which reports
-differences without failing) or it is a migration bug.
+reason: one restructure change and the 13 results the phase 4 fixes change. Anything else is a
+migration bug.
 """
 
 import argparse
@@ -35,14 +35,31 @@ EXPECTED = {
     "Revised total 2040": "old fvalues_spatac AC219 held 24,024, a rounded paste of the RFS amount "
     "24,023.75; Expenditures now reads the RFS amount itself (design Q28)",
 }
+# The phase 4 fixes, which the build always applies. Each difference is listed by its cells, so
+# that any other change in the same rows still fails.
+COMPOUNDING = "the phase 4 compounding fix: investment row 19 pays at maturity and compounds over its own term, not 5 years"
+CLOSING = "the phase 4 closing fix: the closing balance counts the adjustment to minimum cash once, not twice"
+EXPECTED.update({
+    "Investment row 19 (Schedule_of_Investments!I19 ": COMPOUNDING,
+    "Investment row 19 (Schedule_of_Investments!J19 ": COMPOUNDING,
+    "Medium_Term_Cashflow maturities D10 vs D10+D11": COMPOUNDING,
+})
+for _c in "BD":
+    EXPECTED["Medium_Term_Cashflow row 21 (Medium_Term_Cashflow!%s21 " % _c] = CLOSING
+for _c in "CE":
+    EXPECTED["Medium_Term_Cashflow row 5 (Medium_Term_Cashflow!%s5 " % _c] = CLOSING + ", so the next year opens with less cash"
+for _c in "CDE":
+    EXPECTED["Medium_Term_Cashflow row 12 (Medium_Term_Cashflow!%s12 " % _c] = CLOSING + ", and the compounding fix: the balancing 5-year investment and its total change"
+    EXPECTED["Medium_Term_Cashflow row 17 (Medium_Term_Cashflow!%s17 " % _c] = CLOSING + ", and the compounding fix: the balancing 5-year investment changes"
+
 
 ALLOWED = {
-    "ABS", "AGGREGATE", "AND", "COLUMN", "COUNTIFS", "DATEDIF", "FILTER", "IF", "IFERROR",
+    "ABS", "AND", "COLUMN", "COUNTIFS", "DATEDIF", "FILTER", "IF", "IFERROR",
     "INDEX", "INT", "ISERROR", "ISNA", "LET", "MATCH", "MAX", "MIN", "MOD", "N", "OR", "ROUND",
     "ROW", "ROWS", "SUM", "SUMIFS", "SUMPRODUCT", "TEXT", "TRIM", "VALUE", "XLOOKUP", "XMATCH",
     "YEAR", "TRANSPOSE", "SEQUENCE", "SORT", "UNIQUE", "COUNT", "COUNTA", "COUNTIF", "SUMIF",
     "LEN", "LEFT", "RIGHT", "MID", "CONCATENATE", "DATE", "MONTH", "DAY", "ISBLANK", "NOT",
-    "FIND",  # the Expenditures item sort key (design 13.5)
+    "IFS", "SWITCH", "TRUE", "ISNUMBER",  # in place of nested IFs (design 13.10)
 }
 SPATAC_TABS = [
     "README", "Settings", "Expenditures", "Medium_Term_Cashflow", "Schedule_of_Investments",
@@ -187,19 +204,19 @@ def check_results(ck):
             (cf, "P", "F", "RFS margin over minimum"),
             (cf, "Q", "G", "RFS margin over inflated minimum"),
             (cf, "R", "H", "RFS margin PV"),
-            (sim, "P", "U", "inflator"),
+            (sim, "P", "W", "inflator"),
         ):
             ck.pair("Projected %s" % what, sheet, "%s%d" % (oc, r), "Projected_Balances", "%s%d" % (nc, r))
         if ck.old.v(sim, "A%d" % r) < 2026:
             continue
         for oc, nc, what in (
-            ("D", "M", "what-if interest"),
-            ("E", "L", "what-if contributions"),
-            ("H", "N", "what-if balance"),
-            ("N", "O", "what-if difference from RFS"),
-            ("S", "P", "what-if margin over minimum"),
-            ("T", "Q", "what-if margin over inflated minimum"),
-            ("U", "R", "what-if margin PV"),
+            ("D", "O", "what-if interest"),
+            ("E", "M", "what-if contributions"),
+            ("H", "P", "what-if balance"),
+            ("N", "Q", "what-if difference from RFS"),
+            ("S", "R", "what-if margin over minimum"),
+            ("T", "S", "what-if margin over inflated minimum"),
+            ("U", "T", "what-if margin PV"),
         ):
             ck.pair("Projected %s" % what, sim, "%s%d" % (oc, r), "Projected_Balances", "%s%d" % (nc, r))
     for oc, nr in (("S", 5), ("T", 6), ("U", 7)):
@@ -274,7 +291,6 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("original")
     ap.add_argument("restructured")
-    ap.add_argument("--expect-changes", action="store_true", help="report differences without failing")
     ap.add_argument("--quiet", action="store_true")
     args = ap.parse_args()
     with Session() as s:
@@ -296,7 +312,7 @@ def main():
     print("Formula problems: %d" % len(problems))
     for p in problems[:50]:
         print("  " + p)
-    if problems or (ck.failures and not args.expect_changes):
+    if problems or ck.failures:
         return 1
     return 0
 

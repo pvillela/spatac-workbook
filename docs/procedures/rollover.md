@@ -45,9 +45,14 @@ you do, the red check in A2 says the first year column is not the base year.
    as held. Its maturities then come from there. Anything left in column B is lost in the next
    step.
 2. **Delete column B**, the year just ended. Everything to its right moves one column left, with
-   its year. Column B's opening cash (B5) shows `#REF!` until step 5.
+   its year. Column B's opening cash (B5) shows `#REF!` until step 5, and so does everything
+   that follows from it: the 5-year investments (row 18), the planned new investments total
+   (row 13) and the closing cash (row 20) of every year, and on Schedule_of_Investments the
+   Planned 5-year rows. This is expected; it clears in step 5.
 3. **Insert a column** just left of the grey **▶ End** column (right-click the ▶ End column
-   heading › Insert Columns Before). Never delete the ▶ End column.
+   heading › Insert Columns Before). Never delete the ▶ End column. Each Planned row on
+   Schedule_of_Investments shows its own grid cell, so the list now shows the years in their
+   new columns.
 4. **Fill it from the column to its left:** copy that column and paste it into the new one.
    Then type the new year in row 3 (one more than its neighbour) and clear its yellow cells
    (payables, the 1- to 4-year investments, the carry-over and the adjustment) or type the

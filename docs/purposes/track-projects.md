@@ -75,7 +75,7 @@ removing an item needs the tab unprotected.
    [Inserting rows](../reference/names.md#inserting-rows)). Never delete the header row or the
    ▼ End row.
 3. Copy a neighbouring item row into it, then clear its yellow cells: copying brings along the
-   formulas in G–I, N, Q, T, the RFS and Revised blocks and the item sort key (CA).
+   formulas in G–I, N, Q, T and the RFS and Revised blocks.
 4. Type the item number, element or GL account name, GL account, and **S** in column F if it is
    a Spatac row. The [RFS check](analyse-rfs.md#the-rfs-check-column) in column I flags the
    row if the S is missing or not needed.
@@ -94,10 +94,9 @@ on a protected tab.
 1. Unprotect Expenditures.
 2. Use a heading's filter button, or Data › Sort, to sort by the column you want:
    - **GL account:** column D.
-   - **Item number:** use **Item sort key** (column CA, folded at the far right), not column B.
-     Column B holds text, so it would put 10.1 before 2.1.
-3. To restore the original order, sort by **Row #** (column A).
+3. To restore the original order, which is item order, sort by **Row #** (column A). Sorting
+   by Item (column B) is not reliable: item numbers are text, so 10.1 would come before 2.1.
 4. Protect the tab again.
 
-Sorting never moves the ▼ End row: it has no row number, item, GL account or sort key, so it
+Sorting never moves the ▼ End row: it has no row number, item or GL account, so it
 stays at the bottom. The totals and the plan are the same in any order.

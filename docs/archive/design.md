@@ -76,6 +76,10 @@ Measured in this devcontainer:
   all.
 - Forbidden: `OFFSET`, `INDIRECT`, VBA/macros, Power Query, Excel Tables and structured
   references. `Table1` is removed (Q4 i).
+- **Readability (13.10):** a formula should be understandable from the formula bar. Use `LET`
+  to name the parts of a complex formula, `IFS` or `SWITCH` instead of nested `IF`s, a layout
+  over several lines for long formulas, and helper columns where they make the logic easier to
+  follow. `IFS` and `SWITCH` need Excel 2019 or later; `LET`, Excel 2021 or later.
 
 ### 3.4 Naming (Q30)
 
@@ -830,8 +834,10 @@ outward-facing without explicit instruction; `_nogit` is create-only.
 
 The common verification, run at the end of every phase that changes the workbook:
 
-- build `_nogit`-bound output in the scratchpad with `migrate.py --fix compounding --fix closing`;
-- `verify.py --expect-changes` against `Spatac-20261121.xlsx`. Its expected-difference list is
+- build `_nogit`-bound output in the scratchpad with `migrate.py --fix compounding --fix closing`
+  (since 13.10 the fixes are always applied and the options are gone);
+- `verify.py --expect-changes` against `Spatac-20261121.xlsx` (since 13.10, plain `verify.py`,
+  which lists the fixes' differences as expected). Its expected-difference list is
   updated in each phase for the changes that phase makes on purpose, and each new expected
   difference is named in the commit message;
 - `check_investment_plan.py` on a freshly extracted plan;
@@ -884,3 +890,44 @@ The common verification, run at the end of every phase that changes the workbook
 - Write the final outputs to the two `_nogit` names of 13.1.
 - A short hand-off note: what was verified, and what still requires the user (the Excel
   checklist, Pages, pushing).
+
+### 13.10 Simplification (2026-11-22)
+
+After phase 14 the user found the workbook brittle and some of its logic hard to understand.
+Agreed changes:
+
+1. **Item sort key removed** (Expenditures column CA, `Exp_SortKey`): a 1,173-character
+   formula. Sorting by Row # restores the original order, which is item order.
+2. **RFS check** (Expenditures I) rewritten with `LET` and `IFS`, over several lines.
+3. **Planned maturities** (Medium_Term_Cashflow row 11) rewritten with `LET` naming the
+   amounts, purchase years and terms. Summing the Planned list instead, as first proposed,
+   was rejected: the list reads the 5-year balancing row, which depends on row 11, so it would
+   be a circular reference.
+4. **Planned list** (Schedule_of_Investments rows 49–78): one fixed row per grid cell, by a
+   typed Grid # in column M (1–5: the five terms in the first year column, 6–10 the second,
+   and so on), blank when the cell is empty. It replaces the `AGGREGATE` formula that packed
+   the non-empty cells to the top. At rollover each row shows the cell now in its place. After
+   the old year's column is deleted, its opening cash shows `#REF!` until it is typed, and the
+   error carries through the 5-year balancing row and the closing balances into the Planned
+   5-year rows; the rollover procedure says so. (The last year column's rows read the ▶ End
+   column meanwhile, which is empty, so they are blank, not errors.)
+5. **Projected_Balances what-if** rebuilt on the old simulator's pattern, with helper columns:
+   J Opening balance, K Expenditures, L Contribution increase, M Contributions, N Interest
+   rate, O Interest, P Closing balance, Q Difference from RFS balance, R–T margins, U per unit
+   per month; W inflator (folded). Before the start year the Opening balance is blank and the
+   rest of the row with it, so no formula repeats a "started?" test. The starting balance is
+   worked out once, in D5 (`PB_StartBalance`). Years before the start were not filled with the
+   RFS figures: the user found that confusing.
+6. **Nested IFs** replaced by `IFS` or `SWITCH`: the Current estimates N, Q, T; the Revised
+   block (`SWITCH` on the year's distance from the base year); the investments' yearly cash
+   flows; the Medium_Term_Cashflow year check (A2).
+7. **The phase 4 fixes are permanent.** `migrate.py` has no `--fix` options and no code that
+   rebuilds the old bugs; `verify.py` lists the 13 differences the fixes cause, each by its
+   cells, and has no `--expect-changes`. On 2026-11-22 four builds were made without the
+   options and so carried the old bugs; this makes that impossible.
+
+The results are unchanged: `verify.py` finds only the expected differences, and the what-if
+still reproduces the RFS with its choices set to RFS.
+
+After this, one final build is to become the master workbook, changed by hand in Excel from
+then on, and `tools/migrate/` is to be retired.
