@@ -1,12 +1,12 @@
 # January rollover
 
 Once a year, in mid to late January, the workbook moves forward a year. The base year goes
-from, say, 2026 to 2027: 2027 becomes the current year, 2028 the next year, and 2029 the year
-after. Do it once the prior year's closing figures are in and the Board's November decisions
-for the new year are recorded.
+from, say, 2026 to 2027: 2027 becomes the current year and 2028 the next year. Do it once the
+prior year's closing figures are in and the Board's November decisions for the new year are
+recorded on the Adjustments tab.
 
-**The order matters.** The Current estimate columns fall back to the RFS for the year they
-show. Copy them while they still show the old years, which means before changing the base year.
+**The order matters.** Expenditures' next-year column shows the year after the base year.
+Copy it while it still shows the new year, which means before changing the base year.
 
 ## Before you start
 
@@ -16,23 +16,32 @@ show. Copy them while they still show the old years, which means before changing
 
 ## Expenditures
 
-1. **Approved for the new year.** Copy the next-year **Current estimate** (column Q, from row 8 down to the row above ▼ End)
-   and paste **values only** into **Approved** (column J).
+1. **Approved for the new year.** Copy the **next year** column (R, from row 8 down to the row
+   above ▼ End) and paste **values only** into **Approved** (column K).
    - Excel: Paste Special › Values.
    - LibreOffice: Paste Special › Values Only.
 
-   This is the amount the Board approved in November, for every item.
-2. **Next year's starting estimate.** Copy the year-after **Current estimate** (column T) and
-   paste values only into the next-year **Mid-year estimate** (column O). It stands until the
-   next mid-year review replaces it.
-3. **Clear** the old year's inputs: Actuals to date (K), Mid-year estimate (L) and Late-year
-   estimate (M). Also clear the next-year Late-year estimate (P) and the year-after estimates (R and S).
-4. **Reasons.** Review column U: delete reasons for changes that no longer apply.
-5. Update the "as of" notes in row 6.
+   This is the RFS amount with the Board's adjustments: what the Board approved in November,
+   for every item.
+2. **Clear** the old year's inputs: Actuals to date (L), Mid-year estimate (M) and Late-year
+   estimate (N).
+3. **Working notes** (P): clear or shorten the notes that were about the year just ended.
+4. Update the "as of" notes in row 6.
+
+## Adjustments
+
+Changes approved from now on go in the **next block** ("Approved in 2027" after the 2027
+rollover). The earlier blocks stay as they are: all blocks apply together. The adjustments are
+not moved or cleared at the rollover; only a [new RFS](new-rfs.md) empties the blocks.
 
 ## Settings
 
 Change **Base year** (B4) to the new year. Every year heading and RFS lookup moves with it.
+
+Then, on Expenditures, **fold the year just ended** in the adjusted block: select its column
+(for example "Adjusted 2026"), then Data › Group and Outline › Group (Excel: Data › Group), so
+that it joins the folded past years, and collapse the group with its **−** button. Past years
+do not affect the plan; folding only keeps them out of the way.
 
 ## Medium_Term_Cashflow
 
@@ -76,6 +85,11 @@ Type the new year's **opening balance** (B5) from the prior year's financial sta
 less payables and accrued liabilities, plus investment principal and accrued interest. The
 what-if now starts in the new year.
 
+The November 2026 workbook was delivered with B5 seeded from the old simulator's projected
+closing balance for 2025, worked out from the 2024 audited closing balance and the 2025 actual
+expenditures. Replace it
+with the figure from the 2025 financial statements once they are available.
+
 ## Finish
 
 1. Protect the four tabs again.
@@ -87,5 +101,6 @@ what-if now starts in the new year.
 
    Read the report. Expect the base year, the pasted columns, the cleared inputs and the
    recalculated totals. Nothing should have changed in a formula.
-3. Extract the Investment Plan for approval: see
+3. Run [`spatac-check`](../tools/check.md) on the new file: it should find no problems.
+4. Extract the Investment Plan for approval: see
    [spatac-investment-plan](../tools/investment-plan.md).

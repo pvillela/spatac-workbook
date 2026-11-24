@@ -1171,3 +1171,29 @@ non-zero if it found any. It checks:
 The rules of section 12 apply: each step ends with its verification and a commit; a failed
 verification or a design change is a stop; nothing outward-facing without explicit
 instruction; `_nogit` is create-only.
+
+### 14.12 As built
+
+Where these differ from 14.1–14.11, they win.
+
+- **Script.** `tools/migrate/restructure.py` edits `Spatac-20261123c.xlsx` in place and reads the
+  user's six rows from the mock-up; `verify_restructure.py` checks it (14.1). Both open copies of
+  their sources, so LibreOffice leaves no lock file in `_nogit`.
+- **Titles.** Expenditures A1 is "ADJUSTED EXPENDITURES" and Adjustments A1 "ADJUSTMENTS TO
+  PLANNED EXPENDITURES", as in the mock-up.
+- **Adjustments layout.** Blocks start at rows 4, 20, 36 and 52: title, blank, header, 10 input
+  rows, grey closing row, two spacers. The `Adj_*` names run from the first header row (6) to
+  the last closing row (65). The Year from and Year to choices are in hidden column J
+  (`Adj_YearChoices`). A2 counts the flagged rows. Inserting a row needs the tab unprotected.
+- **Inflation.** The factor of 14.5 is computed once, in `PB_Inflator`; Adjustments G divides
+  the to-year factor by the from-year factor there. With both RFS rates at 2%, the inflator's
+  values, and so every Projected_Balances margin, are unchanged.
+- **Expenditures rows 3–5** keep their roles over the new columns: row 3 the vendor's total per
+  adjusted year, row 4 the totals (Approved, Actuals, Current estimate, next year, adjusted
+  block), row 5 the variance against row 3. Over the adjusted block, row 6 holds the years.
+- **The Medium_Term_Cashflow RFS row** (29) reads `RFS_Fv_Totals`, the vendor's own yearly
+  total: `RFS_Fv_Values` spans the tab's header rows too, so a column sum would add the years.
+- **Projected_Balances K** uses the RFS cost for years before the base year, as well as after
+  the 30-year span: past years do not affect the projection (G27).
+- **Labels** use the GL account as typed (text, e.g. 9210.2030). 4.1a's account becomes the text
+  9250.1010.

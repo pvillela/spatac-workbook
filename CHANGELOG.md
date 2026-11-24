@@ -7,8 +7,28 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Added
+
+- `spatac-check`, a third tool: checks a Spatac workbook's integrity and lists every problem
+  (missing formulas, broken or missing names, cells showing errors, Adjustments inputs without
+  their validation, protection that does not match a cell's role). Exit status 1 on a problem.
+- The workbook's **Adjustments** tab (design 14): the Board's changes to the RFS, each a move
+  between years, an addition or a removal, with its reason, in four blocks by approval year.
+  Amounts move at the RFS's own short-term and long-term inflation rates.
+
 ### Changed
 
+- Expenditures: the next-year and year-after estimate blocks, the Reason for change column and
+  the RFS and Revised blocks are replaced by an adjustment label (J), a next-year column (R) and
+  the adjusted RFS for the study's 30 years (T onwards), shaded where it differs from the RFS.
+  Working notes moved next to the current year, with their column letters updated.
+- Medium_Term_Cashflow: a blank row before the minimum, now "Minimum closing cash balance"; the
+  RFS row reads RFS_fvalues.
+- Projected_Balances: the inflator applies the short-term rate for Settings' new "years of
+  short-term inflation" and the long-term rate after.
+- `spatac-investment-plan`: the plan keeps its source's fonts, drops the input look of the
+  source's input cells, gives the Cover's approval lines the input look, and opens with only
+  the Cover selected.
 - `spatac-investment-plan`: the Changes_from_RFS tab is gone. The cover says instead that the
   reasons for changes from the RFS are described in the Spatac workbooks for the current and
   previous years.

@@ -26,7 +26,7 @@ year. The grey ▶ End column after them marks where a new year column goes at t
 | 5 | Opening cash balance | First year: typed in, the actual cash at the end of last year. Later years: the previous year's closing balance. |
 | 6 | Payables and accrued liabilities | Typed in. |
 | 8 | Planned contributions | The RFS funding plan (RFS_cashflow). |
-| 9 | Revised expenditures | Expenditures, Revised block: the RFS amounts as changed by the Board. |
+| 9 | Revised expenditures | Expenditures: the current year's Current estimate; later years, the adjusted RFS amounts (the RFS as changed by the Board on the Adjustments tab). |
 | 10 | Held investments maturing, plus interest | Schedule_of_Investments, held investments. |
 | 11 | Planned investments maturing | The planned investments in rows 14–18 of earlier years, compounded at the assumed rate. |
 | 13 | Planned new investments | The total of rows 14–18, as an outflow. |
@@ -35,9 +35,9 @@ year. The grey ▶ End column after them marks where a new year column goes at t
 | 20 | Closing cash balance | Rows 5–13. By construction, the minimum plus the carry-over plus the adjustment. |
 | 22 | Additional cash carry-over | Typed in: cash to hold above the minimum. |
 | 23 | Adjustment to minimum cash balance | Typed in: a correction to the cash the plan holds, such as a rounding difference with the bank. |
-| 24 | Minimum closing cash balance | Settings: the Board's minimum target (s.3.5), inflated from the year it is stated in at the RFS short-term inflation rate. |
-| 28–30 | RFS versus Revised expenditures | The Board's changes, year by year. |
-| 32–34 | RFS versus projected fund balance | Projected_Balances, for context. Not part of the extracted plan. |
+| 25 | Minimum closing cash balance | Settings: the Board's minimum target (s.3.5), inflated from the year it is stated in at the RFS short-term inflation rate. |
+| 29–31 | RFS versus Revised expenditures | The Board's changes, year by year. |
+| 33–35 | RFS versus projected fund balance | Projected_Balances, for context. Not part of the extracted plan. |
 
 **Schedule_of_Investments** has one row per investment:
 
@@ -54,7 +54,7 @@ year. The grey ▶ End column after them marks where a new year column goes at t
 
 ## Checking the plan against the policy
 
-- **Liquidity:** closing cash (row 20) never falls below the minimum (row 24), less any
+- **Liquidity:** closing cash (row 20) never falls below the minimum (row 25), less any
   adjustment.
 - **Laddering:** Schedule_of_Investments shows something maturing in every year of the horizon.
 - **Terms:** no term (Schedule_of_Investments column F) exceeds five years without the broker's

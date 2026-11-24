@@ -9,30 +9,36 @@ spreadsheet's three tabs are pasted, unchanged, into the workbook's RFS tabs.
 | **RFS_fvalues** | The repair and replacement schedule: for each item, the cost in each year from the study year on, inflated to that year (its *future value*). Rows 10–13 hold the yearly totals, interest, contributions and balance. |
 | **RFS_cashflow** | The cash flow summary: for each year, expected costs, interest, contributions and the closing balance, plus the study's parameters (opening balance, minimum balance, interest and inflation rates, contribution increases). |
 
-Columns to the right of the vendor's data are added by the workbook (RFS_info J:K, RFS_fvalues
-BC). They are not part of the paste.
+Columns to the right of the vendor's data are added by the workbook. They are not part of the
+paste:
+
+- **RFS_info J** is each item's key (item number | GL account), and **K** flags an RFS item with
+  no row on Expenditures.
+- **RFS_fvalues BC** is each row's key (item number | description), by which Expenditures looks
+  up the RFS amounts.
 
 ## Where the RFS figures appear
 
-**Expenditures** has one row per RFS item, in the order of the study. Its **RFS** block (the
-columns headed by years after the Reason and Working notes columns) shows each item's RFS
-amount for every year from the base year on. Each amount is looked up in RFS_fvalues by the
-item's number and description, so the block always matches the pasted study.
+**Expenditures** has one row per RFS item, in the order of the study. Its **adjusted RFS**
+block (the columns headed "Adjusted" and a year, from column T) shows each item's amount for
+every year of the study's 30-year span: the RFS amount, looked up in RFS_fvalues by the item's
+number and description, with the [Adjustments](track-projects.md#the-adjustments-tab) applied.
+Amounts that differ from the RFS are shaded orange; every other amount is the RFS's own.
 
-Row 3 of the RFS block is the vendor's own total for each year and row 4 adds up the items. The
-two should agree; a difference means an item is missing from Expenditures. Row 5 shows, for
-each year, how far the Revised amounts depart from the RFS.
+Row 3 of the block is the vendor's own total for each year and row 4 adds up the items. Row 5
+is their difference: zero in a year without adjustments, and otherwise the net effect of the
+adjustments. A difference in a year that has no adjustments means an item is missing from
+Expenditures.
 
 ## Questions the workbook answers
 
-- **What does the RFS expect to spend in a given year, and on what?** Filter or sort the RFS
-  block's year column on Expenditures.
+- **What does the RFS expect to spend in a given year, and on what?** Filter or sort that
+  year's column of the adjusted block on Expenditures. An unshaded amount is the RFS's own.
 - **Which items drive a heavy year?** For example 2033, with slab and garage roof waterproofing
   and the main roof. Sort that year's column, largest first.
-- **How does Spatac's view differ from the RFS?** The Revised block, to the right of the RFS
-  block, holds the amounts the plan uses. The two blocks share their column order, so
-  comparing a year in one with the same year in the other shows the difference.
-  Medium_Term_Cashflow rows 28–30 compare the yearly totals for the next six years.
+- **How does Spatac's view differ from the RFS?** The shaded amounts of the adjusted block,
+  and the rows of the Adjustments tab, which give each change and its reason.
+  Medium_Term_Cashflow rows 29–31 compare the yearly totals for the next six years.
 - **What did the study assume?** RFS_cashflow rows 6–12 hold its parameters. Projected_Balances
   shows what they produce year by year; see the [next chapter](validate-funding.md).
 

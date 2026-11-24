@@ -78,8 +78,10 @@ fund on Spatac's plan rather than the vendor's:
 - It starts in the current year from the **opening balance** in B5. Type it from the prior
   year's financial statements: cash, less payables and accrued liabilities, plus investment
   principal and accrued interest.
-- Expenditures are the **Revised** amounts from Expenditures for the years its Revised block
-  covers, and the RFS amounts after.
+- Expenditures are Spatac's: the current year's **Current estimate**, and for later years the
+  **adjusted RFS** amounts (the RFS with the Adjustments tab applied) through the end of the
+  study's 30-year span. Years before the current year, and years after the span, use the RFS
+  amounts.
 - Contributions follow the RFS schedule through B8, then grow by the increases in B9:B12. See
   [Estimating future contribution increases](contribution-increases.md).
 

@@ -26,6 +26,7 @@ again, and an insert at that edge would fall outside them.
 | `Cfg_MinTarget` | B5 | The minimum target cash balance (policy s.3.5). |
 | `Cfg_MinTargetYear` | B6 | The year whose dollars the minimum target is stated in. |
 | `Cfg_NewInvRate` | B7 | The interest rate assumed for planned investments. |
+| `Cfg_ShortInflationYears` | B8 | How many years from the study year the RFS applies its short-term inflation rate; the long-term rate applies after them. |
 
 ## Expenditures (`Exp_`)
 
@@ -34,22 +35,35 @@ workbook).
 
 | Name | Column | Name | Column |
 |---|---|---|---|
-| `Exp_RowNumber` | A | `Exp_Approved` | J |
-| `Exp_Item` | B | `Exp_Actual` | K |
-| `Exp_Element` | C | `Exp_MidEst` | L |
-| `Exp_GL` | D | `Exp_LateEst` | M |
-| `Exp_GLName` | E | `Exp_Current` | N |
-| `Exp_SpatacRow` | F | `Exp_MidEst1`, `Exp_LateEst1`, `Exp_Current1` | O, P, Q |
-| `Exp_Key` | G | `Exp_MidEst2`, `Exp_LateEst2`, `Exp_Current2` | R, S, T |
-| `Exp_Key2` | H | `Exp_Reason` | U |
-| `Exp_Check` | I | `Exp_Notes` | V |
+| `Exp_RowNumber` | A | `Exp_AdjLabel` | J |
+| `Exp_Item` | B | `Exp_Approved` | K |
+| `Exp_Element` | C | `Exp_Actual` | L |
+| `Exp_GL` | D | `Exp_MidEst` | M |
+| `Exp_GLName` | E | `Exp_LateEst` | N |
+| `Exp_SpatacRow` | F | `Exp_Current` | O |
+| `Exp_Key` | G | `Exp_Notes` | P |
+| `Exp_Key2` | H | `Exp_NextYear` | R |
+| `Exp_Check` | I | | |
 
 | Name | Range | Meaning |
 |---|---|---|
-| `Exp_RFS` | W7:AX250 | RFS amount per item and year. |
-| `Exp_RFSYears` | W6:AX6 | The years of `Exp_RFS`. |
-| `Exp_Revised` | AY7:BZ250 | Revised amount per item and year. |
-| `Exp_RevisedYears` | AY6:BZ6 | The years of `Exp_Revised`. |
+| `Exp_Adjusted` | T7:AW250 | Adjusted RFS amount per item and year: the RFS amount with the Adjustments tab applied. |
+| `Exp_AdjustedYears` | T6:AW6 | The years of `Exp_Adjusted`: the RFS study year and the 29 after it. |
+
+## Adjustments (`Adj_`)
+
+Each column name runs from the first block's header row (6) to the last block's closing row
+(65), so a row inserted inside any block is inside them.
+
+| Name | Column | Meaning |
+|---|---|---|
+| `Adj_Item` | A | The item, as its Expenditures adjustment label. |
+| `Adj_From`, `Adj_To` | B, C | Year from and Year to, or **none**. |
+| `Adj_Amount` | D | The amount typed. |
+| `Adj_Reason` | E | The reason for the change. |
+| `Adj_FromAmount`, `Adj_ToAmount` | F, G | What leaves Year from, in its dollars; what arrives in Year to, in its dollars. |
+| `Adj_Check` | H | The row's check. |
+| `Adj_YearChoices` | J6:J36 (hidden) | The choices for Year from and Year to: **none** and the RFS's 30 years. |
 
 ## Medium_Term_Cashflow (`MTC_`)
 
@@ -60,20 +74,20 @@ Each covers columns B–H of its row: the six year columns and the grey **▶ En
 | `MTC_Years` | 3 | `MTC_ClosingCash` | 20 |
 | `MTC_OpeningCash` | 5 | `MTC_CarryOver` | 22 |
 | `MTC_Payables` | 6 | `MTC_Adjustment` | 23 |
-| `MTC_Contributions` | 8 | `MTC_MinCash` | 24 |
-| `MTC_Expenditures` | 9 | `MTC_RFSExpenditures` | 28 |
-| `MTC_Maturities` | 10 | `MTC_RevisedExpenditures` | 29 |
-| `MTC_PlannedMaturities` | 11 | `MTC_ExpVariance` | 30 |
-| `MTC_NewInvTotal` | 13 | `MTC_RFSBalance` | 32 |
-| `MTC_NewInv` | 14–18 | `MTC_ProjectedBalance` | 33 |
-| | | `MTC_BalanceVariance` | 34 |
+| `MTC_Contributions` | 8 | `MTC_MinCash` | 25 |
+| `MTC_Expenditures` | 9 | `MTC_RFSExpenditures` | 29 |
+| `MTC_Maturities` | 10 | `MTC_RevisedExpenditures` | 30 |
+| `MTC_PlannedMaturities` | 11 | `MTC_ExpVariance` | 31 |
+| `MTC_NewInvTotal` | 13 | `MTC_RFSBalance` | 33 |
+| `MTC_NewInv` | 14–18 | `MTC_ProjectedBalance` | 34 |
+| | | `MTC_BalanceVariance` | 35 |
 
 Three more names cover areas rather than a single row:
 
 - `MTC_Title` is A1. A2 is a check that the first year column is the base year and that the
   years run in steps of one.
-- `MTC_CashSection` is A3:H24.
-- `MTC_ComparisonSection` is A28:H30.
+- `MTC_CashSection` is A3:H25.
+- `MTC_ComparisonSection` is A29:H31.
 
 The extraction tool keeps these.
 
@@ -106,7 +120,7 @@ The extraction tool keeps these.
 | `PB_Lowest` | G5:I10 | The 30-year lows. |
 | `PB_Year`; `PB_RFSCost` … `PB_RFSMarginPV` | columns A; B–H, rows 15–64 | The years; the RFS baseline: one name per column, `PB_RFS` and a short form of its heading (`PB_RFSCost`, `PB_RFSInterest`, … `PB_RFSMarginPV`). |
 | `PB_Opening`, `PB_Cost`, `PB_Increase`, `PB_Contributions`, `PB_Rate`, `PB_Interest`, `PB_Balance`, `PB_Variance`, `PB_Margin`, `PB_MarginInflated`, `PB_MarginPV`, `PB_PerUnitMonth` | columns J–U, rows 15–64 | The what-if. `PB_Variance` is the difference from the RFS balance. |
-| `PB_Inflator` | column W, rows 15–64 | The inflation factor from the study year. |
+| `PB_Inflator` | column W, rows 15–64 | The inflation factor from the study year: the short-term rate for `Cfg_ShortInflationYears` years, the long-term rate after. The Adjustments tab inflates and deflates with it. |
 
 ## RFS tabs (`RFS_`)
 

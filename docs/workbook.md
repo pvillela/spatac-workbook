@@ -5,12 +5,13 @@
 | Tab | What it holds |
 |---|---|
 | **README** | A short guide to the tabs and colours, with a link to this documentation. |
-| **Expenditures** | Every RFS component, one row each, plus Spatac's own rows. For each: the amount approved, actual spending, estimates and the reason for any change; the RFS amount for every year; and the Revised amount the plan uses. |
+| **Expenditures** | Every RFS component, one row each, plus Spatac's own rows. For each: the current year's approved amount, actual spending, estimates and working notes; and for every year of the RFS, the RFS amount with the Board's adjustments applied, which the plan uses. |
+| **Adjustments** | The Board's changes to the RFS, each with its reason: amounts moved between years, added or removed. |
 | **Medium_Term_Cashflow** | The Investment Plan: six years of cash in and out, and the investments planned to keep cash at the minimum target. |
 | **Schedule_of_Investments** | Investments held and planned, each with its cash flows by year. |
 | **Projected_Balances** | The reserve fund balance year by year to the end of the RFS, with Spatac's changes and what-if contribution increases. |
 | **RFS_info**, **RFS_fvalues**, **RFS_cashflow** | The vendor's RFS spreadsheet, pasted in unchanged: the component inventory, the future value of each component's costs by year, and the cash flow summary. |
-| **Settings** | The base year (the current year), the minimum target cash balance and the year whose dollars it is stated in, and the interest rate assumed for planned investments. |
+| **Settings** | The base year (the current year), the minimum target cash balance and the year whose dollars it is stated in, the interest rate assumed for planned investments, and the number of years the RFS applies its short-term inflation rate. |
 
 ## Colours
 
@@ -19,6 +20,8 @@
   on Expenditures. Read them, don't type into them.
 - **Grey cells are fixed for the year**, such as the current year's Approved amounts on
   Expenditures. They change only at the [January rollover](procedures/rollover.md).
+- **Orange cells** on Expenditures are adjusted RFS amounts that differ from the RFS because of
+  the Adjustments tab.
 - Everything else is a label or a calculation.
 
 The Spatac tabs are protected **without a password**, so that a stray keystroke cannot
@@ -37,7 +40,7 @@ unfold a group. Excel does not allow this on a protected tab, so unprotect the t
 ## Defined names
 
 Formulas refer to other tabs through **defined names**, such as `Cfg_BaseYear` for the base
-year on Settings, or `Exp_Revised` for the block of Revised amounts on Expenditures. A name keeps
+year on Settings, or `Exp_Adjusted` for the block of adjusted RFS amounts on Expenditures. A name keeps
 pointing at the right cells when rows or columns are inserted. The command-line tools find
 everything through these names too, so do not rename or delete them. The
 [reference](reference/names.md) lists them all.

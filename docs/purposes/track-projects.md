@@ -1,70 +1,135 @@
 # Tracking project timing and cost
 
-Spatac and the Board change when projects happen and what they are expected to cost. Each
-change is recorded on **Expenditures**, against the item it affects, together with the reason
-for it.
+Spatac and the Board change when projects happen and what they are expected to cost. Two tabs
+record it:
 
-## The columns, left to right
+- **Expenditures** holds the current year's figures for every item (approved amounts, actuals and
+  estimates) and shows the RFS amounts for every year with the Board's changes applied.
+- **Adjustments** records each change to the RFS, with its reason.
+
+## Expenditures, left to right
 
 | Columns | Content |
 |---|---|
 | A–F | The item: row number, item number, building element, GL account, GL account name (folded), and **S** for a Spatac row (folded; one with no RFS amounts, such as a GL account split out of an RFS item or a project the RFS does not foresee). These columns are fixed: unprotect the tab to change them. |
 | G–I | Lookup keys (folded) and the [RFS check](analyse-rfs.md#the-rfs-check-column). |
-| J–N | **Current year.** Approved (approved by the Board the previous November; grey, fixed for the year), Actuals to date, Mid-year estimate, Late-year estimate, and the calculated **Current estimate**. |
-| O–Q | **Next year.** Mid-year estimate, Late-year estimate, **Current estimate**. |
-| R–T | **The year after.** The same three. |
-| U | **Reason for change** for the next year (headed, for example, "2027 Reason for change"): one short line the Board can read, explaining the approved change from the RFS. |
-| V | **Working notes**: the running log of updates and sources. |
-| then | The **RFS** block and the **Revised** block, one column per year. |
+| J | **Adjustment label**: the name the Adjustments tab knows the item by (see [Adjustment labels](#adjustment-labels)). |
+| K–O | **Current year.** Approved (approved by the Board the previous November; grey, fixed for the year), Actuals to date, Mid-year estimate, Late-year estimate, and the calculated **Current estimate**. |
+| P | **Working notes**: the running log of updates and sources for the current year. |
+| R | **Next year**: the adjusted RFS amount for next year, from the block to its right. |
+| T onwards | The **adjusted RFS** block: one column per year of the RFS's 30-year span (2024–2053 for the 2024 study), the RFS amount with the Adjustments tab applied. Years before the current year are folded. |
+
+Columns Q and S are narrow spacers.
 
 Above the headings:
 
+- Row 3 is the vendor's own total for each year of the adjusted block.
 - Row 4 totals the columns that hold an amount for every item: Approved, Actuals to date, the
-  three Current estimates, and the RFS and Revised blocks. The estimate columns that hold
-  changes only have no total.
-- Row 5 is the **variance vs RFS** of each Current estimate and each Revised year: its total
-  minus the RFS total for the same year. A positive variance means more spending than the RFS.
-- Row 6 records where each column's figures came from, such as "to Oct 26" or "2026-11-04".
-  Update it when you update a column.
+  Current estimate, next year and the adjusted block. The estimate columns, which hold changes
+  only, have no total.
+- Row 5 is the **variance vs RFS** of the Current estimate, next year and each adjusted year:
+  its total minus the RFS total for the same year. A positive variance means more spending than
+  the RFS.
+- Row 6 records where each current-year column's figures came from, such as "to Oct 26".
+  Update it when you update a column. Over the adjusted block, row 6 holds the years.
 
-## How the Current estimate is chosen
+## The current year
 
-- **Current year:** the Late-year estimate if one is entered, otherwise the Mid-year estimate,
-  otherwise the Approved amount.
-- **Next year and the year after:** the Late-year estimate, otherwise the Mid-year estimate,
-  otherwise the RFS amount.
+The **Current estimate** is the Late-year estimate if one is entered, otherwise the Mid-year
+estimate, otherwise the Approved amount.
 
 Estimates are entered **only for items whose estimate changed**. Type the new full amount, not
 the difference. A blank means no change. Type **0** to record that an item will cost nothing
-that year, for example because it was deferred.
+this year.
 
 The two look different: a **0** shows as `0`, and a blank shows nothing. The same holds in the
-green Current estimate columns: `0` means the item is now expected to cost nothing that year,
-and a blank means it has no amount at all, neither an estimate nor an Approved or RFS amount. In the other amount columns (Approved, Actuals, and the RFS and Revised blocks) a zero
-shows as blank, since there it means the same as no amount.
+green Current estimate column: `0` means the item is now expected to cost nothing this year, and
+a blank means it has no amount at all, neither an estimate nor an Approved amount. In the other
+amount columns (Approved, Actuals, next year and the adjusted block) a zero shows as blank,
+since there it means the same as no amount.
 
 An estimate can be a formula as well as a number, when that is how it was worked out. For
-example, `=MAX(J8,K8)` keeps the Late-year estimate at the approved amount until actual spending
+example, `=MAX(K8,L8)` keeps the Late-year estimate at the approved amount until actual spending
 exceeds it, then follows actual spending. A cell holding a formula counts as entered, even when
 the formula's result is zero.
 
-The **Revised** block takes the three Current estimate columns for the first three years and the
-RFS amounts after that. It is what Medium_Term_Cashflow and Projected_Balances use.
+## What the plan uses
 
-## Recording a change
+Medium_Term_Cashflow and Projected_Balances take **the current year from the Current
+estimate** column and **every later year from the adjusted RFS block**. The adjusted block's own
+column for the current year shows the RFS with the adjustments applied, for comparison; it is
+not used for the current year.
 
-1. Find the item's row. To add a row for something the RFS does not list, see
-   [Adding a row](#adding-a-row).
-2. Type the new amount in the estimate column for the year affected, such as next year's
-   Late-year estimate in November. If a project moves from one year to another, enter **0** in
-   the year it leaves and the amount in the year it arrives.
-3. Write the reason in column U, in a line the Board can read ("Deferred to 2028: covered by the
-   P1 refurbishment"). Details and sources go in Working notes, column V.
+An adjusted amount that differs from the RFS amount by more than 50 cents is shaded orange.
 
-The reasons are the record of the Board's changes from the RFS: the Investment Plan's cover
-refers readers to them.
+## The Adjustments tab
 
-## Adding a row
+Each row of Adjustments is one change to the RFS:
+
+| Column | Content |
+|---|---|
+| A | **Item**, picked from a dropdown of the [adjustment labels](#adjustment-labels). |
+| B | **Year from**: the year the amount leaves, or **none** when the amount is new money. |
+| C | **Year to**: the year the amount arrives, or **none** when the amount is removed. |
+| D | **Amount**, greater than 0, typed or given by a formula (see below). |
+| E | **Reason for change**: one line the Board can read. |
+| F | From-year amount (calculated): what leaves Year from. |
+| G | To-year amount (calculated): what arrives in Year to. |
+| H | **Check** (calculated): blank when the row is in order. |
+
+Three kinds of row:
+
+- **A move** gives both years. Type the amount in **Year from's dollars**, normally the RFS
+  amount being moved. The To-year amount is that amount inflated, or deflated for a move to an
+  earlier year, at the RFS's own rates: the short-term rate for the study's first years (the
+  number is on Settings) and the long-term rate after them.
+- **An addition** has **none** in Year from. Type the amount in **Year to's dollars**.
+- **A removal** has **none** in Year to. Type the amount in Year from's dollars.
+
+A part of an amount can be moved; several rows can move the same item. Rows add up: a later row
+can move an amount that an earlier row brought in. An amount can be a formula, such as
+`=600000-G42` for "the difference between 600,000 and the amount the row above brings in".
+
+The **Check** column flags:
+
+- **Missing entry**: a row with some but not all of Item, Year from, Year to, Amount and Reason.
+- **Item not in Expenditures**: an Item that is not a label.
+- **Year from = Year to**.
+- **More than the item holds in *year***: a move or removal larger than the item's RFS amount
+  for Year from, after the rows above it.
+
+Cell A2 counts the flagged rows.
+
+### Blocks
+
+The tab has four blocks, one for each of the first four years of the RFS study ("Approved in
+2024" to "Approved in 2027" for the 2024 study). Each records the changes the Board approved
+in that year. All four apply together.
+
+- At the [January rollover](../procedures/rollover.md), start using the next block.
+- With a [new RFS](../procedures/new-rfs.md), all four blocks are emptied, and the first block
+  is used again.
+
+### Adding rows to an Adjustments block
+
+Each block has 10 rows. If a block fills up:
+
+1. Unprotect Adjustments.
+2. Insert a row inside the block, above its grey closing row.
+3. Copy the row above it and paste it into the new row: that brings the dropdowns, the input
+   look and the formulas in F, G and H. Then clear the new row's yellow cells.
+4. Protect the tab again.
+5. Run [`spatac-check`](../tools/check.md): it reports any formula or dropdown the new row is
+   missing.
+
+## Adjustment labels
+
+The label in Expenditures column J identifies an item on the Adjustments tab: the GL account,
+then the building element, or the GL account name when the row has no element. A Spatac row's
+label ends in "(Spatac)". Rows without a GL account, such as section headings, have no label;
+they show as blank lines in the dropdown, and the Check column rejects them.
+
+## Adding a row to Expenditures
 
 The item number, element, GL account and the other columns A–F are fixed, so adding or
 removing an item needs the tab unprotected.
@@ -75,18 +140,18 @@ removing an item needs the tab unprotected.
    [Inserting rows](../reference/names.md#inserting-rows)). Never delete the header row or the
    ▼ End row.
 3. Copy a neighbouring item row into it, then clear its yellow cells: copying brings along the
-   formulas in G–I, N, Q, T and the RFS and Revised blocks.
+   formulas in G–J, O, R and the adjusted block.
 4. Type the item number, element or GL account name, GL account, and **S** in column F if it is
    a Spatac row. The [RFS check](analyse-rfs.md#the-rfs-check-column) in column I flags the
    row if the S is missing or not needed.
 5. Type a **Row #** in column A between those of its neighbours, such as 125.5, so that sorting
    by Row # puts it back in its place.
-6. Protect the tab again.
+6. Protect the tab again, and run [`spatac-check`](../tools/check.md).
 
 ## Filtering and sorting
 
 **Filtering** works while the tab is protected. Each heading in row 7 has a filter button: use
-it to show, for example, only one GL account or only the items with a reason for change.
+it to show, for example, only one GL account.
 
 **Sorting** needs the tab unprotected: Excel will not sort rows that contain protected cells
 on a protected tab.
