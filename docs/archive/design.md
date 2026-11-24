@@ -931,3 +931,243 @@ still reproduces the RFS with its choices set to RFS.
 
 After this, one final build is to become the master workbook, changed by hand in Excel from
 then on, and `tools/migrate/` is to be retired.
+
+## 14. Revisions of 2026-11-24
+
+Decisions from the session of 2026-11-24, on `docs/archive/Prompt-20261124.md`. Question
+numbers are prefixed **G** (G1–G35). Where this section conflicts with sections 1–13, this
+section wins.
+
+### 14.1 Sources and method (G5, G35)
+
+- **The golden source** is `_nogit/Spatac-L-20261123.xlsx`, the user's own workbook in the old
+  layout. `_nogit/Spatac-20261123c.xlsx` is the current build aligned with it, and is the
+  starting point of this restructure. All other files are history.
+- **Numeric parity with the golden source is required**, except for the one inflation fix in
+  14.4 (G24, G32).
+- The restructure is a new scripted step that takes `Spatac-20261123c.xlsx` as input, with
+  checks. It does not rebuild from `Spatac-20261121.xlsx`.
+- After the user accepts the result it goes to the Board. Their feedback is applied by
+  whatever method suits each change, scripted or by hand (G35). The freeze in 13.10 waits
+  until then.
+
+### 14.2 Investment Plan tool (G2)
+
+The reference is `_nogit/Medium_Term_Reserve_Cashflow-20261123.xlsx`, a copy the user
+formatted by hand. The plan is a frozen document, so:
+
+- Medium_Term_Cashflow and Schedule_of_Investments lose the input fill (tan) and the dotted
+  input borders.
+- Every tab uses the source's font (Arial 10). The Calibri 11 of today's output is a side
+  effect of re-serialising the styles. The year headings are bold.
+- Column widths stay as the tool makes them. The reference copy's wider columns were not
+  intended.
+- The Cover keeps the input look on the cells to be edited before publishing.
+- Only the first tab (Cover) is selected when the file opens. Today the Cover is active and
+  Medium_Term_Cashflow is also selected.
+
+### 14.3 Medium_Term_Cashflow (G3)
+
+- A blank row is inserted after "Adjustment to minimum cash balance" (row 23). Everything below
+  moves down one row, with the formulas and the `MTC_*` names.
+- The minimum row (now 25) is relabelled **"Minimum closing cash balance"**, dropping
+  "(Settings, inflated)", and is no longer bold.
+
+### 14.4 Adjustments tab (new; G6–G11, G16, G18, G23, G25, G26, G32, G34)
+
+Placed after Expenditures. It records every change to the RFS, with its reason. It replaces
+the next-year and year-after estimate blocks and the Reason for change column of Expenditures.
+
+**Blocks.**
+
+- Four permanent blocks, titled "Approved in *YYYY*" with *YYYY* = `RFS_StudyYear` + 0, +1, +2
+  and +3 (2024–2027 today). The blocks always exist.
+- At the January rollover the user is directed to the next block. At a new RFS all four
+  blocks are emptied, and the user starts again in the first block (year 0 of the new study).
+- All blocks apply together, and their adjustments add up.
+- Each block has a header row, **10 input rows filled in advance** (formulas included), and a
+  closing row. More rows may be inserted. The docs say how to copy the formula columns into an
+  inserted row, and `spatac-check` reports any missing formula (14.8). No Excel Table is used,
+  because the workbook must work in Calc as well as Excel.
+
+**Columns.**
+
+| Col | Content | Kind |
+|---|---|---|
+| A | Item | Input; dropdown |
+| B | Year from | Input; dropdown: "none" or a year |
+| C | Year to | Input; dropdown: "none" or a year |
+| D | Amount | Input |
+| E | Reason for change | Input |
+| F | From-year amount | Formula |
+| G | To-year amount | Formula |
+| H | Check | Formula |
+
+**Meaning of a row.**
+
+- **Move**: both years given. D is in **from-year dollars**. F = D. G = D × factor(C) ÷
+  factor(B) (14.5).
+- **Add**: Year from is "none". D is in **to-year dollars**. F is empty and G = D.
+- **Remove**: Year to is "none". F = D and G is empty.
+- A move may go backwards in time; the factor then deflates.
+- These rules go into the user documentation (G10).
+
+**Validation.**
+
+- Item: a list from `Expenditures!J` (the adjustment label, 14.6). Section-heading rows give
+  blank entries in the list; H rejects any Item that is not a label (G26).
+- Year from and Year to: "none" or a year from `RFS_StudyYear` to `RFS_StudyYear` + 29
+  (2024–2053).
+- Amount: `ISNUMBER` and greater than 0, so a typed number or a formula is accepted.
+- Item and Reason are required.
+
+**Check (H).** Empty for an empty row. Otherwise it flags:
+
+- a missing Item, Year from, Year to, Amount or Reason;
+- an Item that is not a label;
+- Year from equal to Year to;
+- an overdraw: F greater than the item's RFS amount in Year from, as adjusted by the rows above
+  it (all blocks, in order).
+
+**Initial data.** The user's six rows in the 2026 block of
+`_nogit/Spatac-20261123c-restructured.xlsx` (A21:E26) are real data, keeping the user's reasons.
+Their amounts are restated by the rules above:
+
+| Item | From → To | Amount |
+|---|---|---|
+| 3.9 Replace Garage Ramp Topping | 2025 → 2028 | 229,500 |
+| 6.3 Replace Exterior Sealants | none → 2027 | 50,000 |
+| 6.3 Replace Exterior Sealants | 2026 → 2028 | 416,160 |
+| 18.3.1 Refurbish Corridors | 2028 → 2027 | 524,979.60 |
+| 18.3.1 Refurbish Corridors | none → 2027 | 85,314.12 (600,000 less row 4 in 2027 dollars) |
+| 18.11 Refurbish Boardroom | 2027 → 2025 | 42,448.32 |
+
+- **3.9 (G32):** the golden source had 238,772 in 2028, which carries two years of inflation
+  instead of three. The fix gives 229,500 × 1.02³ = 243,547.24. A comment on 3.9's 2028 cell in
+  Expenditures records the difference. This is the only departure from numeric parity.
+- **18.11 (G25):** kept as the user entered it. The money was probably spent in 2025, and its
+  appearance in the 2026 Mid-year estimate was probably an error. The row changes no total.
+- **5.1, 5.5, 5.6 and 18.4 (G24):** their 2026 RFS amounts are absent from the current year,
+  as in the golden source. No adjustments are added.
+
+### 14.5 Inflation factor (G9)
+
+- The RFS has a **short-term** rate (`RFS_ShortInflation`) for its first years and a
+  **long-term** rate (`RFS_LongInflation`) after them. Both are 2% today, which is a
+  coincidence; nothing may assume they are equal.
+- The number of short-term years appears in the RFS only as a text label ("Inflation 0-3"), so
+  it is a new Settings parameter, **Short-term inflation years** = 3 (`Cfg_ShortInflationYears`).
+- factor(year) = (1 + short)^MIN(n, k) × (1 + long)^MAX(n − k, 0), with n = year −
+  `RFS_StudyYear` and k = `Cfg_ShortInflationYears`.
+- The Adjustments tab and the Projected_Balances inflator (`PB_Inflator`, today short-rate
+  only) both use this factor.
+
+### 14.6 Expenditures (G12–G15, G17, G22, G23, G27)
+
+**Columns.**
+
+| Cols | Content |
+|---|---|
+| A–I | Unchanged: identity, keys, RFS check |
+| J | **Adjustment label** (formula, protected) |
+| K–O | Current year, today's J–N: Approved, Actuals to date, Mid-year, Late-year, Current estimate (`Exp_Current` = O) |
+| P | Working notes (today's V) |
+| Q | Blank, narrow |
+| R | **Next year**: that year's column of `Exp_Adjusted` |
+| S | Blank, narrow |
+| T–AW | **Adjusted RFS**, 2024–2053, one column per year (`Exp_Adjusted`, `Exp_AdjustedYears`) |
+
+Removed: today's O–Q (next year), R–T (year after), U (Reason for change), W–AX (RFS block) and
+AY–BZ (Revised block), with their names (`Exp_MidEst1`…`Exp_Current2`, `Exp_Reason`, `Exp_RFS`,
+`Exp_RFSYears`, `Exp_Revised`, `Exp_RevisedYears`).
+
+**Adjustment label (J).**
+
+- Core: GL account + " - " + Building element (C) when the element is not empty; otherwise
+  GL account + " - " + GL account name (E), even if the name is empty.
+- Spatac rows (F = "S") add " (Spatac)".
+- Spaces are trimmed. Rows with no GL account (section headings) give an empty label.
+- Data fixes: row 34 (4.1a) gets its GL account as a number (9250.1010, not the text
+  '9250.101); row 241 (18.24a) loses the line break in its GL account name.
+- Item 16.1 (Garbage Compactor) keeps the RFS number 16.1, not the golden source's "16".
+
+**Adjusted RFS (T–AW).**
+
+- Each cell = the item's RFS amount for the year (from `RFS_fvalues`, by `Exp_Key`)
+  + `SUMIFS` of Adjustments G for the item's label with Year to = the year
+  − `SUMIFS` of Adjustments F for the item's label with Year from = the year.
+- A cell is highlighted by conditional formatting when it differs from the RFS amount by more
+  than 0.5.
+- Years before `Cfg_BaseYear` are grouped and folded. At rollover the year just ended is
+  folded too (G27).
+
+**Next year (R)** reads `Exp_Adjusted` at `Cfg_BaseYear` + 1. There are no next-year estimates:
+every next-year change goes through Adjustments (G17).
+
+### 14.7 What reads Expenditures (G14, G22)
+
+- `Medium_Term_Cashflow!B9:G9` (Revised expenditures): for the base year, `-SUM(Exp_Current)`;
+  for every other year, minus the year's column sum of `Exp_Adjusted`.
+- The Medium_Term_Cashflow RFS row (29 after 14.3) reads the year's column sum of
+  `RFS_Fv_Values` (`RFS_Fv_Years`). The totals equal those of the removed RFS block.
+- `Projected_Balances!K15:K64` (what-if expenditures): the base year from `Exp_Current`, which
+  overrides the adjusted figure; other years 2024–2053 from `Exp_Adjusted`; 2054–2073 from the
+  RFS cost in `Projected_Balances!B`. Rows before the what-if start year stay blank.
+
+### 14.8 Notes and comments (G28–G31)
+
+- **Working notes** of the golden source are kept, on their rows, in `Expenditures!P`. Column
+  letters in them are rewritten for the new layout (golden I, J, K, L → K, L, M, N), and the
+  user approves every changed note before the build. Letters that were already wrong in the
+  golden source are translated, not corrected.
+- **Cell comments** stay comments, on the cell they belong to:
+  - kept: "Kerry's projection" on the Approved header; "Revised by Bruce…" on 15.5a's
+    Late-year estimate;
+  - dropped: the comments on the removed next-year and year-after columns. Those on the
+    Mid-year and Late-year cells are superseded by the Adjustments reasons;
+  - added: the 3.9 inflation note (14.4).
+- **Claude's texts are removed:** the 55 reasons of `tools/migrate/reasons.py` (column U) and
+  the 17 doubt comments on them. The reasons for change are the user's, in Adjustments.
+- The golden source's comments on `cashflow_spatac_simulator!H15` and
+  `fvalues_spatac_end_2025!H3` are obsolete and ignored.
+- `Medium_Term_Cashflow!J33`: the updated reference to Projected_Balances stays.
+
+### 14.9 Where documentation lives (G33)
+
+One place for each kind of information:
+
+- **Docs site** (`docs/`): how the workbook works and how to operate it. Procedures (rollover,
+  new RFS, adding items, copying the Adjustments formula columns), names and formulas.
+- **README tab**: the purpose of each tab, the input legend, and a link to the docs site. No
+  procedures.
+- **Working notes** (`Expenditures!P`): the user's notes on an item's figures.
+- **Adjustments reasons** (`Adjustments!E`): why the RFS was changed.
+- **Cell comments**: only the provenance of a single figure. Never instructions. Claude's four
+  instruction comments (`Medium_Term_Cashflow!H3`, `Projected_Balances!B5`, `RFS_info!K1`,
+  `RFS_fvalues!BC1`) move into the docs.
+- **Check cells** say what is wrong and name the docs page that explains it.
+
+### 14.10 `spatac-check` (G20)
+
+A third binary in the crate. It reads formulas, names, formats and stored results, without
+recalculating, and reports every problem it finds, by tab and cell, before exiting. It exits
+non-zero if it found any. It checks:
+
+- missing formulas in formula columns (the Adjustments F–H rows, Expenditures);
+- defined names that are `#REF!` or out of place;
+- stored error results (`#N/A`, `#REF!`, `#DIV/0!`…) from the last save in Excel or Calc;
+- missing data validations on the Adjustments input rows;
+- a cell's Protected flag that does not match its role.
+
+### 14.11 Order of work
+
+1. Commit `docs/archive/Prompt-20261124.md` and this section.
+2. Investment Plan formatting (14.2) and the Medium_Term_Cashflow row (14.3).
+3. The restructure (14.4–14.8), with checks.
+4. `spatac-check` (14.10).
+5. Documentation (14.9), including the rollover and new-RFS procedures for the Adjustments
+   blocks.
+
+The rules of section 12 apply: each step ends with its verification and a commit; a failed
+verification or a design change is a stop; nothing outward-facing without explicit
+instruction; `_nogit` is create-only.

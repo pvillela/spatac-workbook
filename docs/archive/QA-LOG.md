@@ -521,3 +521,89 @@ rule."
 
 **User:** "Update the Q&A document, create a handoff document for today, similar to yesterday's,
 and commit."
+
+## Session of 2026-11-24: Investment Plan formatting and the Adjustments restructure
+
+Questions are numbered G1–G35 here; design section 14 cites them by those numbers.
+
+**User:** "Based on the context provided by @docs/archive/HANDOFF-20261122.md, grill me on
+@docs/archive/Prompt-20261124.md." The prompt asks for the Investment Plan's MTC tab to be
+formatted like `Medium_Term_Reserve_Cashflow-20261123.xlsx`, only the first tab selected, the
+user's blank row and label change applied to the workbook, and a restructure following the
+mock-up `Spatac-20261123c-restructured.xlsx`: an Adjustments tab, and on Expenditures the
+year-after block removed, next year a single adjusted column, the RFS block replaced by a
+30-year adjusted block with changed cells highlighted, Reason for change removed, and Working
+notes moved into the current-year block.
+
+**Claude:** asked a first round (commit the prompt, build path, order, where the original RFS
+lives, kinds of adjustment, amount rules, inflation, existing revisions, next-year estimates).
+After agents reported on the files, corrected two recommendations (the mock-up states amounts in
+to-year dollars; the original RFS is already in `RFS_fvalues`).
+**User:** "Give me a clean set of updated questions"
+
+### Round 1 (G1–G17)
+
+| Q | Question ➡️ recommendation | Answer |
+|---|---|---|
+| G1 | Commit the prompt file? ➡️ yes. | "ok." |
+| G2 | Plan MTC: match the hand copy (no input fill or borders, Arial 10, bold years, its widths); Schedule_of_Investments too; Cover keeps its highlight. | "OK, except for the column widths. I did nothing on purpose to widen the columns." |
+| G3 | Apply the blank row, label and unbolding to the workbook's MTC. | "ok." |
+| G4 | Plan and MTC fixes first. | "ok." |
+| G5 | Build path: new phases in `migrate.py`; any hand changes in other files? | "Spatac-20261123c was created by you to align with Spatac-L-20261123 (which was created by me). That is starting point for the restructuring I described. Everything else is history. Adjust your scripts accordingly." |
+| G6 | Actuals tab? ➡️ leave out. | "I forgot to mention the Actuals tab. Do not include the "NOT SURE I NEED THIS BLOCK"." |
+| G7 | Blocks apply together; grow above a ▼ End row; new block at rollover. | Yes to the first. "NO, all 4 blocks will exist at all times. At annual roll-over, the user will be directed to use the next block. At RFS roll-over (e.g., September next year), 4 blocks are emptied and the user will be directed to use the block for year 0 (2027)." |
+| G8 | Amount in from-year dollars, to-year amount computed (a), or to-year dollars (b). ➡️ (a). | "from_year can be "none", in which case the amount is obviously going to be expressed in to_year dollars. Other than that, I agree that most of the time typing the from-year amount is more natural. I approve option (a) with the preceding caveat. Correct the amounts as needed to conform to this rule." |
+| G9 | `RFS_ShortInflation` for every gap. | "For the adjustments tab, use the actual year-by-year RFS rates. That is the only way to keep the RFS transfers balanced." |
+| G10 | "none" in Year to means removal. | "ok. Include this in documentation." |
+| G11 | Validation of years, amount, item, reason; a flag column for overdraws and from = to. | All OK; "but how can that formula be auto-created when a row is inserted?" |
+| G12 | Dropdown: only RFS items, "GL - name". | "Items (`S` rows) that have a GL account but no RFS item description should use the GL account name instead." |
+| G13 | Adjusted block 2024–2053. | "ok." |
+| G14 | Remove the Revised block and rewire. | "Remove it, but describe the formula wiring appropriately to me for approval. Your description was vague and ambiguous, using column names in multiple tabs without qualifying them.." |
+| G15 | Highlight differences above 0.5. | "ok." |
+| G16 | Are the six mock-up rows real data; convert existing revisions? | "The six rows in the Adjustments tab's 2026 block are real data, modulo inflation/deflation corrections or any other errors or omissions. I already converted everything for 2026, using my knowledge and judgment. No further changes should be required, unless you identify flaws in my work, which need to be communicated to me for review." "Existing revisions and reasons: Didn't I provide instructions in my prompt document? Why are you asking again?" |
+| G17 | No next-year estimates any more. | "ok." |
+
+**Claude:** acknowledged G16 (the prompt had said so); an agent audited the six rows.
+
+### Rounds 2–3 (G18–G21)
+
+| Q | Question ➡️ recommendation | Answer |
+|---|---|---|
+| G18 | Formulas in inserted Adjustments rows: fixed blocks, prefilled; how many rows? ➡️ 30. | "We are using both Calc and Excel, so this needs to work with Calc too. We can pre-populate 10 rows for each block, and provide instructions to copy the check formula for inserted rows. We should also add another command line tool that checks the itegrity of the workbook, and that tool should scan for missing formulas." |
+| G19 | Purpose of the Actuals tab? | "(a). The title in cell A1 should say "CURRENT YEAR ACTUALS (2026)" where "2026" is the result of a formula pointing to the configure current year." (Later withdrawn: see G22.) |
+| G20 | `spatac-check` as a Rust binary, scope, non-zero exit. | "Yes … It should produce a comprehensive error report, not exit eagerly. I don't know what you mean by "cached error values", though. Explain." |
+| G21 | Keep Actuals rows in step: typed Row # lookup. | "I don't understand why one would typa a row number in the Actuals tab. … I need to be able to search by account name in the Actuals tab, so formulas are OK provided that a search will match the formula's values." Then: "I want Actuals tab to be a sparse matrix like Expenditure and unlike Adjustments." Then (a), typed copies checked by the tool: "Yes. You need to be more precise with your language. When you say "typed", it could mean pre-typed (already in the sheet) or typed by the end-user." |
+
+**Claude:** explained stored formula results and searching formula values in Excel and Calc.
+
+### Round 4 onwards (G9 revised, G22–G35)
+
+| Q | Question ➡️ recommendation | Answer |
+|---|---|---|
+| G9 | The RFS has no year-by-year series; build factors from the two rates. | "You are confusing the actual number 0.02 with the semantics of inflation in the RFS. There is a short-term rate, valid for x years (x needs to be a config parameter unless explicitly provided as a separate value in the RFS sheets), and a long-term rate, valid thereafter. … The inflator/deflator needs to be built-up from those two parameters." Then: parameter = 3, "OK"; `PB_Inflator` to use it, "OK". |
+| G22 | Layout and wiring (Actuals tab, Expenditures columns, Adjustments F–H, MTC and Projected_Balances). | "I don't want a separate Actuals tab, that was a left-over from an earlier iteration … The actuals information is really supposed to survive in the Expenditures tab as in the existing columns J-N … plus the existing V." Label column OK, "but that column will also contain garbage values corresponding to section headings"; next year "should be preceded and followed by a blank column"; Adjustments OK; "The current year's expenditure overrides 2024–2053 from Exp_Adjusted for the current year." Revised layout: OK, blank columns narrow; years before the current one "ideally should be invisible"; 2054–2073 from `Projected_Balances!B`: "I don't understand." (explained). |
+| G23 | Label fixes. | " (Spatac)" OK. "Fix the GL account format (append '0') and apply the "GL account" + "Building element" rule … Label core: "GL account" + "Building element" if "Building element" not empty, otherwise "GL account" + "GL name" (even if "GL name" is empty); If S row, append " (Spatac)" to label core." Remove the line break. |
+| G24 | 5.1, 5.5, 5.6, 18.4: cancelled or deferred? | "Where did you get the reason for change text … from? ALL WORKING NOTES AND CELL COMMENTS FROM THE GOLDEN SOURCE (Spatac-L-20261123.xlsx) MUST BE PRESERVED AS WORKING NOTES. ANY REASONS FOR CHANGE YOU CREATED ARE SUPERSEDED BY THE ONES I ENTERED IN THE ADJUSTMENTS TAB." Claude: the texts came from `tools/migrate/reasons.py`, inferred by Claude on 2026-11-22. Restated: "It is what it is. Numeric parity with the golden source is a requirement. …" |
+| G25 | 18.11, 2027 → 2025. | "I'm not sure what happened, but it's probably that it was actually spent in 2025 and appeared in the mid-year 2026 estimate in error." |
+| G26 | Dropdown with blank heading entries, rejected by the check. | "ok." |
+| G27 | Fold past-year columns. | "ok." |
+| G28 | Comment text into working notes? / comments on removed cells. | "Keep comments as comments only." Columns O, R: "drop them"; P, S29, S69, S207: "superseded by Adjustments reason." |
+| G29 | Old column letters in notes. | "The notes become useless if they refer to old column letters, need to be updated to new column letters.." Mapping I, J, K, L → K, L, M, N, each changed note approved before the build: "OK." |
+| G30 | 16 vs 16.1; MTC J33 text; Claude's instruction comments. | "Keep 16.1"; J33 "OK"; "I'm concerned about the scattering documentation across comments, intro tabs, and markdown documents. I need a clean strategy to be defined and followed." |
+| G31 | Comments on golden tabs with no new cell. | "You have to tell me what tab of what workbook you are referring to, I can't answer otherwise". Then: "This is obsolete … This is a left-over historic tab. We will no longer add history tabs going forward, we will simply refer to previous versions of the workbook. Bottom line, those comments can be ignored." |
+| G32 | 3.9: parity or the inflation fix? | "Fix the inflation calculation and add a comment describing the difference." |
+| G33 | One place per kind of documentation. | "OK." |
+| G34 | Block titles from `RFS_StudyYear` + 0…3. | "OK." |
+| G35 | Freeze after acceptance? | "Once I accept it, I will share it with my board colleagues and we may need to incorporate some feedback. Whether the feedback is incorporated using your existing Python tools or something else is up to you." |
+
+Along the way the user said: "Too much noise on the CLI. Give me a clean list of open
+questions"; "Your question is too long. I don't care what your toold did or did not do. I'm
+defining what the expected outcomes need to be. Ask questions from that perspective."; and
+"Don't give me stuff to read before I answer the questions. That's a waste of time and space."
+
+**User:** "We have a design document at @docs/archive/design.md; update it with this."
+**Claude:** wrote design section 14, noting four points filled in: the name
+`Cfg_ShortInflationYears`, the overdraw check across all blocks in order, Expenditures rows 3–5
+carried over in role, and this log.
+**User:** "OK to proceed, but first update the Q&A log document and commit it together with the
+design."
