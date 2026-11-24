@@ -11,6 +11,8 @@ investments. This repository holds:
   only Spatac's) and writes the differences as Markdown.
 - **`spatac-investment-plan`**, a command-line tool that extracts the Medium_Term_Cashflow and
   Schedule_of_Investments tabs into a separate InvestmentPlan workbook.
+- **`spatac-check`**, a command-line tool that checks the integrity of a Spatac workbook:
+  missing formulas, broken names, cells showing errors, lost validations and protection.
 - The documentation for using the workbook and the tools.
 
 The workbooks themselves are not in this repository.

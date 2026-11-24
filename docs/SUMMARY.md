@@ -24,6 +24,7 @@
 - [Installing the tools](tools/install.md)
 - [xlsx-diff](tools/xlsx-diff.md)
 - [spatac-investment-plan](tools/investment-plan.md)
+- [spatac-check](tools/check.md)
 
 # Reference
 

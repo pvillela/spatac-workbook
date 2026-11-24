@@ -96,7 +96,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           mkdir -p dist
-          for bin in xlsx-diff spatac-investment-plan; do
+          for bin in xlsx-diff spatac-investment-plan spatac-check; do
             cp target/${{ matrix.target }}/release/$bin dist/$bin-${{ steps.stamp.outputs.stamp }}
           done
           cp LICENSE-MIT LICENSE-APACHE THIRD-PARTY-NOTICES.md dist/
@@ -104,7 +104,7 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           New-Item -ItemType Directory -Force -Path dist
-          foreach ($bin in 'xlsx-diff', 'spatac-investment-plan') {
+          foreach ($bin in 'xlsx-diff', 'spatac-investment-plan', 'spatac-check') {
             Copy-Item target/${{ matrix.target }}/release/$bin.exe `
               dist/$bin-${{ steps.stamp.outputs.stamp }}.exe
           }
