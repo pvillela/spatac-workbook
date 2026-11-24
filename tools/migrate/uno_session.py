@@ -6,6 +6,7 @@ Run these scripts with LibreOffice's bundled Python, which carries the `uno` mod
 """
 
 import os
+import shutil
 import subprocess
 import tempfile
 import time
@@ -70,6 +71,15 @@ class Session:
         if doc is None:
             raise RuntimeError("cannot open " + path)
         return doc
+
+    def open_copy(self, path, hidden=True):
+        """Opens a copy of `path`, made in a throwaway folder, so the original is only read:
+        LibreOffice writes a lock file next to whatever it opens, and a source in _nogit must
+        never gain one (it would stay behind if a script failed)."""
+        folder = tempfile.mkdtemp(prefix="spatac-source-", dir=self.profile)
+        copy = os.path.join(folder, os.path.basename(path))
+        shutil.copyfile(path, copy)
+        return self.open(copy, hidden=hidden)
 
     def new_calc(self, hidden=True):
         """A new spreadsheet. Pass hidden=False when the saved file must keep view settings
