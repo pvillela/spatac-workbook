@@ -49,14 +49,14 @@ pub fn unlocked_cells(path: &Path) -> Result<Unlocked, String> {
 static ATTR: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#"([A-Za-z:]+)\s*=\s*"([^"]*)""#).expect("valid pattern"));
 
-fn attrs(tag: &str) -> BTreeMap<&str, &str> {
+pub(crate) fn attrs(tag: &str) -> BTreeMap<&str, &str> {
     ATTR.captures_iter(tag)
         .map(|c| (c.get(1).unwrap().as_str(), c.get(2).unwrap().as_str()))
         .collect()
 }
 
 /// Each tab's name and the zip path of its part, in workbook order.
-fn sheet_parts(book: &str, rels: &str) -> Vec<(String, String)> {
+pub(crate) fn sheet_parts(book: &str, rels: &str) -> Vec<(String, String)> {
     static SHEET: LazyLock<Regex> =
         LazyLock::new(|| Regex::new(r"<(?:\w+:)?sheet\s[^>]*>").expect("valid pattern"));
     static REL: LazyLock<Regex> =
@@ -82,7 +82,7 @@ fn sheet_parts(book: &str, rels: &str) -> Vec<(String, String)> {
         .collect()
 }
 
-fn unescape(s: &str) -> String {
+pub(crate) fn unescape(s: &str) -> String {
     s.replace("&lt;", "<")
         .replace("&gt;", ">")
         .replace("&quot;", "\"")
@@ -107,14 +107,16 @@ fn unlocked_formats(styles: &str) -> BTreeSet<usize> {
         .collect()
 }
 
-struct Format {
+pub(crate) struct Format {
     /// The `locked` value of the format's own `<protection>`, if it has one.
     locked: Option<bool>,
     /// The cell style it is based on (`xfId`).
     style: Option<usize>,
+    /// Its font (`fontId`).
+    pub(crate) font: Option<usize>,
 }
 
-fn formats_in(styles: &str, list: &str) -> Vec<Format> {
+pub(crate) fn formats_in(styles: &str, list: &str) -> Vec<Format> {
     static XF: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r"(?s)<(?:\w+:)?xf\b[^>]*?(?:/>|>.*?</(?:\w+:)?xf>)").expect("valid pattern")
     });
@@ -136,8 +138,14 @@ fn formats_in(styles: &str, list: &str) -> Vec<Format> {
                     .get("locked")
                     .is_none_or(|v| !matches!(*v, "0" | "false"))
             });
-            let style = attrs(head).get("xfId").and_then(|v| v.parse().ok());
-            Format { locked, style }
+            let head = attrs(head);
+            let style = head.get("xfId").and_then(|v| v.parse().ok());
+            let font = head.get("fontId").and_then(|v| v.parse().ok());
+            Format {
+                locked,
+                style,
+                font,
+            }
         })
         .collect()
 }

@@ -3,7 +3,7 @@
 use spatac_workbook::investment_plan::extract;
 use std::path::PathBuf;
 use umya_spreadsheet::Workbook;
-use umya_spreadsheet::structs::DefinedName;
+use umya_spreadsheet::structs::{Border, DefinedName, PatternValues};
 
 fn name(wb: &mut Workbook, n: &str, address: &str) {
     let mut dn = DefinedName::default();
@@ -60,7 +60,23 @@ fn spatac_shaped() -> Workbook {
         ws.cell_mut("A20")
             .set_value("Investment balance comparison (dropped)");
         ws.cell_mut("B20").set_value_number(1);
-        ws.style_mut("B5").protection_mut().set_locked(false);
+        // B5 is an input: unlocked, with the input fill and dotted borders. The tab is selected,
+        // as the source's active tab would be.
+        let style = ws.style_mut("B5");
+        style.protection_mut().set_locked(false);
+        style
+            .fill_mut()
+            .pattern_fill_mut()
+            .set_pattern_type(PatternValues::Solid)
+            .foreground_color_mut()
+            .set_argb_str("FFFFF2CC");
+        style
+            .borders_mut()
+            .left_mut()
+            .set_border_style(Border::BORDER_DOTTED);
+        for view in ws.sheet_views_mut().sheet_view_list_mut() {
+            view.set_tab_selected(true);
+        }
     }
     formula(
         &mut wb,
@@ -70,6 +86,14 @@ fn spatac_shaped() -> Workbook {
         "2026",
     );
     formula(&mut wb, "Medium_Term_Cashflow", "C3", "B3+1", "2027");
+    {
+        let font = wb
+            .sheet_by_name_mut("Medium_Term_Cashflow")
+            .unwrap()
+            .style_mut("B3")
+            .font_mut();
+        font.set_name("Arial").set_size(10.0).set_bold(true);
+    }
     formula(&mut wb, "Medium_Term_Cashflow", "D3", "C3+1", "2028");
     formula(&mut wb, "Medium_Term_Cashflow", "C5", "B5*2", "20");
     formula(
@@ -192,7 +216,7 @@ fn rows_outside_the_plan_are_dropped() {
 }
 
 #[test]
-fn everything_is_locked_and_protected() {
+fn everything_is_locked_and_protected_but_the_covers_entries() {
     let wb = run("locked");
     for ws in wb.sheet_collection() {
         assert!(
@@ -201,12 +225,76 @@ fn everything_is_locked_and_protected() {
             ws.name()
         );
         for c in ws.cells() {
-            assert!(
-                c.style().protection().is_none_or(|p| p.locked()),
-                "{}!{} unlocked",
-                ws.name(),
-                c.coordinate()
-            );
+            let at = format!("{}!{}", ws.name(), c.coordinate());
+            let locked = c.style().protection().is_none_or(|p| p.locked());
+            let entry = at == "Cover!B8" || at == "Cover!B9";
+            assert_eq!(locked, !entry, "{at}");
         }
     }
+}
+
+#[test]
+fn only_the_cover_is_selected() {
+    let wb = run("selected");
+    let selected: Vec<&str> = wb
+        .sheet_collection()
+        .iter()
+        .filter(|ws| {
+            ws.sheets_views()
+                .sheet_view_list()
+                .iter()
+                .any(|v| v.tab_selected())
+        })
+        .map(|ws| ws.name())
+        .collect();
+    assert_eq!(selected, ["Cover"]);
+}
+
+#[test]
+fn inputs_lose_their_look_and_the_covers_entries_have_it() {
+    let wb = run("look");
+    let b5 = wb
+        .sheet_by_name("Medium_Term_Cashflow")
+        .unwrap()
+        .cell("B5")
+        .unwrap()
+        .style();
+    assert!(b5.fill().is_none_or(|f| f.pattern_fill().is_none_or(|p| {
+        p.foreground_color()
+            .is_none_or(|c| !c.argb_str().contains("FFF2CC"))
+    })));
+    assert!(
+        b5.borders()
+            .is_none_or(|b| b.left().border_style() == "none")
+    );
+    let b8 = wb
+        .sheet_by_name("Cover")
+        .unwrap()
+        .cell("B8")
+        .unwrap()
+        .style();
+    let fill = b8.fill().and_then(|f| f.pattern_fill()).unwrap();
+    assert!(
+        fill.foreground_color()
+            .unwrap()
+            .argb_str()
+            .contains("FFF2CC")
+    );
+}
+
+#[test]
+fn cells_keep_their_source_font() {
+    let wb = run("font");
+    let font = wb
+        .sheet_by_name("Medium_Term_Cashflow")
+        .unwrap()
+        .cell("B3")
+        .unwrap()
+        .style()
+        .font()
+        .cloned()
+        .unwrap();
+    assert_eq!(font.name(), "Arial");
+    assert_eq!(font.size(), 10.0);
+    assert!(font.bold());
 }

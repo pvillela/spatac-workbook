@@ -11,20 +11,29 @@
 //! - **Schedule_of_Investments**: held and planned investments with their cash flows by year.
 //!
 //! Formulas that refer only to these two tabs stay formulas. A formula that refers to any other
-//! tab, directly or through a defined name, becomes its cached value. Every cell is locked and
-//! every sheet protected without a password.
+//! tab, directly or through a defined name, becomes its cached value. Every sheet is protected
+//! without a password, and every cell is locked but the Cover's two lines for the approving
+//! meeting.
+//!
+//! The plan is a finished document (design 14.2): the two tabs lose the input look (fill and
+//! borders) of the source's input cells, every cell keeps its source font, and only the Cover is
+//! selected when the file opens.
 //!
 //! Content is located only through defined names (design section 3.4), so the extraction keeps
 //! working when rows or columns move.
 
+mod fonts;
+
 use crate::diff::formula::{self, Token};
 use crate::diff::model::parse_range;
+use crate::diff::protection::unlocked_cells;
+use fonts::{FontSpec, cell_fonts};
 use regex::Regex;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
-use umya_spreadsheet::structs::DefinedName;
-use umya_spreadsheet::{CellRawValue, Workbook, Worksheet};
+use umya_spreadsheet::structs::{Border, DefinedName, PatternValues, SheetView};
+use umya_spreadsheet::{CellRawValue, Color, Workbook, Worksheet};
 
 pub const MTC: &str = "Medium_Term_Cashflow";
 pub const SCHEDULE: &str = "Schedule_of_Investments";
@@ -88,6 +97,9 @@ pub fn extract(source: &Path, output: &Path, generated_on: &str) -> Result<Summa
             .map_err(|_| format!("{} has no {sheet} tab", source.display()))?;
     }
 
+    let fonts = cell_fonts(source, &KEPT)?;
+    let unlocked = unlocked_cells(source)?;
+
     let mut summary = Summary {
         output: output.to_owned(),
         ..Summary::default()
@@ -100,7 +112,7 @@ pub fn extract(source: &Path, output: &Path, generated_on: &str) -> Result<Summa
     let source_name = source
         .file_name()
         .map_or_else(String::new, |f| f.to_string_lossy().into_owned());
-    out.add_sheet(cover(&source_name, generated_on, base_year))
+    out.add_sheet(cover(&source_name, generated_on, base_year, &fonts.default))
         .map_err(|e| e.to_string())?;
 
     // The two tabs, trimmed to what the plan needs.
@@ -115,7 +127,16 @@ pub fn extract(source: &Path, output: &Path, generated_on: &str) -> Result<Summa
         let mut ws = wb.sheet_by_name(sheet).expect("checked above").clone();
         trim(&mut ws, keep);
         convert_formulas(&mut ws, &names, &mut used_names, &mut summary)?;
+        restyle(
+            &mut ws,
+            fonts.cells.get(sheet),
+            unlocked.get(sheet),
+            &fonts.default,
+        );
         lock(&mut ws);
+        for view in ws.sheet_views_mut().sheet_view_list_mut() {
+            view.set_tab_selected(false);
+        }
         out.add_sheet(ws).map_err(|e| e.to_string())?;
     }
 
@@ -129,9 +150,6 @@ pub fn extract(source: &Path, output: &Path, generated_on: &str) -> Result<Summa
         dn.set_name(n.clone());
         dn.set_address(t.address.clone());
         out.add_defined_names(dn);
-    }
-    for ws in out.sheet_collection_mut() {
-        lock(ws);
     }
     out.set_active_sheet(0);
 
@@ -294,6 +312,26 @@ fn strip_strings(text: &str) -> String {
     out
 }
 
+/// Gives every cell its source font, and takes the input look (fill and borders) off the source's
+/// input cells, which are the unlocked ones.
+fn restyle(
+    ws: &mut Worksheet,
+    fonts: Option<&HashMap<(u32, u32), FontSpec>>,
+    inputs: Option<&BTreeSet<(u32, u32)>>,
+    default: &FontSpec,
+) {
+    for cell in ws.cells_mut() {
+        let at = (cell.coordinate().row_num(), cell.coordinate().col_num());
+        let font = fonts.and_then(|f| f.get(&at)).unwrap_or(default);
+        let style = cell.style_mut();
+        font.apply(style);
+        if inputs.is_some_and(|i| i.contains(&at)) {
+            style.remove_fill();
+            style.remove_borders();
+        }
+    }
+}
+
 /// Locks every cell and protects the sheet without a password.
 fn lock(ws: &mut Worksheet) {
     for cell in ws.cells_mut() {
@@ -307,21 +345,53 @@ fn cell_number(wb: &Workbook, t: &Target, dr: u32, dc: u32) -> Option<f64> {
     ws.cell((t.start.1 + dc, t.start.0 + dr))?.value_number()
 }
 
-fn set_text(ws: &mut Worksheet, at: &str, text: &str, bold: bool) {
+/// The input look of the source workbook: its `Input` cell style's fill and dotted borders.
+const INPUT_FILL: &str = "FFFFF2CC";
+const INPUT_BORDER: &str = "FF666666";
+
+fn set_text(ws: &mut Worksheet, font: &FontSpec, at: &str, text: &str, bold: bool) {
     let cell = ws.cell_mut(at);
     cell.set_value_string(text);
-    if bold {
-        cell.style_mut().font_mut().set_bold(true);
-    }
+    let style = cell.style_mut();
+    font.apply(style);
+    style.font_mut().set_bold(bold);
 }
 
-fn cover(source: &str, generated_on: &str, base_year: f64) -> Worksheet {
+/// Gives a Cover cell the input look and unlocks it: it is filled in before the plan is published.
+fn make_input(ws: &mut Worksheet, at: &str) {
+    let style = ws.cell_mut(at).style_mut();
+    style
+        .fill_mut()
+        .pattern_fill_mut()
+        .set_pattern_type(PatternValues::Solid)
+        .foreground_color_mut()
+        .set_argb_str(INPUT_FILL);
+    let borders = style.borders_mut();
+    dotted(borders.left_mut());
+    dotted(borders.right_mut());
+    dotted(borders.top_mut());
+    dotted(borders.bottom_mut());
+    style.protection_mut().set_locked(false);
+}
+
+fn dotted(border: &mut Border) {
+    border.set_border_style(Border::BORDER_DOTTED);
+    let mut color = Color::default();
+    color.set_argb_str(INPUT_BORDER);
+    border.set_color(color);
+}
+
+fn cover(source: &str, generated_on: &str, base_year: f64, font: &FontSpec) -> Worksheet {
     let mut ws = Worksheet::default();
     ws.set_name("Cover");
-    set_text(&mut ws, "A1", "INVESTMENT PLAN — RESERVE FUND", true);
+    let mut view = SheetView::default();
+    view.set_tab_selected(true);
+    ws.sheet_views_mut().add_sheet_view_list_mut(view);
+    set_text(&mut ws, font, "A1", "INVESTMENT PLAN — RESERVE FUND", true);
     ws.cell_mut("A1").style_mut().font_mut().set_size(14.0);
     set_text(
         &mut ws,
+        font,
         "A2",
         "The Medium-Term Cash Flow schedule required by the Reserve Fund Investment Policy (s.3.2), \
          with the schedule of investments.",
@@ -334,29 +404,37 @@ fn cover(source: &str, generated_on: &str, base_year: f64) -> Worksheet {
     ];
     for (i, (label, value)) in rows.iter().enumerate() {
         let r = 4 + i as u32;
-        set_text(&mut ws, &format!("A{r}"), label, true);
-        set_text(&mut ws, &format!("B{r}"), value, false);
+        set_text(&mut ws, font, &format!("A{r}"), label, true);
+        set_text(&mut ws, font, &format!("B{r}"), value, false);
     }
     set_text(
         &mut ws,
+        font,
         "A8",
         "Approved by the Board at the meeting of",
         true,
     );
-    set_text(&mut ws, "B8", "____________________", false);
-    set_text(&mut ws, "A9", "Minutes reference", true);
-    set_text(&mut ws, "B9", "____________________", false);
-    set_text(&mut ws, "A11", "Contents", true);
+    set_text(&mut ws, font, "B8", "", false);
+    set_text(&mut ws, font, "A9", "Minutes reference", true);
+    set_text(&mut ws, font, "B9", "", false);
+    set_text(&mut ws, font, "A11", "Contents", true);
     let contents = [
         "Medium_Term_Cashflow — cash, expenditures, maturities and planned investments against the minimum target.",
         "Schedule_of_Investments — investments held and planned, with their cash flows by year.",
     ];
     for (i, line) in contents.iter().enumerate() {
-        set_text(&mut ws, &format!("A{}", 12 + i), line, false);
+        set_text(&mut ws, font, &format!("A{}", 12 + i), line, false);
     }
-    set_text(&mut ws, "A15", "Changes from the Reserve Fund Study", true);
     set_text(
         &mut ws,
+        font,
+        "A15",
+        "Changes from the Reserve Fund Study",
+        true,
+    );
+    set_text(
+        &mut ws,
+        font,
         "A16",
         "The expenditures in this plan differ from the Reserve Fund Study where the Board has changed \
          the timing or cost of a project. The reasons for those changes are described in the Spatac \
@@ -365,6 +443,9 @@ fn cover(source: &str, generated_on: &str, base_year: f64) -> Worksheet {
     );
     ws.column_dimension_mut("A").set_width(42.0);
     ws.column_dimension_mut("B").set_width(60.0);
+    lock(&mut ws);
+    make_input(&mut ws, "B8");
+    make_input(&mut ws, "B9");
     ws
 }
 
