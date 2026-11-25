@@ -761,3 +761,107 @@ couple of spaces at the beginning of the string "RFS amounts by year, …"."
 
 **User:** "Update the Q&A log and create a handoff document similar to the previous ones to capture
 the current context."
+
+## Session of 2026-11-25: Projected_Balances defects and the money formats
+
+Questions are numbered H1–H19 here (Q1–Q19 in the session); design section 15 cites them by
+those numbers.
+
+**User:** "Read @docs/archive/HANDOFF-20261124.md for context. Then, /grill-me on
+@_nogit/defects-20261125.md." The file was in fact `docs/archive/defects-20261125.md`: red
+negatives on Projected_Balances; column I too narrow for the year; what the 3.77% "unlabelled
+value" and the "Historical inflation rate 2021–2024" are; shading for years past the 30-year
+horizon; H14 to read "RFS PV margin over minimum"; the RFS block to recompute the RFS rather than
+copy RFS_cashflow, with a column checking for discrepancies; the what-if formulas simpler once
+the block no longer has to reproduce the RFS.
+
+### Round 1 (H1–H9)
+
+| Q | Question ➡️ recommendation | Answer |
+|---|---|---|
+| H1 | Commit the untracked defects file? ➡️ yes. | "I've committed it." |
+| H2 | Changes in `restructure.py`, output `Spatac-20261125a.xlsx`. | "ok." |
+| H3 | Red negatives with a minus sign on every money cell of the tab. | "ok." |
+| H4 | Widen I, the spacer holding the lowest margins' years. | "widen if necessary, but wait until you add the new check column I asked for in the RFS block, as that may impact where the year values land." |
+| H5 | D8:E9 (old simulator T4 and its unlabelled Q7; no formula uses them): delete, also in `migrate.py`. | "ok." |
+| H6 | Light grey fill on rows 45–64. | "ok." |
+| H7 | "PV margin over minimum" on T14, G7 and G10 too. | "ok." |
+| H8 | What the RFS block recomputes ➡️ interest, balance and contributions; costs read. | "The only things that should be read from the RFS are the expenditures and rates. Everything else needs to be recomputed to verify the RFS calculations are correct." |
+| H9 | One check column after the balance, tolerance 0.5, a count above it. | "ok." |
+
+### Round 2 (H10–H13)
+
+| Q | Question ➡️ recommendation | Answer |
+|---|---|---|
+| H10 | Read the opening balance (C11) and present contribution (C12) as inputs; recomputing from them matched RFS_cashflow within 0.01 in all 50 years. | "Read C11, C12, rates, and expenditures; recompute all else." |
+| H11 | The RFS block laid out like the what-if, rate columns shown. | "Same columns as what-if block. The check column corresponds to the "Difference from RFS balance" column." Also: "I noticed there is a bug in the what-if block: cells L17 and L18 are displaying blank values." |
+| H12 | Short-term interest for 3 years (2024–2026). | "Should be based on cell B8 in the Settings tab. The label there should change to "Years of short-term inflation and interest in the RFS (the long-term rate applies after them)"." |
+| H13 | Drop the what-if's three "RFS" choices. | "ok. In addition, cells A8:B8 should mean "Contributions increases follow the RFS schedule through". The contributions themselves are computed from the increases. That changes the meaning and usage of the parameter." |
+
+### Round 3 (H14–H19)
+
+| Q | Question ➡️ recommendation | Answer |
+|---|---|---|
+| H14 | L17:L18 blank by design (B8 = 2027); the new meaning fills them with the RFS rate. | "ok." |
+| H15 | The what-if's first contribution grows from the RFS block's previous year. | "ok." |
+| H16 | Settings B8 for interest, counted from the study year. | "Create separate config parameters for short-ter inflation and interest years." |
+| H17 | Rename `Cfg_ShortInflationYears`. | "See above." (Not renamed: a second parameter instead.) |
+| H18 | Subsequent increase: keep as a formula, read-only? | "Leave B12 as an input." (It already was, with `=RFS_SubsequentIncrease` as default.) |
+| H19 | New Settings row 9, `Cfg_ShortInterestYears` = 3; the note to row 10. | "ok." |
+
+**User:** "Update the design document, then proceed with implementation."
+**Claude:** wrote design 15.1–15.4 and rebuilt the tab: RFS block B–M recomputed with the check in
+I (count in I13), what-if O–Z, inflator AB; `spatac-check`, `verify_restructure.py` and the docs
+followed. `Spatac-20261125a.xlsx`; nothing committed for want of a session trailer.
+
+### Review of the build (2026-11-25, continued)
+
+**User:** "Shift A4:B10 to O4. The summary block currently in D4:H10 needs to be split into two
+blocks: one above the RFS block and the other above the what-if block. The summary blocks need to
+be augmented with the first negative balance margins and the years when they occur. I alredy told
+you previously that I don't want to see `-0` values. Fix the formats (not formulas) so zero shows
+as `0`."
+**Claude:** inputs to O4:P10 (labels right-justified, running left), summaries B4:H7 and R4:X7 with
+Lowest, Year, First negative, Year (`MINIFS`; "none"), and a conditional red format
+`[RED][<=-0.5]#,##0;[<0.5]0;#,##0`. The only `-0`s were rounding noise in the check column.
+`Spatac-20261125b.xlsx`.
+
+**User:** "Is your number format in the projected balances tab the same as in the MTC and
+Expenditures tab?" **Claude:** no: red there only on the variance rows; `#,##0` and a hide-zero
+format elsewhere.
+**User:** "I don't think zero values should show blank in Expenditures." Then, interrupting:
+"Show me a real example where a zero shows blank." **Claude:** none on Expenditures; 692 cells on
+Schedule_of_Investments.
+**User:** "Let's use the same money formatting convention consistently across the board. Use the
+simplest formatting option that works in Calc." Then: "Tell me what that format is."; "Why do you
+need the condition? Rounding is automatic and works in Calc, i.e., -0.4 appears as 0."; "I'm
+saying you don't need the <= 0.5 portion"; "NO, that is not true. Look at the corresponding formats
+in the legacy workbook. I never had to specify a <= 0.5."
+**Claude:** tested the legacy format `#,##0;[RED]-#,##0` on a legacy cell (Medium_Term_Cashflow
+B30 of `Spatac-L-20261123.xlsx`): −0.4 shows `-0`; the legacy workbook just never had such values.
+**User:** "I stand corrected. Use the simple format and let -0 happen."
+**Claude:** `Spatac-20261125c.xlsx`, every money cell red.
+**User:** "Sorry, I changed my mind. The consistency rule adds too much red noise. Revert the
+formatting changes in the tabs other than Projected_Balances." **Claude:** `Spatac-20261125d.xlsx`;
+other tabs' formats identical to `Spatac-20261124f.xlsx`.
+
+**User:** "What is "Claude-Session trailer"?" — "This question was never asked before, how did you
+do it previously?" **Claude:** earlier sessions' system messages supplied the line; this one's did
+not. **User:** "Drop the trailer. Please fix theformats in that Expenditures range to plain #,##0
+(black, shows 0)." (Approved and Actuals.) Committed as `598b800`.
+**User:** "… what is the rationale for that?" (rows 3–4 hide-zero) **Claude:** none; carried over.
+**User:** "yes" (switch them) — `319e85d`. "Fix the spaver ranges as well because I don't want the
+bad format to leak out if I insert columns" — "In other words: hidden zeroes nowhere." — "Make sure
+the format that hides zeroes is deleted from the Python script." **Claude:** the Schedule grid
+N7:X80 became `#,##0`, the `MONEY` constant was removed, and the verify script fails on any hidden
+zero (`c6ff7a4`).
+
+**User:** "Projected_Balances range E4:H7 can be moved to D4; similarly, U4:X7 to T4." — "And row
+11 can be deleted" **Claude:** summaries B4:G7 and R4:W7; header row 13, years 14–63
+(`Spatac-20261125h.xlsx`, `3ff30a3`).
+**User:** "My commit for the initial prompt failed and you did not notice and tell me?"
+**Claude:** `Prompt_DS_Review-20261125.md` had shown as untracked in three commits and was only
+mentioned in passing. **User:** "Lousy job there. I just committed it." (Folded into the last
+commit by amendment: `2fe7d34`.)
+
+**User:** "Create a handoff document similar to previous ones and update the Q&A log."
