@@ -503,7 +503,7 @@ class Restructure:
         b.bold("S2")
         b.cell("S2").IsTextWrapped = False
         # Legends for rows 3-5, right-justified next to the figures (in the notes column).
-        for r, text in ((3, "RFS total"), (4, "Total"), (5, "Variance vs RFS")):
+        for r, text in ((3, "RFS total"), (4, "Adjusted total"), (5, "Variance vs RFS")):
             b.value("P%d" % r, text)
             b.cell("P%d" % r).HoriJustify = right
         # Variances: negative is unfavourable (more spending than the RFS), in red, as on

@@ -1208,7 +1208,7 @@ Where these differ from 14.1–14.11, they win.
   notes that were already wrong (11.5, 18.11: "K = 0: not in YE projection") now say
   "Late-year estimate" = 0.
 - **Defects of 2026-11-24** (`docs/archive/defects-20261124.md`):
-  - "Vendor total" is now **RFS total**, with legends "RFS total", "Total" and "Variance vs RFS"
+  - "Vendor total" is now **RFS total**, with legends "RFS total", "Adjusted total" and "Variance vs RFS"
     right-justified in Q3:Q5. Next year (S3) shows its RFS total too.
   - **Variances are RFS minus Spatac** on Expenditures (row 5), as on Medium_Term_Cashflow: a
     negative variance is unfavourable and shows in red.
