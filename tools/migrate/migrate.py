@@ -1438,12 +1438,6 @@ class Migration:
         b.fmt("D5", MONEY_ZERO)
         define(doc, "PB_StartBalance", ref("Projected_Balances", "D5"))
 
-        b.value("D8", "Historical inflation rate 2021–2024")
-        b.value("E8", num(self.sim_cell("T", 4)))
-        b.value("D9", "Unlabelled value carried over from the old simulator (Q7)")
-        b.value("E9", num(self.sim_cell("Q", 7)))
-        b.fmt("E8:E9", PERCENT)
-
         # Lowest margins over the first 30 years of the RFS.
         b.value("G4", "Lowest over the first 30 years")
         b.value("H4", "Amount")

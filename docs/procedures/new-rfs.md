@@ -63,14 +63,15 @@ year.)
 
 ## 4. Review what follows from the study
 
-- **Projected_Balances B8:** the last year of contributions fixed by the new funding plan.
-  Review the catch-up increases in B9:B11.
-- **Projected_Balances, validation:** set the what-if to RFS and check that the difference
-  from the RFS balance is zero in every year (see
-  [Re-doing the vendor's arithmetic](../purposes/validate-funding.md#re-doing-the-vendors-arithmetic)).
-- **Settings:** the minimum target and its year, if the Board revisits them; and the **years of
+- **Projected_Balances P6:** the last year of contribution increases fixed by the new funding
+  plan. Review the catch-up increases in P7:P9.
+- **Projected_Balances, validation:** I13 shows 0: the recomputed RFS balance matches
+  RFS_cashflow in every year (see
+  [Checking the vendor's arithmetic](../purposes/validate-funding.md#checking-the-vendors-arithmetic)).
+- **Settings:** the minimum target and its year, if the Board revisits them; the **years of
   short-term inflation**, which must match the study's (RFS_fvalues labels them, for example
-  "Inflation 0-3" for 3).
+  "Inflation 0-3" for 3); and the **years of short-term interest** (RFS_cashflow F7, for
+  example "Short Term (3 yr.) Interest").
 - **Expenditures:** review the current year's estimates against the new study.
 - **Adjustments:** record in the first block any change from the new study that the Board
   approves; see [The Adjustments tab](../purposes/track-projects.md#the-adjustments-tab).

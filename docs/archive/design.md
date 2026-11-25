@@ -1224,3 +1224,94 @@ Where these differ from 14.1–14.11, they win.
     no amount and no adjustment touches the year, and show `0` where adjustments leave nothing.
   - **Adjustments Check** shows OK for a non-empty row in order, right-justified; A2 counts the
     other non-empty results.
+
+## 15. Revisions of 2026-11-25
+
+Decisions from the session of 2026-11-25, on `docs/archive/defects-20261125.md`. Question
+numbers are prefixed **H** (H1–H19). Where this section conflicts with sections 1–14, this
+section wins. The changes go into `tools/migrate/restructure.py` (H2), which still starts from
+`_nogit/Spatac-20261123c.xlsx`; `verify_restructure.py` and the docs follow.
+
+### 15.1 Settings (H16, H17, H19)
+
+- A new row 9, **"Years of short-term interest in the RFS (the long-term rate applies after
+  them)"**, B9 = 3, an input named `Cfg_ShortInterestYears`. The note moves to row 10.
+- Row 8 (`Cfg_ShortInflationYears`) is unchanged: the two counts are separate parameters.
+- Interest is at `RFS_ShortInterest` for the years `RFS_StudyYear` to `RFS_StudyYear` +
+  `Cfg_ShortInterestYears` − 1 (2024–2026), then `RFS_LongInterest`. Formerly the what-if used
+  the short rate through `RFS_StudyYear` + 3 (four years). Both rates are 4% today, so no
+  number changes.
+
+### 15.2 Projected_Balances: the RFS block is recomputed (H8–H11)
+
+This replaces the "RFS baseline, read-only" of 13.6.
+
+- **Read from the RFS:** only the expenditures (RFS_cashflow B), the rates (interest G7:G8,
+  contribution increases K9:K12) and two starting values: the opening balance (C11) and the
+  present contribution (C12). **Everything else is recomputed**: contributions (last year's
+  × (1 + the RFS increase)), interest (opening × rate), closing balance.
+- **Same columns as the what-if block**, so the two read across column for column. The column
+  where the what-if has "Difference from RFS balance" holds the **check**: the recomputed
+  closing balance minus RFS_cashflow G. A difference over 0.5 is shaded; the count of such
+  years is in row 13 above the column (red when not zero).
+- Checked outside the workbook before building: the recomputation matches RFS_cashflow C, D
+  and G within 0.01 in all 50 years.
+
+### 15.3 Projected_Balances: the what-if is simpler (H13–H15)
+
+- The three "RFS" choices go: **start** (always the current year, `Cfg_BaseYear`, from the
+  typed opening balance), **expenditures** (always Revised: `Exp_Current` for the base year,
+  `Exp_Adjusted` after, the RFS beyond 2053) and **contributions** (always from increases).
+  `PB_Start`, `PB_ExpBasis`, `PB_ContribBasis` and `PB_StartBalance` are removed. The check of
+  the vendor's arithmetic is now the RFS block's (15.2); A3's instruction goes.
+- **"Contribution increases follow the RFS schedule through"** (formerly "Contributions follow
+  …"): through that year the increase column shows the RFS's increase, after it the three
+  catch-up increases and then the subsequent one. Contributions are always last year's × (1 +
+  increase), the first what-if year growing from the RFS block's recomputed contribution of
+  the year before. With the year set to 2073 the what-if follows the RFS schedule throughout.
+- This removes the blanks in the increase column for the years through that year (L17:L18 in
+  `Spatac-20261124f.xlsx`), which were by design, not a formula error (H14).
+- "Subsequent annual increase" stays an input whose default is `=RFS_SubsequentIncrease` (H18).
+- "Difference from RFS balance" compares with the recomputed RFS balance.
+
+### 15.4 Projected_Balances: layout and format (H3–H7)
+
+- **Inputs** A4:B10 (moved to P4:P10 by 15.5): what-if start year (calculated), opening
+  balance, the "through" year, the three catch-up increases, the subsequent increase. The old D8:E9 (a historical inflation
+  rate and an unlabelled value of the old simulator; no formula used either) are deleted, here
+  and in `migrate.py`.
+- **Lowest margins over the first 30 years**: label in D, amount in G, year in H, rows 4–10
+  (replaced by 15.5).
+- **Year table**, header row 14, years in rows 15–64: A year; B–M the RFS block; N spacer;
+  O–Z the what-if; AB the inflator (folded).
+- **Labels**: "PV margin over minimum" replaces "margin over minimum (PV)" everywhere on the
+  tab ("RFS PV margin over minimum", "What-if: PV margin over minimum", …).
+- **Negatives in red** with a minus sign (`MONEY_RED`) in every money cell of the tab.
+- **Years past the 30-year horizon** (rows 45–64) have a light grey fill across the table.
+- Column widths: every table column fits a year; there is no separate year spacer to widen
+  (H4).
+
+### 15.5 Review of `Spatac-20261125a.xlsx`
+
+- **Inputs above the what-if**: A4:B10 move to O4:P10. The labels are right-justified in O and
+  run left over the empty cells before it. Column A holds only years now and is narrowed.
+- **Two summaries**, one above each block, over the first 30 years: B4:H7 for the RFS
+  (`PB_RFSLowest`, B5:H7) and R4:X7 for the what-if (`PB_Lowest`, R5:X7). Each has a row per
+  margin (over minimum, over inflated minimum, PV) and the columns Lowest, Year, **First
+  negative**, Year. The first negative year is `MINIFS` of the years where the margin is below
+  zero; "none" when there is none, with the amount blank.
+- **`-0`**: superseded by 15.6.
+
+### 15.6 Money format
+
+- **Projected_Balances only** uses the legacy workbook's red format, `#,##0;[RED]-#,##0`
+  (`MONEY_RED`; with cents, `#,##0.00;[RED]-#,##0.00` for the per-unit columns), in every money
+  cell. The other tabs keep their formats as they were (`#,##0`, the hide-zero `#,##0;-#,##0;""`
+  of 13.4, and red only on their variance rows). Making every tab red was tried and rejected
+  by the user as too much red noise.
+- **Expenditures Approved and Actuals to date** (L8:M249) change from the hide-zero format to
+  `#,##0` (`MONEY_ZERO`): a zero shows 0, black. This supersedes 13.4's exception for them.
+- **`-0` is accepted.** An amount between −0.5 and 0 shows `-0`, as in the legacy workbook. A
+  conditional format (`[RED][<=-0.5]#,##0;#,##0`) would avoid it, but the user prefers the
+  simple one. Today only Projected_Balances I26, I27 and I29 (about −1e-8, rounding noise in the
+  check) show it.

@@ -81,11 +81,11 @@ you do, the red check in A2 says the first year column is not the base year.
 
 ## Projected_Balances
 
-Type the new year's **opening balance** (B5) from the prior year's financial statements: cash,
+Type the new year's **opening balance** (P5) from the prior year's financial statements: cash,
 less payables and accrued liabilities, plus investment principal and accrued interest. The
 what-if now starts in the new year.
 
-The November 2026 workbook was delivered with B5 seeded from the old simulator's projected
+The November 2026 workbook was delivered with P5 seeded from the old simulator's projected
 closing balance for 2025, worked out from the 2024 audited closing balance and the 2025 actual
 expenditures. Replace it
 with the figure from the 2025 financial statements once they are available.

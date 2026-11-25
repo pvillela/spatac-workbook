@@ -30,6 +30,7 @@ from migrate import (
     HEADER_COLOR,
     MONEY,
     MONEY_ZERO,
+    PERCENT,
     SEPARATOR_COLOR,
     YEAR,
     Builder,
@@ -44,6 +45,9 @@ from uno_session import Session
 
 RFS_SPAN = 30  # the RFS planning span: study year .. study year + 29
 SHORT_INFLATION_YEARS = 3  # "Inflation 0-3" in RFS_fvalues W1 (design 14.5)
+SHORT_INTEREST_YEARS = 3  # "Short Term (3 yr.) Interest" in RFS_cashflow F7 (design 15.1)
+BEYOND_COLOR = 0xEDEDED  # Projected_Balances: a year past the RFS's 30-year horizon
+MONEY_CENTS_RED = "#,##0.00;[RED]-#,##0.00"  # MONEY_RED with cents (design 15.4)
 CHANGED_COLOR = 0xFCE4D6  # an adjusted amount that differs from the RFS
 
 # Expenditures after the restructure (design 14.6).
@@ -239,6 +243,15 @@ class Restructure:
         b.fmt("B8", "0")
         b.cell("B8").HoriJustify = b.cell("B7").HoriJustify
         define(self.doc, "Cfg_ShortInflationYears", ref("Settings", "B8"))
+        # A separate count for interest (design 15.1); the note below moves down a row.
+        sheet.Rows.insertByIndex(8, 1)
+        b.value("A9", "Years of short-term interest in the RFS (the long-term rate applies after them)")
+        b.value("B9", SHORT_INTEREST_YEARS)
+        b.style("B9", "Input")
+        b.fmt("B9", "0")
+        b.cell("B9").HoriJustify = b.cell("B8").HoriJustify
+        b.cell("A9").CellStyle = b.cell("A8").CellStyle
+        define(self.doc, "Cfg_ShortInterestYears", ref("Settings", "B9"))
 
     # -- Adjustments --------------------------------------------------------------------------
 
@@ -584,6 +597,8 @@ class Restructure:
         self.adj_cols = [col(ADJ_FIRST + 1 + k) for k in range(RFS_SPAN)]
         if b.cell("%s6" % a0).getValue() != study or b.cell("%s7" % LABEL).getString() != "Adjustment label":
             raise RuntimeError("Expenditures: the spacer did not move the columns as expected")
+        # Approved and Actuals to date show a zero as 0, not blank (design 15.6).
+        b.fmt("L%d:M%d" % (first, last), MONEY_ZERO)
 
         # Groups, folded: the identity helpers (E-H), the label (J) and the past years of the
         # adjusted block (one more is folded at each rollover, design 14.6). The current year's
@@ -696,32 +711,282 @@ class Restructure:
     # -- Projected_Balances -------------------------------------------------------------------
 
     def projected(self):
-        sheet = self.doc.Sheets.getByName("Projected_Balances")
-        b = Builder(self.doc, sheet)
-        first, last = 15, 64
-        b.formulas(
-            "K%d:K%d" % (first, last),
-            [[
+        """Rebuilt (design 15.2-15.4): the RFS block recomputed from the RFS's inputs and checked
+        against RFS_cashflow, beside a what-if that always starts in the current year. The tab
+        is cleared and rebuilt in place, so that the names other tabs read keep working."""
+        doc = self.doc
+        sheet = doc.Sheets.getByName("Projected_Balances")
+        b = Builder(doc, sheet)
+        hdr, first, last = 14, 15, 64
+        last30 = first + RFS_SPAN - 1
+
+        # The user's inputs, kept: opening balance, the "through" year, the catch-up increases and
+        # the subsequent increase (a formula by default).
+        expected = {
+            "A5": "Opening balance of the current year (Current year start only)",
+            "A8": "Contributions follow the RFS schedule through",
+            "A12": "Subsequent annual increase",
+        }
+        for a, text in expected.items():
+            if b.cell(a).getString() != text:
+                raise RuntimeError("Projected_Balances %s is not %r" % (a, text))
+        opening = b.cell("B5").getValue()
+        through = b.cell("B8").getValue()
+        catch_up = [b.cell("B%d" % r).getValue() for r in (9, 10, 11)]
+        subsequent = b.cell("B12").getFormula()
+        if not remove_comment(sheet, "B5"):  # its instructions are in the docs (design 14.9)
+            raise RuntimeError("no comment on Projected_Balances!B5")
+
+        everything = b.cell("A1:AF200")
+        everything.Validation = sheet.getCellRangeByName("AF200").Validation  # none
+        everything.clearContents(1 | 2 | 4 | 8 | 16 | 32 | 64 | 256 | 512)
+        everything.CellStyle = "Default"
+        cf = everything.ConditionalFormat
+        cf.clear()
+        everything.ConditionalFormat = cf
+        sheet.clearOutline()
+        names = doc.NamedRanges
+        for n in ("PB_Start", "PB_ExpBasis", "PB_ContribBasis", "PB_StartBalance", "PB_RFSCheck"):
+            if names.hasByName(n):
+                names.removeByName(n)
+
+        def name(n, a):
+            # Names other tabs read (PB_Year, PB_Inflator, PB_Balance, PB_RFSBalance) are moved,
+            # not re-created, so the formulas that use them keep them.
+            content = ref("Projected_Balances", a)
+            if names.hasByName(n):
+                names.getByName(n).setContent(content)
+            else:
+                define(doc, n, content)
+
+        b.value("A1", "PROJECTED RESERVE FUND BALANCES").CellStyle = "Title"
+        b.value(
+            "A2",
+            "The RFS's projection recomputed from its inputs (columns B-M), checked against "
+            "RFS_cashflow (column I), and a what-if projection (columns O-Z, inputs in P4:P10).",
+        )
+
+        # The what-if's inputs, above the what-if (design 15.5). The labels are right-justified
+        # in O, so that they run left over the empty cells before it.
+        right = uno.Enum("com.sun.star.table.CellHoriJustify", "RIGHT")
+        b.value("O4", "What-if starts in")
+        b.formula("P4", "=Cfg_BaseYear")
+        b.style("P4", "Calculated")
+        b.fmt("P4", YEAR)
+        name("PB_StartYear", "P4")
+        inputs = [
+            (5, "Opening balance of the current year", opening, MONEY_RED, "PB_OpeningBalance"),
+            (6, "Contribution increases follow the RFS schedule through", through, YEAR,
+             "PB_ContribFixedThrough"),
+            (7, "Contribution increase, 1st year after", catch_up[0], PERCENT, None),
+            (8, "Contribution increase, 2nd year after", catch_up[1], PERCENT, None),
+            (9, "Contribution increase, 3rd year after", catch_up[2], PERCENT, None),
+            (10, "Subsequent annual increase", subsequent, PERCENT, "PB_SubsequentIncrease"),
+        ]
+        for r, label, v, fmt, n in inputs:
+            b.value("O%d" % r, label)
+            if isinstance(v, str):
+                b.formula("P%d" % r, v)
+            else:
+                b.value("P%d" % r, v)
+            b.style("P%d" % r, "Input")
+            b.fmt("P%d" % r, fmt)
+            if n:
+                name(n, "P%d" % r)
+        b.cell("O4:O10").HoriJustify = right
+        name("PB_CatchUp", "P7:P9")
+
+        # A summary above each block: over the first 30 years of the RFS, each margin's lowest
+        # value and its first negative one, with their years (design 15.5).
+        self.margin_summary(b, "B", "RFS, first 30 years", ("J", "K", "L"), first, last30)
+        self.margin_summary(b, "R", "What-if, first 30 years", ("W", "X", "Y"), first, last30)
+        name("PB_RFSLowest", "B5:H7")
+        name("PB_Lowest", "R5:X7")
+
+        # The year table.
+        b.value("B%d" % (hdr - 1), "RFS (recomputed from RFS_cashflow inputs)")
+        b.value("O%d" % (hdr - 1), "What-if")
+        b.bold("A%d:Z%d" % (hdr - 1, hdr - 1))
+        b.value("H%d" % (hdr - 1), "Years that differ")
+        b.cell("H%d" % (hdr - 1)).HoriJustify = uno.Enum("com.sun.star.table.CellHoriJustify", "RIGHT")
+        b.formula("I%d" % (hdr - 1), '=COUNTIF(I%d:I%d;">0.5")+COUNTIF(I%d:I%d;"<-0.5")'
+                  % (first, last, first, last))
+        b.fmt("I%d" % (hdr - 1), "[RED]0;-0;0")  # a count: red when not zero
+        heads = {
+            "A": "Year",
+            "B": "RFS opening balance", "C": "RFS expected costs", "D": "RFS contribution increase",
+            "E": "RFS contributions", "F": "RFS interest rate", "G": "RFS interest",
+            "H": "RFS closing balance", "I": "Difference from RFS_cashflow balance",
+            "J": "RFS margin over minimum", "K": "RFS margin over inflated minimum",
+            "L": "RFS PV margin over minimum", "M": "RFS contribution per unit per month",
+            "O": "Opening balance", "P": "Expenditures", "Q": "Contribution increase",
+            "R": "Contributions", "S": "Interest rate", "T": "Interest", "U": "Closing balance",
+            "V": "Difference from RFS balance", "W": "Margin over minimum",
+            "X": "Margin over inflated minimum", "Y": "PV margin over minimum",
+            "Z": "Contribution per unit per month", "AB": "Inflator",
+        }
+        for c, h in heads.items():
+            b.value("%s%d" % (c, hdr), h)
+        b.style("A%d:AB%d" % (hdr, hdr), "Header")
+        b.style("N%d" % hdr, "Default")
+        b.style("AA%d" % hdr, "Default")
+        b.wrap("A%d:AB%d" % (hdr, hdr))
+        b.height(hdr, 42)
+
+        rows = []
+        for r in range(first, last + 1):
+            p = r - 1
+            top = r == first
+            row = [
+                # A: Year
+                "=RFS_StudyYear" if top else "=$A%d+1" % p,
+                # B-M: the RFS, recomputed. Read: costs, rates, opening balance, present
+                # contribution. Opening + costs (negative) + contributions + interest = closing.
+                "=RFS_OpeningBalance" if top else "=$H%d" % p,
+                "=IFERROR(INDEX(RFS_Cf_Cost;MATCH($A{r};RFS_Cf_Year;0));0)",
+                "" if top else (
+                    "=LET(\n"
+                    "  n; $A{r}-RFS_StudyYear;\n"
+                    "  IF(n<=3; INDEX(RFS_CatchUpIncreases; n); RFS_SubsequentIncrease))"
+                ),
+                "=RFS_PresentContribution" if top else "=$E%d*(1+$D{r})" % p,
+                "=IF($A{r}<RFS_StudyYear+Cfg_ShortInterestYears;RFS_ShortInterest;RFS_LongInterest)",
+                "=$B{r}*$F{r}",
+                "=$B{r}+$C{r}+$E{r}+$G{r}",
+                '=IFERROR($H{r}-INDEX(RFS_Cf_Balance;MATCH($A{r};RFS_Cf_Year;0));"")',
+                "=$H{r}-RFS_MinBalance",
+                "=$H{r}-RFS_MinBalance*$AB{r}",
+                "=$H{r}/$AB{r}-RFS_MinBalance",
+                "=$E{r}/12/RFS_Units",
+                "",  # N: spacer
+                # O-Z: the what-if, from the start year on; before it every what-if cell is blank.
+                '=IF($A{r}<PB_StartYear;"";PB_OpeningBalance)' if top else
+                '=IFS($A{r}<PB_StartYear;"";$A{r}=PB_StartYear;PB_OpeningBalance;TRUE();$U%d)' % p,
+                # P: Expenditures: the current year's estimates, then the adjusted RFS, then the
+                # RFS beyond the adjusted block.
                 "=LET(\n"
                 "  year; $A{r};\n"
                 "  adjusted_column; MATCH(year; Exp_AdjustedYears; 0);\n"
                 "  IFS(\n"
-                '    $J{r}=""; "";\n'
-                '    PB_ExpBasis="RFS"; $B{r};\n'
-                "    year<Cfg_BaseYear; $B{r};\n"
+                '    $O{r}=""; "";\n'
                 "    year=Cfg_BaseYear; -SUM(Exp_Current);\n"
-                "    ISNA(adjusted_column); $B{r};\n"
-                "    TRUE(); -SUM(INDEX(Exp_Adjusted; 0; adjusted_column))))".format(r=r)
-            ] for r in range(first, last + 1)],
-        )
-        b.formulas(
-            "W%d:W%d" % (first, last),
-            [[
+                "    ISNA(adjusted_column); $C{r};\n"
+                "    TRUE(); -SUM(INDEX(Exp_Adjusted; 0; adjusted_column))))",
+                # Q: the RFS's increase through the chosen year, then the catch-up increases,
+                # then the subsequent one.
+                "=LET(\n"
+                "  years_after; $A{r}-PB_ContribFixedThrough;\n"
+                "  IFS(\n"
+                '    OR($O{r}=""; $A{r}=RFS_StudyYear); "";\n'
+                "    years_after<=0; $D{r};\n"
+                "    years_after<=3; INDEX(PB_CatchUp; years_after);\n"
+                "    TRUE(); PB_SubsequentIncrease))",
+                # R: last year's contributions (the RFS block's before the what-if starts), grown.
+                '=IF($O{r}="";"";RFS_PresentContribution)' if top else
+                '=IFS($O{r}="";"";$A{r}=RFS_StudyYear;RFS_PresentContribution;'
+                'TRUE();IF($R%d="";$E%d;$R%d)*(1+$Q{r}))' % (p, p, p),
+                '=IF($O{r}="";"";$F{r})',
+                '=IF($O{r}="";"";$O{r}*$S{r})',
+                '=IF($O{r}="";"";$O{r}+$P{r}+$R{r}+$T{r})',
+                '=IF($U{r}="";"";$U{r}-$H{r})',
+                '=IF($U{r}="";"";$U{r}-RFS_MinBalance)',
+                '=IF($U{r}="";"";$U{r}-RFS_MinBalance*$AB{r})',
+                '=IF($U{r}="";"";$U{r}/$AB{r}-RFS_MinBalance)',
+                '=IF($R{r}="";"";$R{r}/12/RFS_Units)',
+                "",  # AA: spacer
+                # AB: the inflation factor (design 14.5).
                 "=LET(\n"
                 "  n; $A{r}-RFS_StudyYear;\n"
-                "  (1+RFS_ShortInflation)^MIN(n; Cfg_ShortInflationYears)*(1+RFS_LongInflation)^MAX(n-Cfg_ShortInflationYears; 0))".format(r=r)
-            ] for r in range(first, last + 1)],
-        )
+                "  (1+RFS_ShortInflation)^MIN(n; Cfg_ShortInflationYears)*(1+RFS_LongInflation)^MAX(n-Cfg_ShortInflationYears; 0))",
+            ]
+            rows.append([f.format(r=r) if f else "" for f in row])
+        b.formulas("A%d:AB%d" % (first, last), rows)
+
+        b.style("B%d:M%d" % (first, last), "Calculated")
+        b.style("O%d:Z%d" % (first, last), "Calculated")
+        b.fmt("A%d:A%d" % (first, last), YEAR)
+        for c in ("B", "C", "E", "G", "H", "I", "J", "K", "L",
+                  "O", "P", "R", "T", "U", "V", "W", "X", "Y"):
+            b.fmt("%s%d:%s%d" % (c, first, c, last), MONEY_RED)
+        for c in "DFQS":
+            b.fmt("%s%d:%s%d" % (c, first, c, last), PERCENT)
+        for c in "MZ":
+            b.fmt("%s%d:%s%d" % (c, first, c, last), MONEY_CENTS_RED)
+        b.fmt("AB%d:AB%d" % (first, last), "0.0000")
+        # Years past the 30-year horizon (design 15.4).
+        b.fill("A%d:Z%d" % (last30 + 1, last), BEYOND_COLOR)
+        self.flag_check(sheet, "I%d:I%d" % (first, last))
+
+        b.width("A", 8)  # years only: the inputs' labels are in O
+        for k in range(colnum("B"), colnum("AB") + 1):
+            b.width(col(k), 13)
+        b.width("N", 2)
+        b.width("AA", 2)
+        b.group_cols("AB", "AB", collapse=True)
+
+        for n, c in (
+            ("PB_Year", "A"), ("PB_RFSOpening", "B"), ("PB_RFSCost", "C"),
+            ("PB_RFSIncrease", "D"), ("PB_RFSContrib", "E"), ("PB_RFSRate", "F"),
+            ("PB_RFSInterest", "G"), ("PB_RFSBalance", "H"), ("PB_RFSDifference", "I"),
+            ("PB_RFSMargin", "J"), ("PB_RFSMarginInflated", "K"), ("PB_RFSMarginPV", "L"),
+            ("PB_RFSPerUnitMonth", "M"),
+            ("PB_Opening", "O"), ("PB_Cost", "P"), ("PB_Increase", "Q"),
+            ("PB_Contributions", "R"), ("PB_Rate", "S"), ("PB_Interest", "T"),
+            ("PB_Balance", "U"), ("PB_Variance", "V"), ("PB_Margin", "W"),
+            ("PB_MarginInflated", "X"), ("PB_MarginPV", "Y"), ("PB_PerUnitMonth", "Z"),
+            ("PB_Inflator", "AB"),
+        ):
+            name(n, "%s%d:%s%d" % (c, first, c, last))
+
+    def margin_summary(self, b, at, title, margins, first, last30):
+        """Label at `at` (running over the next two columns); then Lowest, Year, First negative,
+        Year."""
+        c0 = colnum(at)
+        low, low_year, neg, neg_year = (col(c0 + k) for k in (3, 4, 5, 6))
+        years = "$A$%d:$A$%d" % (first, last30)
+        b.values("%s4:%s4" % (at, neg_year), [[title, "", "", "Lowest", "Year", "First negative", "Year"]])
+        b.style("%s4:%s4" % (at, neg_year), "Header")
+        labels = ("Margin over minimum", "Margin over inflated minimum", "PV margin over minimum")
+        for i, (label, m) in enumerate(zip(labels, margins)):
+            r = 5 + i
+            span = "%s%d:%s%d" % (m, first, m, last30)
+            b.value("%s%d" % (at, r), label)
+            b.formula("%s%d" % (low, r), "=MIN(%s)" % span)
+            b.formula("%s%d" % (low_year, r), "=INDEX(%s;MATCH(%s%d;%s;0))" % (years, low, r, span))
+            b.formula(
+                "%s%d" % (neg_year, r),
+                '=IF(COUNTIF({s};"<0")=0;"none";MINIFS({y};{s};"<0"))'.format(s=span, y=years),
+            )
+            b.formula(
+                "%s%d" % (neg, r),
+                '=IF({ny}{r}="none";"";INDEX({s};MATCH({ny}{r};{y};0)))'.format(ny=neg_year, r=r, s=span, y=years),
+            )
+        b.fmt("%s5:%s7" % (low, low), MONEY_RED)
+        b.fmt("%s5:%s7" % (neg, neg), MONEY_RED)
+        for c in (low_year, neg_year):
+            b.fmt("%s5:%s7" % (c, c), YEAR)
+            b.cell("%s5:%s7" % (c, c)).HoriJustify = uno.Enum("com.sun.star.table.CellHoriJustify", "RIGHT")
+
+    def flag_check(self, sheet, address):
+        """Shades a year whose recomputed RFS balance differs from RFS_cashflow's by more than
+        0.5 (design 15.2)."""
+        rng = sheet.getCellRangeByName(address)
+        cf = rng.ConditionalFormat
+        cf.clear()
+
+        def pv(n, value):
+            p = uno.createUnoStruct("com.sun.star.beans.PropertyValue")
+            p.Name, p.Value = n, value
+            return p
+
+        first = rng.getCellByPosition(0, 0)
+        cf.addNew((
+            pv("Operator", uno.Enum("com.sun.star.sheet.ConditionOperator", "FORMULA")),
+            pv("Formula1", "ABS(N(%s))>0.5" % address.split(":")[0]),
+            pv("StyleName", "Changed"),
+            pv("SourcePosition", first.CellAddress),
+        ))
+        rng.ConditionalFormat = cf
 
     # -- README -------------------------------------------------------------------------------
 
@@ -757,18 +1022,33 @@ class Restructure:
         if len(settings) != 1:
             raise RuntimeError("README: the Settings line was not found")
         b.value("A%d" % settings[0], "Settings — the base year, the minimum target cash balance, the "
-                "rate assumed for planned new investments, and the RFS's years of short-term inflation.")
+                "rate assumed for planned new investments, and the RFS's years of short-term "
+                "inflation and of short-term interest.")
+        projected = [i for i in range(8, 16) if b.cell("A%d" % i).getString().startswith("Projected_Balances")]
+        if len(projected) != 1:
+            raise RuntimeError("README: the Projected_Balances line was not found")
+        b.value("A%d" % projected[0], "Projected_Balances — the reserve fund balance to the end of "
+                "the RFS: the RFS's own projection, recomputed from its inputs and checked against "
+                "RFS_cashflow, and a what-if with Spatac's adjustments and contribution increases.")
+        # A legend line for the years past the RFS's horizon, after Orange (design 15.4).
+        sheet.Rows.insertByIndex(g + 1, 1)
+        b.value("A%d" % (g + 2), "Light grey — on Projected_Balances, a year past the RFS's 30-year "
+                                 "horizon.")
+        b.cell("A%d" % (g + 2)).CellStyle = b.cell("A%d" % g).CellStyle
+        b.cell("A%d" % (g + 2)).IsTextWrapped = True
         b.fix_heights(6, 7)
         b.fix_heights(settings[0], settings[0])
-        b.fix_heights(g + 1, g + 1)
+        b.fix_heights(projected[0], projected[0])
+        b.fix_heights(g + 1, g + 2)
 
     # -- comments and tab order ---------------------------------------------------------------
 
     def instruction_comments(self):
         """Claude's instruction comments move into the docs (design 14.9)."""
         sheets = self.doc.Sheets
-        for sheet, address in (("Medium_Term_Cashflow", "H3"), ("Projected_Balances", "B5"),
-                               ("RFS_info", "K1"), ("RFS_fvalues", "BC1")):
+        # Projected_Balances B5's goes when the tab is rebuilt (projected).
+        for sheet, address in (("Medium_Term_Cashflow", "H3"), ("RFS_info", "K1"),
+                               ("RFS_fvalues", "BC1")):
             if not remove_comment(sheets.getByName(sheet), address):
                 raise RuntimeError("no comment on %s!%s" % (sheet, address))
 

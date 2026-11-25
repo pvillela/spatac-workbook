@@ -10,11 +10,12 @@ instead of three. OLD is patched in memory with the fixed amount, and then every
 match:
 
 - Medium_Term_Cashflow, every row, allowing for the inserted row 24;
-- Projected_Balances, every year and the lowest margins;
+- Projected_Balances, every year and the lowest margins, in their new columns (design 15.4);
 - Expenditures: the current year's Current estimate per item, and each later year of the old
   Revised block against the adjusted block;
 - no error values on any Spatac tab, and no flagged Adjustments rows;
-- the what-if reproduces the RFS with its three choices set to RFS.
+- the recomputed RFS block matches RFS_cashflow, and its check catches a changed balance;
+- the what-if follows the RFS schedule when told to, and the interest years follow Settings.
 
 Both files are opened read-only.
 """
@@ -74,6 +75,66 @@ def find_row(doc, sheet, column, text, first=1, last=400):
     return rows[0]
 
 
+def colnum(letters):
+    n = 0
+    for ch in letters:
+        n = n * 26 + ord(ch) - 64
+    return n
+
+
+def self_check_projected(c, new):
+    """The recomputed RFS block and the simpler what-if (design 15.1-15.3), in memory."""
+    pb = new.Sheets.getByName("Projected_Balances")
+    cf = new.Sheets.getByName("RFS_cashflow")
+    settings = new.Sheets.getByName("Settings")
+    get = lambda rng: block(new, "Projected_Balances", rng)
+
+    # The recomputation matches RFS_cashflow in every year.
+    diffs = [v for (v,) in get("I15:I64") if v == "" or abs(v) > TOL]
+    c.true("Projected_Balances: recomputed RFS differs from RFS_cashflow: %s" % diffs[:3], not diffs)
+    c.eq("Projected_Balances I13 (years that differ)", 0.0, get("I13:I13")[0][0])
+    c.eq("Settings A9", "Years of short-term interest in the RFS (the long-term rate applies after them)",
+         block(new, "Settings", "A9:A9")[0][0])
+    c.eq("Cfg_ShortInterestYears", 3.0,
+         new.NamedRanges.getByName("Cfg_ShortInterestYears").ReferredCells.getValue())
+
+    # A changed vendor balance is caught, in that year only.
+    g20 = cf.getCellRangeByName("G20")
+    kept = g20.getValue()
+    g20.setValue(kept + 1000)
+    new.calculateAll()
+    c.eq("Projected_Balances I13 after RFS_cashflow G20 + 1000", 1.0, get("I13:I13")[0][0])
+    c.eq("Projected_Balances I20 after RFS_cashflow G20 + 1000", -1000.0, get("I20:I20")[0][0])
+    g20.setValue(kept)
+
+    # Through the chosen year the what-if's increase is the RFS's; through 2073 its contributions
+    # are the RFS's throughout.
+    rows = get("A15:AB64")
+    through = get("P6:P6")[0][0]
+    for r in rows:
+        if r[14] != "" and r[0] <= through and r[0] > rows[0][0]:
+            c.eq("Projected_Balances Q for %d is the RFS's increase" % r[0], r[3], r[16])
+    pb.getCellRangeByName("P6").setValue(2073)
+    new.calculateAll()
+    for r in get("A15:AB64"):
+        if r[14] != "":
+            c.eq("Projected_Balances R for %d with the RFS schedule throughout" % r[0], r[4], r[17])
+    pb.getCellRangeByName("P6").setValue(through)
+
+    # Interest: the short-term rate for the first Cfg_ShortInterestYears years.
+    g8 = cf.getCellRangeByName("G8")
+    long_rate = g8.getValue()
+    g8.setValue(0.05)
+    settings.getCellRangeByName("B9").setValue(1)
+    new.calculateAll()
+    rates = [r[5] for r in get("A15:F16")]
+    c.true("Projected_Balances F15:F16 with one short-term year: %s" % rates,
+           abs(rates[0] - cf.getCellRangeByName("G7").getValue()) < 1e-9 and abs(rates[1] - 0.05) < 1e-9)
+    g8.setValue(long_rate)
+    settings.getCellRangeByName("B9").setValue(3)
+    new.calculateAll()
+
+
 def main():
     old_path, new_path = sys.argv[1], sys.argv[2]
     c = Checks()
@@ -103,17 +164,40 @@ def main():
         c.true("Medium_Term_Cashflow row 24 is blank", all(v == "" for v in n[23][:7]))
         c.eq("Medium_Term_Cashflow A25", "Minimum closing cash balance", n[24][0])
 
-        # Projected_Balances: every year and the lowest margins.
+        # Projected_Balances: every year and the lowest margins, old column -> new column. The
+        # what-if's increase (old L) was blank while contributions followed the RFS; it now shows
+        # the RFS's increase, so only its other years are compared.
+        moved = {"A": "A", "B": "C", "C": "G", "D": "E", "E": "H", "F": "J", "G": "K", "H": "L",
+                 "J": "O", "K": "P", "L": "Q", "M": "R", "N": "S", "O": "T", "P": "U", "Q": "V",
+                 "R": "W", "S": "X", "T": "Y", "U": "Z"}
         o = block(old, "Projected_Balances", "A15:U64")
-        n = block(new, "Projected_Balances", "A15:U64")
+        n = block(new, "Projected_Balances", "A15:AB64")
         for r in range(50):
-            for k in range(21):
-                c.eq("Projected_Balances %s%d" % (col(k + 1), r + 15), o[r][k], n[r][k])
+            for oc, nc in moved.items():
+                a, b = o[r][colnum(oc) - 1], n[r][colnum(nc) - 1]
+                if oc == "L" and a == "":
+                    continue
+                c.eq("Projected_Balances %s%d -> %s%d" % (oc, r + 15, nc, r + 15), a, b)
+        # The lowest margins: old H5:I10 (what-if rows 5-7, RFS rows 8-10) -> the what-if summary
+        # U5:V7 and the RFS summary E5:F7.
         o = block(old, "Projected_Balances", "H5:I10")
-        n = block(new, "Projected_Balances", "H5:I10")
         for r in range(6):
+            at, row = ("U", r + 5) if r < 3 else ("E", r + 2)
+            got = block(new, "Projected_Balances", "%s%d:%s%d" % (at, row, col(colnum(at) + 1), row))[0]
             for k in range(2):
-                c.eq("Projected_Balances %s%d" % ("HI"[k], r + 5), o[r][k], n[r][k])
+                c.eq("Projected_Balances %s%d -> %s%d" % ("HI"[k], r + 5, col(colnum(at) + k), row),
+                     o[r][k], got[k])
+        # The first negative margins, worked out here from the year table's first 30 years.
+        years = block(new, "Projected_Balances", "A15:AB44")
+        for at, margins in (("G", "JKL"), ("W", "WXY")):
+            for i, m in enumerate(margins):
+                k = colnum(m) - 1
+                neg = [(r[0], r[k]) for r in years if r[k] != "" and r[k] < 0]
+                want = [neg[0][1], neg[0][0]] if neg else ["", "none"]
+                got = block(new, "Projected_Balances", "%s%d:%s%d" % (at, 5 + i, col(colnum(at) + 1), 5 + i))[0]
+                c.eq("Projected_Balances %s%d first negative %s" % (at, 5 + i, m), want[0], got[0])
+                c.eq("Projected_Balances %s%d year of first negative %s" % (col(colnum(at) + 1), 5 + i, m),
+                     want[1], got[1])
 
         # Expenditures, item by item (same rows): current year; later years of Revised.
         end = find_row(new, "Expenditures", "C", "▼ End of items: insert new rows above this line")
@@ -196,15 +280,7 @@ def main():
         adj.getCellRangeByName("A55:E59").clearContents(1 | 2 | 4 | 16)
         new.calculateAll()
 
-        # The what-if with its three choices set to RFS reproduces the RFS balance.
-        pb = new.Sheets.getByName("Projected_Balances")
-        pb.getCellRangeByName("B4").setString("RFS")
-        pb.getCellRangeByName("B6").setString("RFS")
-        pb.getCellRangeByName("B7").setString("RFS")
-        new.calculateAll()
-        diffs = [v for (v,) in block(new, "Projected_Balances", "Q15:Q64") if v != "" and abs(v) > TOL]
-        c.true("Projected_Balances: the what-if set to RFS differs from the RFS: %s" % diffs[:3],
-               not diffs)
+        self_check_projected(c, new)
 
         old.close(True)
         new.close(True)

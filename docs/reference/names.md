@@ -27,6 +27,7 @@ again, and an insert at that edge would fall outside them.
 | `Cfg_MinTargetYear` | B6 | The year whose dollars the minimum target is stated in. |
 | `Cfg_NewInvRate` | B7 | The interest rate assumed for planned investments. |
 | `Cfg_ShortInflationYears` | B8 | How many years from the study year the RFS applies its short-term inflation rate; the long-term rate applies after them. |
+| `Cfg_ShortInterestYears` | B9 | How many years, from the study year on, the RFS earns its short-term interest rate; the long-term rate applies after them. |
 
 ## Expenditures (`Exp_`)
 
@@ -109,18 +110,16 @@ The extraction tool keeps these.
 
 | Name | Range | Meaning |
 |---|---|---|
-| `PB_Start` | B4 | Where the what-if starts: **Current year** or **RFS**. |
-| `PB_StartYear` | D4 | The year it starts in. |
-| `PB_StartBalance` | D5 | The balance it starts from: the RFS opening balance, or B5. |
-| `PB_OpeningBalance` | B5 | The opening balance of the current year. |
-| `PB_ExpBasis`, `PB_ContribBasis` | B6, B7 | The what-if's expenditures (**Revised** or **RFS**) and contributions (**Increases** or **RFS**). |
-| `PB_ContribFixedThrough` | B8 | Last year of contributions per the RFS schedule. |
-| `PB_CatchUp` | B9:B11 | Increases in the three years after it. |
-| `PB_SubsequentIncrease` | B12 | The increase after those. |
-| `PB_Lowest` | G5:I10 | The 30-year lows. |
-| `PB_Year`; `PB_RFSCost` … `PB_RFSMarginPV` | columns A; B–H, rows 15–64 | The years; the RFS baseline: one name per column, `PB_RFS` and a short form of its heading (`PB_RFSCost`, `PB_RFSInterest`, … `PB_RFSMarginPV`). |
-| `PB_Opening`, `PB_Cost`, `PB_Increase`, `PB_Contributions`, `PB_Rate`, `PB_Interest`, `PB_Balance`, `PB_Variance`, `PB_Margin`, `PB_MarginInflated`, `PB_MarginPV`, `PB_PerUnitMonth` | columns J–U, rows 15–64 | The what-if. `PB_Variance` is the difference from the RFS balance. |
-| `PB_Inflator` | column W, rows 15–64 | The inflation factor from the study year: the short-term rate for `Cfg_ShortInflationYears` years, the long-term rate after. The Adjustments tab inflates and deflates with it. |
+| `PB_StartYear` | P4 | The year the what-if starts in: the current year. |
+| `PB_OpeningBalance` | P5 | The opening balance of the current year. |
+| `PB_ContribFixedThrough` | P6 | Last year whose contribution increase follows the RFS schedule. |
+| `PB_CatchUp` | P7:P9 | Increases in the three years after it. |
+| `PB_SubsequentIncrease` | P10 | The increase after those. |
+| `PB_RFSLowest`, `PB_Lowest` | B5:H7, R5:X7 | The RFS's and the what-if's margins over the first 30 years: lowest and first negative, with their years. |
+| `PB_Year` | column A, rows 15–64 | The years. |
+| `PB_RFSOpening`, `PB_RFSCost`, `PB_RFSIncrease`, `PB_RFSContrib`, `PB_RFSRate`, `PB_RFSInterest`, `PB_RFSBalance`, `PB_RFSDifference`, `PB_RFSMargin`, `PB_RFSMarginInflated`, `PB_RFSMarginPV`, `PB_RFSPerUnitMonth` | columns B–M, rows 15–64 | The RFS, recomputed from its inputs. `PB_RFSDifference` is the recomputed balance minus RFS_cashflow's. |
+| `PB_Opening`, `PB_Cost`, `PB_Increase`, `PB_Contributions`, `PB_Rate`, `PB_Interest`, `PB_Balance`, `PB_Variance`, `PB_Margin`, `PB_MarginInflated`, `PB_MarginPV`, `PB_PerUnitMonth` | columns O–Z, rows 15–64 | The what-if. `PB_Variance` is the difference from the RFS balance. |
+| `PB_Inflator` | column AB, rows 15–64 | The inflation factor from the study year: the short-term rate for `Cfg_ShortInflationYears` years, the long-term rate after. The Adjustments tab inflates and deflates with it. |
 
 ## RFS tabs (`RFS_`)
 

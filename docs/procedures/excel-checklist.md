@@ -26,7 +26,7 @@ workbook:
       with gaps; row 50 reads "Planned 2-year investment, bought 2026". No cell shows an error.
 - [ ] **Formulas with `LET`, `IFS` and `SWITCH`** calculate (Excel 2021 or later), for example
       Expenditures I8, J8 and U8, Adjustments H7, Medium_Term_Cashflow B9 and B11, and
-      Projected_Balances K17 and W17. Their line
+      Projected_Balances D16, P17, Q17 and AB17. Their line
       breaks show in the formula bar when it is expanded.
 - [ ] **Expenditures row 5** over the adjusted block (from column U): 0 in every year but
       2025 (188,700), 2026 (416,160), 2027 (−607,552, red) and 2028 (−151,541, red), the years the
@@ -35,9 +35,14 @@ workbook:
       orange, for example row 29 (3.9) in 2025 and 2028. Unfold the past years to see 2025.
 - [ ] **Adjustments, 2026 block:** column H shows OK on all six rows; G shows 243,547 · 50,000
       · 432,973 · 514,686 · 85,314 · 40,800.
-- [ ] **Projected_Balances G4:I10:** the lowest margins show amounts and years, not errors.
-- [ ] **Projected_Balances validation:** choose **RFS** in the dropdowns B4, B6 and B7: column Q
-      shows 0 in every year. Undo afterwards.
+- [ ] **Projected_Balances B4:H7 and R4:X7:** the lowest and first negative margins show
+      amounts and years, not errors (`MINIFS` needs Excel 2019 or later): U5 −1,882,352 (2050),
+      W5 −1,058,672 (2045).
+- [ ] **Projected_Balances money format:** a negative amount such as U44 (−341,094) shows red
+      with a minus sign.
+- [ ] **Projected_Balances validation:** column I shows 0 in every year and I13 shows 0. Type
+      1000 more into RFS_cashflow G20: I20 turns orange and I13 shows 1 in red. Undo afterwards.
+- [ ] **Projected_Balances, light grey:** rows 45–64 (2054–2073) are shaded.
 
 ## Behaviour
 

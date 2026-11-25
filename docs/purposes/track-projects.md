@@ -47,8 +47,8 @@ this year.
 
 The two look different: a **0** shows as `0`, and a blank shows nothing. The same holds in the
 green Current estimate column: `0` means the item is now expected to cost nothing this year, and
-a blank means it has no amount at all, neither an estimate nor an Approved amount. In Approved
-and Actuals a zero shows as blank, since there it means the same as no amount.
+a blank means it has no amount at all, neither an estimate nor an Approved amount. Approved and
+Actuals also show a zero as `0`.
 
 Next year and the adjusted block follow the same rule as the Current estimate: an amount shows
 blank when the RFS has none for that year and no adjustment touches it, and `0` when the
