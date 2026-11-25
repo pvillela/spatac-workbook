@@ -607,3 +607,66 @@ defining what the expected outcomes need to be. Ask questions from that perspect
 carried over in role, and this log.
 **User:** "OK to proceed, but first update the Q&A log document and commit it together with the
 design."
+
+### Implementation (2026-11-24, continued)
+
+**Claude:** implemented steps 2–5 (commits `94203a7`, `e6dfbcb`, `631b8fc`, `1d64fec`): the plan's
+formatting, `restructure.py` and `verify_restructure.py`, `spatac-check`, the docs. Asked the user
+to approve the 48 working notes whose column letters were translated, listed in a scratchpad file,
+before writing the workbook to `_nogit`.
+**User:** "What working notes?"
+**Claude:** the notes in Expenditures (golden `fvalues_spatac` column M); an example.
+**User:** "How can I review them if you didn't write the workbook to _nogit?"
+**Claude:** wrote `Spatac-20261124.xlsx` and its plan.
+**User:** "I'm going to have to trust you did the mapping correctly. By the way, parts that
+reference columns were most likely written by Claude."
+**Claude:** explained how the mapping was checked; two notes (11.5, 18.11) were already wrong
+("K = 0" for the Late-year estimate).
+**User:** "Correct them." **Claude:** rebuilt as `Spatac-20261124a.xlsx` (`ad85f3c`).
+**User:** "I'm going to delete versions 20261124 as they have been superseded by 20261124a, OK?"
+**Claude:** yes.
+
+**User:** "In Expenditures tab, the "Adjustment label" column should be collapsed by data group."
+**Claude:** asked whether to move the label into the E–H group or add a spacer, since touching
+groups merge. The user chose to clarify:
+**User:** "I just did it in Calc and saved it. 2 separate groups. Not sure it will work in Excel."
+**Claude:** the `.xlsx` format cannot keep two touching groups apart; on reopening they merge.
+**User:** "I see. Create a new version, inserting a narrow blank column between the label column and
+the actuals block. In addition, I doubt the grouping of the actuals block iw really useful, so it
+can be removed."
+**User** (interrupting the rewrite of the notes' letters): "Instead of endlessly fixing the column
+references in notes, change the notes to refer to column names and, if necessary, row names."
+Then: "Make sure to put column or row names in quotes."
+**Claude:** built `Spatac-20261124b.xlsx` (`4a60065`): label J folded alone, spacer K, current year
+L–P unfolded, notes naming columns by heading in quotes.
+
+**User:** "Address the items in @docs/archive/defects-20261124.md" (RFS total; variances negative =
+unfavourable, in red; row 7 headings wrapping, with the block's years moved to row 7; S3 empty; Q4
+and Q5 legends; bold totals; zeros in S and the block shown only when deliberate; S2 just the
+year; Adjustments Check showing OK, right-justified).
+**Claude:** started moving the years into row 7 as text, rewriting the formulas that read them.
+**User:** "let me stop you for a moment" — "You have access to LibreOffice Calc. Can't you move the
+range containing RFS years in the Expenditures tab using Calc so that Calc takes care of updating
+all dependent formulas instead of doing it by brute force?"
+**Claude:** a move would update the references, but numeric years in row 7 would be added into the
+column totals; offered text years, names from row 8, or years left in row 6.
+**User:** "Let me propose something: Change the shading of W6:AX6 to light green like the other
+protected formulas; change the number formatting to invisible; make row 7 values equal to string
+versions of row 6; add a comment to W6 saying something like: "Do not modify this cell or cells to
+the right.""
+**Claude:** adopted it (on U6, where the block now starts), noting the comment is an exception to
+the documentation rule of G33. Built `Spatac-20261124c.xlsx` (`aa58c07`).
+**User:** "We have a problem when column U is collapsed, that's why I was referring to column W. We
+can't put a block description in a cell that could end up hidden."
+**Claude:** moved the description and comment into the spacer T, which never folds
+(`Spatac-20261124d.xlsx`, `2f5eb23`).
+**User:** "We may need another blank column between T and U."
+**Claude:** asked what it would fix.
+**User:** "I'll tell you what: instead of another blank column, a better solution is to simply add a
+couple of spaces at the beginning of the string "RFS amounts by year, …"."
+**Claude:** `Spatac-20261124e.xlsx` (`e5083a8`).
+**User:** "Q4 shold be "Adjusted total"" **Claude:** `Spatac-20261124f.xlsx` (`de1c1b8`); C4 kept.
+**User:** "No change to C4."
+
+**User:** "Update the Q&A log and create a handoff document similar to the previous ones to capture
+the current context."
