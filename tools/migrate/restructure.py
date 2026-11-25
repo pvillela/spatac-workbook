@@ -67,6 +67,12 @@ USER_AMOUNTS = [229500, 50000, 416160, 524979.5976, "=600000-G{prev}", 42448.32]
 # L Late-year. They are now K, L, M and N (design 14.8).
 LETTERS = {"I": "K", "J": "L", "K": "M", "L": "N"}
 
+# Two notes that were already wrong in the golden source: "K = 0: not in YE projection" means the
+# Late-year estimate, which is 0 on both rows (golden L, now N), not the Mid-year one. Corrected
+# at the user's request, after the letters are translated.
+NOTE_FIXES = {"11.5": ("M = 0: not in YE projection", "N = 0: not in YE projection"),
+              "18.11": ("M = 0: not in YE projection", "N = 0: not in YE projection")}
+
 COMMENT_39 = (
     "2028: the golden source (Spatac-L-20261123.xlsx) had 238,772, the 229,500 moved from 2025 "
     "inflated for two years. Three years' inflation gives 243,547."
@@ -555,13 +561,23 @@ class Restructure:
         self.note_changes = []
         rng = b.cell("V%d:V%d" % (self.first, self.last))
         data = [list(r) for r in rng.getDataArray()]
+        items = [str(r[0]).strip() for r in b.cell("B%d:B%d" % (self.first, self.last)).getDataArray()]
+        fixed = set()
         for i, (text,) in enumerate(data):
             if not isinstance(text, str) or not text:
                 continue
             new = translate_note(text)
+            if items[i] in NOTE_FIXES:
+                old_part, new_part = NOTE_FIXES[items[i]]
+                if new.count(old_part) != 1:
+                    raise RuntimeError("note of %s: %r not found once" % (items[i], old_part))
+                new = new.replace(old_part, new_part)
+                fixed.add(items[i])
             if new != text:
                 self.note_changes.append((self.first + i, text, new))
                 b.cell("V%d" % (self.first + i)).setString(new)
+        if fixed != set(NOTE_FIXES):
+            raise RuntimeError("notes not corrected: %s" % sorted(set(NOTE_FIXES) - fixed))
 
     def highlight_changes(self, sheet, a0, a1):
         rng = sheet.getCellRangeByName("%s%d:%s%d" % (a0, self.first, a1, self.last))
