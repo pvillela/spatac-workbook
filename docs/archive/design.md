@@ -1197,3 +1197,13 @@ Where these differ from 14.1–14.11, they win.
   the 30-year span: past years do not affect the projection (G27).
 - **Labels** use the GL account as typed (text, e.g. 9210.2030). 4.1a's account becomes the text
   9250.1010.
+- **Spacer and groups (2026-11-25).** At the user's request, the label column J is folded on its
+  own, and a narrow blank column K separates it from the current year: in `.xlsx`, groups that
+  touch merge into one. The current-year inputs are no longer grouped. Final layout: J label,
+  K spacer, L–P current year, Q working notes, R spacer, S next year, T spacer, U–AX adjusted
+  RFS. This supersedes the letters of 14.6.
+- **Working notes name columns by heading, in quotes** (2026-11-25, superseding the letter
+  translation of 14.8): golden I, J, K, L become "Approved", "Actuals to date", "Mid-year
+  estimate", "Late-year estimate", so that a note stays right when columns move. The two
+  notes that were already wrong (11.5, 18.11: "K = 0: not in YE projection") now say
+  "Late-year estimate" = 0.

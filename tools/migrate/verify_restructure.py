@@ -118,20 +118,20 @@ def main():
         # Expenditures, item by item (same rows): current year; later years of Revised.
         end = find_row(new, "Expenditures", "C", "▼ End of items: insert new rows above this line")
         o = block(old, "Expenditures", "A8:BZ%d" % (end - 1))
-        n = block(new, "Expenditures", "A8:AW%d" % (end - 1))
+        n = block(new, "Expenditures", "A8:AX%d" % (end - 1))
         o_years = [int(v) for v in block(old, "Expenditures", "AY6:BZ6")[0]]
-        n_years = [int(v) for v in block(new, "Expenditures", "T6:AW6")[0]]
+        n_years = [int(v) for v in block(new, "Expenditures", "U6:AX6")[0]]
         base = o_years[0]
         for i in range(len(o)):
             row = i + 8
             c.eq("Expenditures row %d item" % row, o[i][1], n[i][1])
-            c.eq("Expenditures row %d Current estimate" % row, o[i][13], n[i][14])  # N -> O
-            c.eq("Expenditures row %d notes kept" % row, bool(o[i][21]), bool(n[i][15]))  # V -> P
+            c.eq("Expenditures row %d Current estimate" % row, o[i][13], n[i][15])  # N -> P
+            c.eq("Expenditures row %d notes kept" % row, bool(o[i][21]), bool(n[i][16]))  # V -> Q
             for k, y in enumerate(o_years):
                 if y == base:
                     continue
-                c.eq("Expenditures row %d %d" % (row, y), o[i][50 + k], n[i][19 + n_years.index(y)])
-            c.eq("Expenditures row %d next year" % row, o[i][50 + 1], n[i][17])  # R
+                c.eq("Expenditures row %d %d" % (row, y), o[i][50 + k], n[i][20 + n_years.index(y)])
+            c.eq("Expenditures row %d next year" % row, o[i][50 + 1], n[i][18])  # S
 
         # No error values; nothing flagged on Adjustments.
         for name in SPATAC_TABS:
@@ -151,9 +151,9 @@ def main():
         adj = new.Sheets.getByName("Adjustments")
         r20 = find_row(new, "Expenditures", "B", "20.1")
         label = block(new, "Expenditures", "J%d:J%d" % (r20, r20))[0][0]
-        years = [int(v) for v in block(new, "Expenditures", "T6:AW6")[0]]
-        y30, y31 = (19 + years.index(2030), 19 + years.index(2031))
-        before = block(new, "Expenditures", "A%d:AW%d" % (r20, r20))[0]
+        years = [int(v) for v in block(new, "Expenditures", "U6:AX6")[0]]
+        y30, y31 = (20 + years.index(2030), 20 + years.index(2031))
+        before = block(new, "Expenditures", "A%d:AX%d" % (r20, r20))[0]
         rows = [
             (label, 2028, 2029, 1e9, "x", "More than the item holds in 2028"),
             (label, 2027, 2027, 1, "x", "Year from = Year to"),
@@ -175,7 +175,7 @@ def main():
             c.eq("Adjustments H%d" % (55 + i), row[5], got)
         c.true("Adjustments A2 counts 4 problems",
                block(new, "Adjustments", "A2:A2")[0][0].startswith("Check: 4 row(s)"))
-        after = block(new, "Expenditures", "A%d:AW%d" % (r20, r20))[0]
+        after = block(new, "Expenditures", "A%d:AX%d" % (r20, r20))[0]
         c.eq("Expenditures 20.1 2030 after the move", before[y30] - 1000, after[y30])
         c.eq("Expenditures 20.1 2031 after the move", before[y31] + 1000 * 1.02, after[y31])
         adj.getCellRangeByName("A55:E59").clearContents(1 | 2 | 4 | 16)

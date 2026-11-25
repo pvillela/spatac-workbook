@@ -16,16 +16,16 @@ Copy it while it still shows the new year, which means before changing the base 
 
 ## Expenditures
 
-1. **Approved for the new year.** Copy the **next year** column (R, from row 8 down to the row
-   above ▼ End) and paste **values only** into **Approved** (column K).
+1. **Approved for the new year.** Copy the **next year** column (S, from row 8 down to the row
+   above ▼ End) and paste **values only** into **Approved** (column L).
    - Excel: Paste Special › Values.
    - LibreOffice: Paste Special › Values Only.
 
    This is the RFS amount with the Board's adjustments: what the Board approved in November,
    for every item.
-2. **Clear** the old year's inputs: Actuals to date (L), Mid-year estimate (M) and Late-year
-   estimate (N).
-3. **Working notes** (P): clear or shorten the notes that were about the year just ended.
+2. **Clear** the old year's inputs: Actuals to date (M), Mid-year estimate (N) and Late-year
+   estimate (O).
+3. **Working notes** (Q): clear or shorten the notes that were about the year just ended.
 4. Update the "as of" notes in row 6.
 
 ## Adjustments

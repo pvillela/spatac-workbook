@@ -46,11 +46,11 @@ SHORT_INFLATION_YEARS = 3  # "Inflation 0-3" in RFS_fvalues W1 (design 14.5)
 CHANGED_COLOR = 0xFCE4D6  # an adjusted amount that differs from the RFS
 
 # Expenditures after the restructure (design 14.6).
+# The columns are built without the spacer K, which is inserted last (design 14.12). The final
+# layout: J label, K spacer, L-P current year, Q notes, R spacer, S next year, T spacer, U onwards
+# the adjusted RFS.
 LABEL = "J"
-CURRENT = ["K", "L", "M", "N", "O"]  # Approved, Actuals, Mid-year, Late-year, Current
-NOTES = "P"
-NEXT = "R"
-ADJ_FIRST = colnum("T")  # 1-based
+ADJ_FIRST = colnum("T")  # 1-based, before the spacer
 
 # Adjustments blocks (design 14.4): title, blank, header, input rows, closing row, two spacers.
 BLOCKS = 4
@@ -63,15 +63,25 @@ BLOCK_HEIGHT = 3 + BLOCK_ROWS + 1 + 2
 # "difference between 600,000 and the above amount" as a formula; {prev} is the row above.
 USER_AMOUNTS = [229500, 50000, 416160, 524979.5976, "=600000-G{prev}", 42448.32]
 
-# Notes written by the golden source name its columns: I Approved, J Actuals, K Mid-year,
-# L Late-year. They are now K, L, M and N (design 14.8).
-LETTERS = {"I": "K", "J": "L", "K": "M", "L": "N"}
+# Notes written by the golden source name its columns by letter: I Approved, J Actuals, K Mid-year,
+# L Late-year. They now name them by their headings, which do not change when columns move
+# (design 14.12).
+# The headings are quoted, as the user asked.
+COLUMN_NAMES = {
+    "I": '"Approved"',
+    "J": '"Actuals to date"',
+    "K": '"Mid-year estimate"',
+    "L": '"Late-year estimate"',
+}
+NAMED = "|".join(re.escape(n) for n in COLUMN_NAMES.values())
 
 # Two notes that were already wrong in the golden source: "K = 0: not in YE projection" means the
 # Late-year estimate, which is 0 on both rows (golden L, now N), not the Mid-year one. Corrected
 # at the user's request, after the letters are translated.
-NOTE_FIXES = {"11.5": ("M = 0: not in YE projection", "N = 0: not in YE projection"),
-              "18.11": ("M = 0: not in YE projection", "N = 0: not in YE projection")}
+NOTE_FIXES = {
+    "11.5": ('"Mid-year estimate" = 0: not in YE projection', '"Late-year estimate" = 0: not in YE projection'),
+    "18.11": ('"Mid-year estimate" = 0: not in YE projection', '"Late-year estimate" = 0: not in YE projection'),
+}
 
 COMMENT_39 = (
     "2028: the golden source (Spatac-L-20261123.xlsx) had 238,772, the 229,500 moved from 2025 "
@@ -80,12 +90,16 @@ COMMENT_39 = (
 
 
 def translate_note(text):
-    """Rewrites the column letters a working note names, all at once."""
-    return re.sub(
+    """Replaces the column letters a working note names by the columns' headings, all at once,
+    quoted, with spaces round the = and + next to them: K=J+pending reads
+    "Mid-year estimate" = "Actuals to date" + pending."""
+    text = re.sub(
         r"(?<![A-Za-z0-9’'.-])([IJKL])(?![A-Za-z0-9’'-])",
-        lambda m: LETTERS[m.group(1)],
+        lambda m: COLUMN_NAMES[m.group(1)],
         text,
     )
+    text = re.sub(r"(%s) ?([=+]) ?" % NAMED, r"\1 \2 ", text)
+    return re.sub(r" ?([=+]) ?(%s)" % NAMED, r" \1 \2", text)
 
 
 def label_of(element, gl, gl_name, spatac):
@@ -505,20 +519,8 @@ class Restructure:
         for c in self.adj_cols:
             b.width(c, 10)
 
-        # Groups: the hidden identity helpers, the current year's inputs, and the past years
-        # of the adjusted block (folded; one more is folded at each rollover, design 14.6).
-        sheet.clearOutline()
-        b.group_cols("E", "H", collapse=True)
-        b.group_cols("K", "N")
         base = int(self.doc.NamedRanges.getByName("Cfg_BaseYear").ReferredCells.getValue())
         study = int(b.cell("%s6" % a0).getValue())
-        if base > study:
-            b.group_cols(a0, self.adj_cols[base - study - 1], collapse=True)
-
-        # The AutoFilter covers the new columns.
-        udb = doc.getPropertyValue("UnnamedDatabaseRanges")
-        udb.setByTable(b.cell("A%d:%s%d" % (hdr, a1, end)).RangeAddress)
-        udb.getByTable(sheet.RangeAddress.Sheet).AutoFilter = True
 
         # The labels as the formulas give them, for the user's rows.
         doc.calculateAll()
@@ -531,6 +533,34 @@ class Restructure:
         row39 = self.row_of(b, "3.9")
         y2028 = self.adj_cols[2028 - study]
         sheet.Annotations.insertNew(b.cell("%s%d" % (y2028, row39)).CellAddress, COMMENT_39)
+
+        # A narrow spacer after the label (K), so that the label's folded group stays a group of
+        # its own: in .xlsx, groups that touch merge into one. Everything from the current year on
+        # moves one column right, with its formulas, names and formats (design 14.12).
+        sheet.Columns.insertByIndex(colnum("K") - 1, 1)
+        spacer = b.cell("K1:K%d" % end)
+        spacer.clearContents(1 | 2 | 4 | 16 | 32 | 512)
+        spacer.CellStyle = "Default"
+        b.fill("K%d" % end, SEPARATOR_COLOR)
+        b.width("K", 1.5)
+        a0, a1 = col(ADJ_FIRST + 1), col(ADJ_FIRST + RFS_SPAN)
+        self.adj_cols = [col(ADJ_FIRST + 1 + k) for k in range(RFS_SPAN)]
+        if b.cell("%s6" % a0).getValue() != study or b.cell("%s7" % LABEL).getString() != "Adjustment label":
+            raise RuntimeError("Expenditures: the spacer did not move the columns as expected")
+
+        # Groups, folded: the identity helpers (E-H), the label (J) and the past years of the
+        # adjusted block (one more is folded at each rollover, design 14.6). The current year's
+        # inputs are not grouped.
+        sheet.clearOutline()
+        b.group_cols("E", "H", collapse=True)
+        b.group_cols("J", "J", collapse=True)
+        if base > study:
+            b.group_cols(a0, self.adj_cols[base - study - 1], collapse=True)
+
+        # The AutoFilter covers every column.
+        udb = doc.getPropertyValue("UnnamedDatabaseRanges")
+        udb.setByTable(b.cell("A%d:%s%d" % (hdr, a1, end)).RangeAddress)
+        udb.getByTable(sheet.RangeAddress.Sheet).AutoFilter = True
 
     def row_of(self, b, item, element=None):
         data = b.cell("B%d:C%d" % (self.first, self.last)).getDataArray()
@@ -736,7 +766,7 @@ def main():
     print("Wrote %s" % args.output)
     for line in report:
         print("- " + line)
-    print("- %d working notes had their column letters translated" % len(r.note_changes))
+    print("- %d working notes now name their columns by heading" % len(r.note_changes))
     if args.notes:
         with open(args.notes, "x", encoding="utf-8") as f:
             for row, old, new in r.note_changes:

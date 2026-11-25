@@ -25,10 +25,10 @@ workbook:
 - [ ] **Schedule_of_Investments rows 49–78:** the planned investments, one row per grid cell,
       with gaps; row 50 reads "Planned 2-year investment, bought 2026". No cell shows an error.
 - [ ] **Formulas with `LET`, `IFS` and `SWITCH`** calculate (Excel 2021 or later), for example
-      Expenditures I8, J8 and T8, Adjustments H7, Medium_Term_Cashflow B9 and B11, and
+      Expenditures I8, J8 and U8, Adjustments H7, Medium_Term_Cashflow B9 and B11, and
       Projected_Balances K17 and W17. Their line
       breaks show in the formula bar when it is expanded.
-- [ ] **Expenditures row 5** over the adjusted block (from column T): 0 in every year but
+- [ ] **Expenditures row 5** over the adjusted block (from column U): 0 in every year but
       2025 (−188,700), 2026 (−416,160), 2027 (607,552) and 2028 (151,541), the years the
       Adjustments tab changes.
 - [ ] **Expenditures, orange shading:** the adjusted amounts that differ from the RFS are
@@ -45,8 +45,8 @@ workbook:
       refused.
 - [ ] Review › Unprotect Sheet works without a password.
 - [ ] After unprotecting Expenditures, the + and − buttons fold and unfold the column groups.
-- [ ] **Expenditures N33** (a Late-year estimate of 0) shows `0`; a blank estimate cell, such
-      as L33, shows nothing.
+- [ ] **Expenditures O33** (a Late-year estimate of 0) shows `0`; a blank estimate cell, such
+      as M33, shows nothing.
 - [ ] **Adjustments dropdowns:** in an empty row of the 2027 block, A offers the item labels,
       B and C offer "none" and 2024–2053. D refuses 0 and text, and accepts `=1000*2`. With
       the same year in B and C, H shows "Year from = Year to". Undo.
@@ -65,7 +65,7 @@ workbook:
       ▶ End and fill it from its left neighbour. Row 11 shows numbers, not errors, and the
       Planned list on Schedule_of_Investments is still filled. Discard the copy.
 - [ ] Changing Settings › Base year to 2027 moves the year headings, and Expenditures' next-year
-      column (R) is headed "2028 Adjusted". Medium_Term_Cashflow keeps its years and A2 shows the red check. Undo
+      column (S) is headed "2028 Adjusted". Medium_Term_Cashflow keeps its years and A2 shows the red check. Undo
       afterwards.
 
 ## Saving

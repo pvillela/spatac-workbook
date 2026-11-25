@@ -36,19 +36,19 @@ workbook).
 | Name | Column | Name | Column |
 |---|---|---|---|
 | `Exp_RowNumber` | A | `Exp_AdjLabel` | J |
-| `Exp_Item` | B | `Exp_Approved` | K |
-| `Exp_Element` | C | `Exp_Actual` | L |
-| `Exp_GL` | D | `Exp_MidEst` | M |
-| `Exp_GLName` | E | `Exp_LateEst` | N |
-| `Exp_SpatacRow` | F | `Exp_Current` | O |
-| `Exp_Key` | G | `Exp_Notes` | P |
-| `Exp_Key2` | H | `Exp_NextYear` | R |
+| `Exp_Item` | B | `Exp_Approved` | L |
+| `Exp_Element` | C | `Exp_Actual` | M |
+| `Exp_GL` | D | `Exp_MidEst` | N |
+| `Exp_GLName` | E | `Exp_LateEst` | O |
+| `Exp_SpatacRow` | F | `Exp_Current` | P |
+| `Exp_Key` | G | `Exp_Notes` | Q |
+| `Exp_Key2` | H | `Exp_NextYear` | S |
 | `Exp_Check` | I | | |
 
 | Name | Range | Meaning |
 |---|---|---|
-| `Exp_Adjusted` | T7:AW250 | Adjusted RFS amount per item and year: the RFS amount with the Adjustments tab applied. |
-| `Exp_AdjustedYears` | T6:AW6 | The years of `Exp_Adjusted`: the RFS study year and the 29 after it. |
+| `Exp_Adjusted` | U7:AX250 | Adjusted RFS amount per item and year: the RFS amount with the Adjustments tab applied. |
+| `Exp_AdjustedYears` | U6:AX6 | The years of `Exp_Adjusted`: the RFS study year and the 29 after it. |
 
 ## Adjustments (`Adj_`)
 

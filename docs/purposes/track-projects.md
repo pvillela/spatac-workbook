@@ -13,13 +13,14 @@ record it:
 |---|---|
 | A–F | The item: row number, item number, building element, GL account, GL account name (folded), and **S** for a Spatac row (folded; one with no RFS amounts, such as a GL account split out of an RFS item or a project the RFS does not foresee). These columns are fixed: unprotect the tab to change them. |
 | G–I | Lookup keys (folded) and the [RFS check](analyse-rfs.md#the-rfs-check-column). |
-| J | **Adjustment label**: the name the Adjustments tab knows the item by (see [Adjustment labels](#adjustment-labels)). |
-| K–O | **Current year.** Approved (approved by the Board the previous November; grey, fixed for the year), Actuals to date, Mid-year estimate, Late-year estimate, and the calculated **Current estimate**. |
-| P | **Working notes**: the running log of updates and sources for the current year. |
-| R | **Next year**: the adjusted RFS amount for next year, from the block to its right. |
-| T onwards | The **adjusted RFS** block: one column per year of the RFS's 30-year span (2024–2053 for the 2024 study), the RFS amount with the Adjustments tab applied. Years before the current year are folded. |
+| J | **Adjustment label** (folded): the name the Adjustments tab knows the item by (see [Adjustment labels](#adjustment-labels)). |
+| L–P | **Current year.** Approved (approved by the Board the previous November; grey, fixed for the year), Actuals to date, Mid-year estimate, Late-year estimate, and the calculated **Current estimate**. |
+| Q | **Working notes**: the running log of updates and sources for the current year. |
+| S | **Next year**: the adjusted RFS amount for next year, from the block to its right. |
+| U onwards | The **adjusted RFS** block: one column per year of the RFS's 30-year span (2024–2053 for the 2024 study), the RFS amount with the Adjustments tab applied. Years before the current year are folded. |
 
-Columns Q and S are narrow spacers.
+Columns K, R and T are narrow spacers. Working notes name the columns they refer to by their
+headings, in quotes, such as "Actuals to date", so they stay right when columns move.
 
 Above the headings:
 
@@ -49,7 +50,7 @@ amount columns (Approved, Actuals, next year and the adjusted block) a zero show
 since there it means the same as no amount.
 
 An estimate can be a formula as well as a number, when that is how it was worked out. For
-example, `=MAX(K8,L8)` keeps the Late-year estimate at the approved amount until actual spending
+example, `=MAX(L8,M8)` keeps the Late-year estimate at the approved amount until actual spending
 exceeds it, then follows actual spending. A cell holding a formula counts as entered, even when
 the formula's result is zero.
 
@@ -124,7 +125,7 @@ Each block has 10 rows. If a block fills up:
 
 ## Adjustment labels
 
-The label in Expenditures column J identifies an item on the Adjustments tab: the GL account,
+The label in Expenditures column J (folded; unfold it to see the labels) identifies an item on the Adjustments tab: the GL account,
 then the building element, or the GL account name when the row has no element. A Spatac row's
 label ends in "(Spatac)". Rows without a GL account, such as section headings, have no label;
 they show as blank lines in the dropdown, and the Check column rejects them.
@@ -140,7 +141,7 @@ removing an item needs the tab unprotected.
    [Inserting rows](../reference/names.md#inserting-rows)). Never delete the header row or the
    ▼ End row.
 3. Copy a neighbouring item row into it, then clear its yellow cells: copying brings along the
-   formulas in G–J, O, R and the adjusted block.
+   formulas in G–J, P, S and the adjusted block.
 4. Type the item number, element or GL account name, GL account, and **S** in column F if it is
    a Spatac row. The [RFS check](analyse-rfs.md#the-rfs-check-column) in column I flags the
    row if the S is missing or not needed.

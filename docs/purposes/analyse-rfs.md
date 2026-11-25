@@ -20,7 +20,7 @@ paste:
 ## Where the RFS figures appear
 
 **Expenditures** has one row per RFS item, in the order of the study. Its **adjusted RFS**
-block (the columns headed "Adjusted" and a year, from column T) shows each item's amount for
+block (the columns headed "Adjusted" and a year, from column U) shows each item's amount for
 every year of the study's 30-year span: the RFS amount, looked up in RFS_fvalues by the item's
 number and description, with the [Adjustments](track-projects.md#the-adjustments-tab) applied.
 Amounts that differ from the RFS are shaded orange; every other amount is the RFS's own.
