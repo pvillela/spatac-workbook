@@ -522,6 +522,97 @@ rule."
 **User:** "Update the Q&A document, create a handoff document for today, similar to yesterday's,
 and commit."
 
+## Session of 2026-11-23: the legacy check, the master build and the plan's name
+
+**User:** "Read @docs/archive/HANDOFF-20261122.md."
+**Claude:** summarised the status. ➡️ Is `Spatac-20261122f.xlsx` the final build?
+
+**User:** "You have previously told me that the diagonal formulas in row 41 of
+@_nogit/Spatac-20261121.xlsx are wrong and you have supposedly fixed them. I can't see what's
+wrong with them. Explain what's wrong."
+**Claude:** the diagonals in B41:G41 are right. Only K41 was wrong: filled past the grid into the
+scratch area, its last term multiplies J13, the rate cell (about 3 cents), and J and K never fed
+any result; J37/K37 are also labelled a year early. The "fix" was deleting the scratch area
+(Q15); design section 5 overstates it as a bug. Offered to correct section 5.
+**User:** "Leave it."
+
+**User:** "Why doesn't cell D10 in Spatac-20261122f match the corresponding value in
+Spatac-20261121?"
+**Claude:** old D10 held all maturities; the new D10 holds held investments only and D11 the
+planned ones, and D10+D11 is 10,121.49 lower than old D10. That is the compounding fix:
+Schedule_of_Investments row 19 (Bank of Montreal GIC, $184,750 at 4.58%) is a 4-year term but
+was compounded `^5`.
+**User:** "What were the held investments with compound interest that had less than 5-years
+maturity and matured in 2028?"
+**Claude:** only row 19. Row 20, also due in 2028, is a 5-year term.
+
+**User:** "In folder _nogit, I have added Spatac-L-20261123.xlsx, a legacy workbook which has
+corrected formulas and whose values should match those of Spatac-20261122f.xlsx. Check that. I
+also added Spatac-L-20261123a.xlsx, where I corrected the planned new investments, which had a
+negative value for 2028 in Spatac-L-20261123.xlsx and Spatac-20261122f.xlsx.
+Spatac-L-20261123a.xlsx should be considered the golden legacy workbook until further notice.
+Finally, I made some formatting adjustments to the MTC tab in Spatac-20261122g.xlsx, which should
+be carried forward."
+**Claude:** L matches 22f in all 1,163 key results, with no phase 4 differences allowed (only the
+known 2040 rounding). La changes four inputs (C13, E13, E15, D22) and leaves the 2028 balancing
+figure at −0.33. No formatting change found in 22g's MTC: only zoom, the selected tab and
+protection removed.
+**User:** "The workbook shows amounts rounded to whole dollars. Unlock the 22g version so I can
+inspect it."
+**Claude:** wrote an unprotected copy, `Spatac-20261123.xlsx`. Its own comparison run had left
+stale LibreOffice lock files on 22f and 22g.
+**User:** "LibreOffice is not saving my format changes. The workbook may be corrupted."
+**Claude:** not corrupted: format changes survive a save and reload. ➡️ Which changes, and how?
+**User:** "B20:G20 -- changed border thickness to 1.5pt; B13:G13 -- added bottom borders with
+0.9pt thickness."
+**Claude:** xlsx has only fixed border weights, and LibreOffice snaps to them on save: 0.75–1.5pt
+becomes thin (0.75pt), 1.75–2.25pt medium, 2.5pt and over thick. Both edits were saved as the thin
+borders already there. ➡️ Medium on B20:G20; leave B13:G13 thin.
+**User:** "The problem is that the thin bottom border is invisible with the other formatting. I
+have changed the thin to medium and the medium to thick. Now they stuck."
+**Claude:** built `Spatac-20261123a.xlsx`: 22g with the new borders, La's four inputs and every
+tab protected; it matches La in all key results.
+**User:** "What is Spatac-20261123.xlsx?"
+**Claude:** the unlocked copy, made before the border edit; superseded.
+**User:** "deleted"
+
+**User:** "Why is MTC cell D18 showing -0? I've never seen this in a spreadsheet before."
+**Claude:** D18 is −0.33; the format `#,##0;-#,##0;0` picks its negative section, which keeps the
+minus sign. ➡️ Round the balancing figure with `ROUND`.
+**User:** "I don't know what you did, but it's more complicated than it needs to be. My legacy
+sheet does not show -0. I don't want you to add more complexity to formulas. Simplify the
+formatting if necessary."
+**Claude:** the legacy sheet uses plain `#,##0`; built `Spatac-20261123b.xlsx` with every
+`#,##0;-#,##0;0` cell changed to `#,##0`. D18 shows 0. Excel would still show −0 with either
+format.
+
+**User:** "The spatac-investment-plan tool does not name the investment plan with the same suffix
+as the source Spatc workbook."
+**Claude:** the default name now keeps a same-day letter after the date.
+**User:** "Why doesn't it take the whole suffix after "Spatac"? It should also check that the
+name is "Spatc-*.xlsx"."
+**Claude:** no good reason. `Spatac-SUFFIX.xlsx` now gives `InvestmentPlan-SUFFIX.xlsx`; without
+`--output`, any other source name is refused.
+**User:** "I just ran the tool and generated the investment plan."
+**Claude:** `InvestmentPlan-20261123b.xlsx` matches its source in all 1,633 cells checked. The
+MTC title still reads "prepared 2026-11-20", typed text carried over from the original.
+**User:** "That was my bad. I forgot to update the Spatac-L. I have just created a new version L-b
+with the corrected date."
+**Claude:** Lb changes only MTC A1. Built `Spatac-20261123c.xlsx` (it matches Lb) and
+`InvestmentPlan-20261123c.xlsx`. ➡️ Commit the format and plan-name changes.
+**User:** "Yes"
+**Claude:** committed `a50bdfc` (amounts use `#,##0`) and `7b48885` (the plan's name keeps the
+source's suffix). `migrate.py` no longer reproduces 23c. ➡️ Is 23c the master to freeze?
+
+**User:** "Is it OK if I delete legacy version La?"
+**Claude:** yes; Lb holds everything La does.
+**User:** "Is it OK if I rename Spatac-L-20261123b.xlsx as Spatac-L-20261123.xlsx?"
+**Claude:** yes, once the existing `Spatac-L-20261123.xlsx` (the first legacy version, no longer
+needed) is deleted, or the rename overwrites it. Nothing refers to the L names.
+
+**User:** "This session's Q&A interactions are missing from the Q&A log. Update the Q&A log by
+inserting them."
+
 ## Session of 2026-11-24: Investment Plan formatting and the Adjustments restructure
 
 Questions are numbered G1–G35 here; design section 14 cites them by those numbers.
