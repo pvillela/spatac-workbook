@@ -1214,10 +1214,12 @@ Where these differ from 14.1–14.11, they win.
     negative variance is unfavourable and shows in red.
   - **Years of the adjusted block** stay numbers in row 6 (`Exp_AdjustedYears`), green
     (Calculated) and invisible (format `;;;`); the headings in row 7 are their text (`=""&U$6`),
-    which the column totals do not add. At the user's request, U6 carries the comment "Do not
-    modify this cell or the cells to its right…": an exception to the rule of 14.9 that comments
-    hold no instructions. S2 shows only the next year, bold; U2 a bold description of the
-    block; S4 and U4:AX4 are bold; S is wider.
+    which the column totals do not add. At the user's request, a comment says "Do not modify
+    the cells to the right of this one in this row…": an exception to the rule of 14.9 that
+    comments hold no instructions. The comment (T6) and the block's bold description (T2,
+    running across the empty cells to its right) are in the spacer T, which is never folded:
+    the block's past years are, and the first of them changes at each rollover. S2 shows only
+    the next year, bold; S4 and U4:AX4 are bold; S is wider.
   - **Blank versus zero** (as 13.4): next year and the adjusted block are blank where the RFS has
     no amount and no adjustment touches the year, and show `0` where adjustments leave nothing.
   - **Adjustments Check** shows OK for a non-empty row in order, right-justified; A2 counts the

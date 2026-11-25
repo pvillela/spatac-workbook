@@ -469,10 +469,12 @@ class Restructure:
             b.formula("%s%d" % (c, hdr), '=""&%s$6' % c)
         b.style("%s6:%s6" % (a0, a1), "Calculated")
         b.fmt("%s6:%s6" % (a0, a1), ";;;")
+        # The comment and the block's description go in the spacer before the block (S here, T
+        # once the label's spacer is inserted): it is never folded, unlike the block's past years.
         sheet.Annotations.insertNew(
-            b.cell("%s6" % a0).CellAddress,
-            "Do not modify this cell or the cells to its right: they hold the years of the "
-            "adjusted block, which the formulas read.",
+            b.cell("S6").CellAddress,
+            "Do not modify the cells to the right of this one in this row: they hold the years of "
+            "the adjusted block, which the formulas read.",
         )
         define(doc, "Exp_AdjustedYears", ref("Expenditures", "%s6:%s6" % (a0, a1)))
         year_of = lambda c: "%s$6" % c
@@ -495,9 +497,10 @@ class Restructure:
         box(b.cell("R2:R5"))
 
         # The adjusted RFS block.
-        b.value("%s2" % a0, "RFS amounts by year, with the Adjustments tab applied (amounts that "
-                             "differ from the RFS are shaded orange)")
-        b.bold("%s2" % a0)
+        b.value("S2", "RFS amounts by year, with the Adjustments tab applied (amounts that "
+                      "differ from the RFS are shaded orange)")
+        b.bold("S2")
+        b.cell("S2").IsTextWrapped = False
         # Legends for rows 3-5, right-justified next to the figures (in the notes column).
         for r, text in ((3, "RFS total"), (4, "Total"), (5, "Variance vs RFS")):
             b.value("P%d" % r, text)
