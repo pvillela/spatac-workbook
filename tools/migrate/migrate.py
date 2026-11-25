@@ -55,10 +55,8 @@ VERT_TOP = 1  # com.sun.star.table.CellVertJustify.TOP
 # Red negatives, as the user set on the Medium_Term_Cashflow variance rows.
 MONEY_RED = "#,##0;[RED]-#,##0"
 
-# Hides a zero: for amounts where 0 and blank mean the same thing.
-MONEY = '#,##0;-#,##0;""'
-# Shows a zero as 0: for amounts where a blank means something else. One section, as in the
-# legacy workbook: a tiny negative such as -0.33 then shows as 0, not -0.
+# Shows a zero as 0. One section, as in the legacy workbook: a tiny negative such as -0.33 then
+# shows as 0, not -0. No format hides a zero (design 15.6).
 MONEY_ZERO = "#,##0"
 PERCENT = "0.00%"
 DATE = "YYYY-MM-DD"
@@ -898,13 +896,13 @@ class Migration:
         b.sheet.getCellRangeByName("A%d:B%d" % (first, last)).HoriJustify = uno.Enum(
             "com.sun.star.table.CellHoriJustify", "LEFT"
         )
-        b.fmt("J%d:K%d" % (first, last), MONEY)
+        b.fmt("J%d:K%d" % (first, last), MONEY_ZERO)
         # The estimate columns L-T show a zero as 0, so that it cannot be mistaken for a blank
         # (design 13.4): in Mid-year and Late-year a blank means "no change" and a 0 means "will
         # cost nothing", and the Current estimate columns show the 0 that results. A blank cell,
         # or a Current estimate with nothing to choose from, still shows blank.
         b.fmt("L%d:T%d" % (first, last), MONEY_ZERO)
-        b.fmt("%s%d:%s%d" % (rfs_cols[0], first, rev_cols[-1], last), MONEY)
+        b.fmt("%s%d:%s%d" % (rfs_cols[0], first, rev_cols[-1], last), MONEY_ZERO)
         b.fmt("W%d:BZ%d" % (yr, yr), YEAR)
         widths = {"A": 6, "B": 8, "C": 34, "D": 10, "E": 24, "F": 6, "G": 20, "H": 16, "I": 8, "U": 30, "V": 40}
         for c in "JKLMNOPQRST":
@@ -1330,7 +1328,7 @@ class Migration:
         b.fmt("D%d:D%d" % (held0, plan1), MONEY_ZERO)
         b.fmt("E%d:E%d" % (held0, plan1), PERCENT)
         b.fmt("H%d:J%d" % (held0, plan1), MONEY_ZERO)
-        b.fmt("N%d:X%d" % (held0, total), MONEY)
+        b.fmt("N%d:X%d" % (held0, total), MONEY_ZERO)
         widths = {"A": 44, "B": 11, "C": 11, "D": 11, "E": 8, "F": 7, "G": 11, "H": 10, "I": 11, "J": 11, "K": 8, "L": 8, "M": 5}
         for c, w in widths.items():
             b.width(c, w)

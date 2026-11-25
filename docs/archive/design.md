@@ -1315,6 +1315,9 @@ This replaces the "RFS baseline, read-only" of 13.6.
   hide-zero format, carried over from the old RFS and Revised blocks, to `#,##0`: a year's total
   of 0 is a result, not an absence. Every amount on Expenditures is now `#,##0`, except the red
   variance row 5.
+- **No hidden zeros anywhere.** The hide-zero format of 13.4 is gone from every Spatac tab: the
+  last cells with it, the Schedule_of_Investments cash-flow grid (N7:X80), take `#,##0`, so its
+  empty years show 0. `verify_restructure.py` checks that no cell hides a zero.
 - **`-0` is accepted.** An amount between −0.5 and 0 shows `-0`, as in the legacy workbook. A
   conditional format (`[RED][<=-0.5]#,##0;#,##0`) would avoid it, but the user prefers the
   simple one. Today only Projected_Balances I26, I27 and I29 (about −1e-8, rounding noise in the

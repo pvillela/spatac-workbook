@@ -227,6 +227,19 @@ def main():
             errors = rng.queryFormulaCells(4)  # com.sun.star.sheet.FormulaResult.ERROR
             c.true("%s: error values in %s" % (name, errors.RangeAddressesAsString),
                    errors.Count == 0)
+        # No cell hides a zero (design 15.6).
+        formats = new.NumberFormats
+        for name in SPATAC_TABS:
+            sheet = new.Sheets.getByName(name)
+            cur = sheet.createCursor()
+            cur.gotoEndOfUsedArea(False)
+            a = cur.RangeAddress
+            hidden = [
+                sheet.getCellByPosition(k, r).AbsoluteName
+                for r in range(a.EndRow + 1) for k in range(a.EndColumn + 1)
+                if formats.getByKey(sheet.getCellByPosition(k, r).NumberFormat).FormatString.endswith(';""')
+            ]
+            c.true("%s: cells that hide a zero: %s" % (name, hidden[:3]), not hidden)
         checks = [v for (v,) in block(new, "Adjustments", "H1:H80") if v not in ("", "Check", "OK")]
         c.true("Adjustments: flagged rows %s" % checks, not checks)
         c.eq("Adjustments A2", "", block(new, "Adjustments", "A2:A2")[0][0])

@@ -190,6 +190,7 @@ class Restructure:
         self.projected()
         self.readme()
         self.instruction_comments()
+        self.no_hidden_zeros()
         self.order_and_protect()
 
         doc.calculateAll()
@@ -1050,6 +1051,36 @@ class Restructure:
                                ("RFS_fvalues", "BC1")):
             if not remove_comment(sheets.getByName(sheet), address):
                 raise RuntimeError("no comment on %s!%s" % (sheet, address))
+
+    def no_hidden_zeros(self):
+        """No cell on a Spatac tab hides a zero (design 15.6). The source still has the old
+        hide-zero format (#,##0;-#,##0;""), on the Schedule_of_Investments cash-flow grid: it
+        becomes #,##0."""
+        formats, locale = self.doc.NumberFormats, self.doc.CharLocale
+        plain = formats.queryKey(MONEY_ZERO, locale, False)
+        if plain == -1:
+            plain = formats.addNew(MONEY_ZERO, locale)
+        hides = {}
+
+        def hides_zero(key):
+            if key not in hides:
+                hides[key] = formats.getByKey(key).FormatString.endswith(';""')
+            return hides[key]
+
+        count = 0
+        for sheet in self.doc.Sheets:
+            if sheet.Name.startswith("RFS_"):
+                continue
+            cur = sheet.createCursor()
+            cur.gotoEndOfUsedArea(False)
+            a = cur.RangeAddress
+            for r in range(a.EndRow + 1):
+                for c in range(a.EndColumn + 1):
+                    cell = sheet.getCellByPosition(c, r)
+                    if hides_zero(cell.NumberFormat):
+                        cell.NumberFormat = plain
+                        count += 1
+        self.report.append("%d cells no longer hide a zero" % count)
 
     def order_and_protect(self):
         sheets = self.doc.Sheets
