@@ -24,15 +24,17 @@ headings, in quotes, such as "Actuals to date", so they stay right when columns 
 
 Above the headings:
 
-- Row 3 is the vendor's own total for each year of the adjusted block.
+- Row 3 is the **RFS total** for each year: the vendor's own total, for next year and each
+  year of the adjusted block.
 - Row 4 totals the columns that hold an amount for every item: Approved, Actuals to date, the
   Current estimate, next year and the adjusted block. The estimate columns, which hold changes
   only, have no total.
 - Row 5 is the **variance vs RFS** of the Current estimate, next year and each adjusted year:
-  its total minus the RFS total for the same year. A positive variance means more spending than
-  the RFS.
+  the RFS total for the same year minus its total. As on Medium_Term_Cashflow, a **negative
+  variance is unfavourable**: more spending than the RFS, shown in red.
 - Row 6 records where each current-year column's figures came from, such as "to Oct 26".
-  Update it when you update a column. Over the adjusted block, row 6 holds the years.
+  Update it when you update a column. Over the adjusted block, row 6 holds the years the
+  formulas read: green and invisible. Never change it; the headings in row 7 show the years.
 
 ## The current year
 
@@ -45,9 +47,12 @@ this year.
 
 The two look different: a **0** shows as `0`, and a blank shows nothing. The same holds in the
 green Current estimate column: `0` means the item is now expected to cost nothing this year, and
-a blank means it has no amount at all, neither an estimate nor an Approved amount. In the other
-amount columns (Approved, Actuals, next year and the adjusted block) a zero shows as blank,
-since there it means the same as no amount.
+a blank means it has no amount at all, neither an estimate nor an Approved amount. In Approved
+and Actuals a zero shows as blank, since there it means the same as no amount.
+
+Next year and the adjusted block follow the same rule as the Current estimate: an amount shows
+blank when the RFS has none for that year and no adjustment touches it, and `0` when the
+adjustments leave nothing, for example when a project's whole amount moved to another year.
 
 An estimate can be a formula as well as a number, when that is how it was worked out. For
 example, `=MAX(L8,M8)` keeps the Late-year estimate at the approved amount until actual spending
@@ -91,7 +96,8 @@ A part of an amount can be moved; several rows can move the same item. Rows add 
 can move an amount that an earlier row brought in. An amount can be a formula, such as
 `=600000-G42` for "the difference between 600,000 and the amount the row above brings in".
 
-The **Check** column flags:
+The **Check** column shows **OK** for a row that is in order, and is blank for an empty row.
+It flags:
 
 - **Missing entry**: a row with some but not all of Item, Year from, Year to, Amount and Reason.
 - **Item not in Expenditures**: an Item that is not a label.

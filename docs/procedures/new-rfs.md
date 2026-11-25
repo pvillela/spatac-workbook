@@ -57,7 +57,7 @@ For each flag:
 Column F is protected: unprotect Expenditures to change it, and protect it again afterwards.
 
 When both columns are clear, every RFS item has its row and every row finds its amounts. Then
-check, on Expenditures, that row 3 (the vendor's totals) equals row 4 (the items added up) in
+check, on Expenditures, that row 3 (the RFS totals) equals row 4 (the items added up) in
 the adjusted block. (With the Adjustments tab emptied in section 2, the two rows agree in every
 year.)
 

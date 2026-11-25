@@ -25,9 +25,9 @@ every year of the study's 30-year span: the RFS amount, looked up in RFS_fvalues
 number and description, with the [Adjustments](track-projects.md#the-adjustments-tab) applied.
 Amounts that differ from the RFS are shaded orange; every other amount is the RFS's own.
 
-Row 3 of the block is the vendor's own total for each year and row 4 adds up the items. Row 5
-is their difference: zero in a year without adjustments, and otherwise the net effect of the
-adjustments. A difference in a year that has no adjustments means an item is missing from
+Row 3 of the block is the **RFS total**, the vendor's own total for each year, and row 4 adds up
+the items. Row 5 is the RFS total minus the items' total: zero in a year without adjustments,
+and otherwise the net effect of the adjustments, negative (in red) when they add spending. A difference in a year that has no adjustments means an item is missing from
 Expenditures.
 
 ## Questions the workbook answers

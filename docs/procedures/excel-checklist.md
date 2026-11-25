@@ -29,11 +29,11 @@ workbook:
       Projected_Balances K17 and W17. Their line
       breaks show in the formula bar when it is expanded.
 - [ ] **Expenditures row 5** over the adjusted block (from column U): 0 in every year but
-      2025 (−188,700), 2026 (−416,160), 2027 (607,552) and 2028 (151,541), the years the
+      2025 (188,700), 2026 (416,160), 2027 (−607,552, red) and 2028 (−151,541, red), the years the
       Adjustments tab changes.
 - [ ] **Expenditures, orange shading:** the adjusted amounts that differ from the RFS are
       orange, for example row 29 (3.9) in 2025 and 2028. Unfold the past years to see 2025.
-- [ ] **Adjustments, 2026 block:** column H is blank on all six rows; G shows 243,547 · 50,000
+- [ ] **Adjustments, 2026 block:** column H shows OK on all six rows; G shows 243,547 · 50,000
       · 432,973 · 514,686 · 85,314 · 40,800.
 - [ ] **Projected_Balances G4:I10:** the lowest margins show amounts and years, not errors.
 - [ ] **Projected_Balances validation:** choose **RFS** in the dropdowns B4, B6 and B7: column Q

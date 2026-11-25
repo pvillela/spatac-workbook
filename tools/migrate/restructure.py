@@ -26,6 +26,7 @@ from com.sun.star.table import CellRangeAddress
 from com.sun.star.util import CellProtection
 
 from migrate import (
+    MONEY_RED,
     HEADER_COLOR,
     MONEY,
     MONEY_ZERO,
@@ -275,7 +276,7 @@ class Restructure:
         b.formula(
             "A2",
             "=LET(\n"
-            "  problems; SUMPRODUCT(--(LEN(Adj_Check)>0))-COUNTIF(Adj_Check; \"Check\");\n"
+            "  problems; SUMPRODUCT((LEN(Adj_Check)>0)*(Adj_Check<>\"Check\")*(Adj_Check<>\"OK\"));\n"
             "  IF(problems=0; \"\"; \"Check: \"&problems&\" row(s) need attention; see column H \"&\n"
             "    \"and The Adjustments tab in the documentation.\"))",
         )
@@ -308,6 +309,8 @@ class Restructure:
             b.fmt("D%d:G%d" % (r1, r2), MONEY_ZERO)
             b.wrap("E%d:E%d" % (r1, r2))
             b.wrap("H%d:H%d" % (r1, r2))
+            # Right-justified, so that the OKs keep clear of the To-year amounts.
+            b.cell("H%d:H%d" % (r1, r2)).HoriJustify = uno.Enum("com.sun.star.table.CellHoriJustify", "RIGHT")
         for c, w in {"A": 46, "B": 9, "C": 9, "D": 14, "E": 46, "F": 12, "G": 12, "H": 26, "J": 8}.items():
             b.width(c, w)
         sheet.Columns.getByName("J").IsVisible = False
@@ -348,9 +351,9 @@ class Restructure:
             '    OR(item=""; from=""; to=""; amount=""; reason=""); "Missing entry";\n'
             '    row<=1; "Item not in Expenditures";\n'
             '    from=to; "Year from = Year to";\n'
-            '    from="none"; "";\n'
+            '    from="none"; "OK";\n'
             '    $F{r}>rfs+moved_in-moved_out+0.5; "More than the item holds in "&from;\n'
-            '    TRUE(); ""))'
+            '    TRUE(); "OK"))'
         ).format(r=r, p=p, t=top)
         return [from_amount, to_amount, check]
 
@@ -430,7 +433,6 @@ class Restructure:
         define(doc, "Exp_AdjLabel", ref("Expenditures", "J%d:J%d" % (hdr, end)))
         define(doc, "Exp_NextYear", ref("Expenditures", "R%d:R%d" % (hdr, end)))
         define(doc, "Exp_Adjusted", ref("Expenditures", "%s%d:%s%d" % (a0, hdr, a1, end)))
-        define(doc, "Exp_AdjustedYears", ref("Expenditures", "%s6:%s6" % (a0, a1)))
         for n, c in (("Exp_Approved", "K"), ("Exp_Current", "O"), ("Exp_Notes", "P")):
             if ref("Expenditures", "%s%d:%s%d" % (c, hdr, c, end)) != names.getByName(n).Content:
                 raise RuntimeError("%s is not where expected: %s" % (n, names.getByName(n).Content))
@@ -456,71 +458,102 @@ class Restructure:
         b.style("J%d:J%d" % (first, last), "Calculated")
         b.wrap("J%d:J%d" % (first, last))
 
-        # R: next year, from the adjusted block.
-        b.formula("R2", '=(Cfg_BaseYear+1)&" — next year"')
-        b.formula("R%d" % hdr, '=(Cfg_BaseYear+1)&" Adjusted"')
-        b.formula("R4", "=SUM(R%d:R%d)" % (hdr, end))
-        b.formula(
-            "R5",
-            "=R4-INDEX($%s$3:$%s$3;MATCH(Cfg_BaseYear+1;Exp_AdjustedYears;0))" % (a0, a1),
+        # The adjusted block's years are numbers in row 6, which formulas read; they are green
+        # (calculated) and invisible. The headings in row 7 show them as text: row 7 is inside the
+        # block's names, so a number there would be added in by every column sum (design 14.12).
+        right = uno.Enum("com.sun.star.table.CellHoriJustify", "RIGHT")
+        b.formula("%s6" % a0, "=RFS_StudyYear")
+        for k in range(1, RFS_SPAN):
+            b.formula("%s6" % self.adj_cols[k], "=%s6+1" % self.adj_cols[k - 1])
+        for c in self.adj_cols:
+            b.formula("%s%d" % (c, hdr), '=""&%s$6' % c)
+        b.style("%s6:%s6" % (a0, a1), "Calculated")
+        b.fmt("%s6:%s6" % (a0, a1), ";;;")
+        sheet.Annotations.insertNew(
+            b.cell("%s6" % a0).CellAddress,
+            "Do not modify this cell or the cells to its right: they hold the years of the "
+            "adjusted block, which the formulas read.",
         )
+        define(doc, "Exp_AdjustedYears", ref("Expenditures", "%s6:%s6" % (a0, a1)))
+        year_of = lambda c: "%s$6" % c
+
+        # R: next year, from the adjusted block. Its heading row 2 is just the year.
+        next_col = "Cfg_BaseYear+1"
+        b.formula("R2", "=Cfg_BaseYear+1")
+        b.fmt("R2", YEAR)
+        b.bold("R2")
+        b.formula("R%d" % hdr, '=(Cfg_BaseYear+1)&" Adjusted"')
+        b.formula("R3", "=INDEX($%s$3:$%s$3;MATCH(%s;Exp_AdjustedYears;0))" % (a0, a1, next_col))
+        b.formula("R4", "=SUM(R%d:R%d)" % (hdr, end))
+        b.formula("R5", "=R3-R4")
         b.formulas(
             "R%d:R%d" % (first, last),
-            [["=INDEX($%s%d:$%s%d;1;MATCH(Cfg_BaseYear+1;Exp_AdjustedYears;0))" % (a0, r, a1, r)]
+            [["=INDEX($%s%d:$%s%d;1;MATCH(%s;Exp_AdjustedYears;0))" % (a0, r, a1, r, next_col)]
              for r in range(first, last + 1)],
         )
         b.style("R%d:R%d" % (first, last), "Calculated")
         box(b.cell("R2:R5"))
 
         # The adjusted RFS block.
-        b.value("%s2" % a0, "Adjusted RFS amounts by year (the RFS with the Adjustments tab applied; "
-                             "amounts that differ from the RFS are highlighted)")
-        b.value("P3", "Vendor total")
-        b.cell("P3").HoriJustify = uno.Enum("com.sun.star.table.CellHoriJustify", "RIGHT")
-        b.formula("%s6" % a0, "=RFS_StudyYear")
-        for k in range(1, RFS_SPAN):
-            b.formula("%s6" % self.adj_cols[k], "=%s6+1" % self.adj_cols[k - 1])
+        b.value("%s2" % a0, "RFS amounts by year, with the Adjustments tab applied (amounts that "
+                             "differ from the RFS are shaded orange)")
+        b.bold("%s2" % a0)
+        # Legends for rows 3-5, right-justified next to the figures (in the notes column).
+        for r, text in ((3, "RFS total"), (4, "Total"), (5, "Variance vs RFS")):
+            b.value("P%d" % r, text)
+            b.cell("P%d" % r).HoriJustify = right
+        # Variances: negative is unfavourable (more spending than the RFS), in red, as on
+        # Medium_Term_Cashflow.
+        b.value("C5", "Variance vs RFS (more spending than the RFS is negative, in red)")
         for c in self.adj_cols:
-            b.formula("%s3" % c, "=IFERROR(-INDEX(RFS_Fv_Totals;1;MATCH(%s$6;RFS_Fv_Years;0));0)" % c)
+            b.formula("%s3" % c, "=IFERROR(-INDEX(RFS_Fv_Totals;1;MATCH(%s;RFS_Fv_Years;0));0)" % year_of(c))
             b.formula("%s4" % c, "=SUM(%s%d:%s%d)" % (c, hdr, c, end))
-            b.formula("%s5" % c, "=%s4-%s3" % (c, c))
-            b.formula("%s%d" % (c, hdr), '="Adjusted "&%s$6' % c)
+            b.formula("%s5" % c, "=%s3-%s4" % (c, c))
+        # An amount is blank when the RFS has none and no adjustment touches it; otherwise it
+        # shows, a deliberate zero as 0 (design 13.4).
         b.formulas(
             "%s%d:%s%d" % (a0, first, a1, last),
             [[
                 "=LET(\n"
-                "  rfs; IFERROR(INDEX(RFS_Fv_Values; MATCH($G{r}; RFS_Fv_Key; 0); MATCH({c}$6; RFS_Fv_Years; 0)); 0);\n"
-                "  added; SUMIFS(Adj_ToAmount; Adj_Item; $J{r}; Adj_To; {c}$6);\n"
-                "  removed; SUMIFS(Adj_FromAmount; Adj_Item; $J{r}; Adj_From; {c}$6);\n"
-                '  IF($J{r}=""; rfs; rfs+added-removed))'.format(r=r, c=c)
+                "  year; {y};\n"
+                "  rfs; IFERROR(INDEX(RFS_Fv_Values; MATCH($G{r}; RFS_Fv_Key; 0); MATCH(year; RFS_Fv_Years; 0)); 0);\n"
+                "  touched; COUNTIFS(Adj_Item; $J{r}; Adj_To; year)+COUNTIFS(Adj_Item; $J{r}; Adj_From; year);\n"
+                "  added; SUMIFS(Adj_ToAmount; Adj_Item; $J{r}; Adj_To; year);\n"
+                "  removed; SUMIFS(Adj_FromAmount; Adj_Item; $J{r}; Adj_From; year);\n"
+                "  IFS(\n"
+                '    AND(rfs=0; OR($J{r}=""; touched=0)); "";\n'
+                '    $J{r}=""; rfs;\n'
+                "    TRUE(); rfs+added-removed))".format(r=r, y=year_of(c))
                 for c in self.adj_cols
             ] for r in range(first, last + 1)],
         )
-        # The current year's variance compares with the RFS total in row 3.
         b.formula(
             "O5",
-            "=O4-INDEX($%s$3:$%s$3;MATCH(Cfg_BaseYear;Exp_AdjustedYears;0))" % (a0, a1),
+            "=INDEX($%s$3:$%s$3;MATCH(Cfg_BaseYear;Exp_AdjustedYears;0))-O4" % (a0, a1),
         )
         self.highlight_changes(sheet, a0, a1)
 
         # Formats.
         b.style("Q%d:%s%d" % (hdr, a1, hdr), "Header")
-        b.style("%s6:%s6" % (a0, a1), "Header")
         b.style("Q%d:Q%d" % (hdr, hdr), "Default")
         b.style("S%d:S%d" % (hdr, hdr), "Default")
         b.wrap("J%d:%s%d" % (hdr, a1, hdr))
-        b.fmt("%s6:%s6" % (a0, a1), YEAR)
-        b.fmt("R3:%s5" % a1, MONEY)
+        b.cell("%s%d:%s%d" % (a0, hdr, a1, hdr)).HoriJustify = right
+        b.fmt("R3:%s4" % a1, MONEY)
+        for rng in ("O5", "R5", "%s5:%s5" % (a0, a1)):
+            b.fmt(rng, MONEY_RED)
+        b.bold("R4")
+        b.bold("%s4:%s4" % (a0, a1))
         b.fmt("R%d:R%d" % (first, last), MONEY_ZERO)
-        b.fmt("%s%d:%s%d" % (a0, first, a1, last), MONEY)
+        b.fmt("%s%d:%s%d" % (a0, first, a1, last), MONEY_ZERO)
         b.fill("A%d:%s%d" % (end, a1, end), SEPARATOR_COLOR)
-        for c, w in {"J": 30, "Q": 1.5, "R": 11, "S": 1.5}.items():
+        for c, w in {"J": 30, "Q": 1.5, "R": 13, "S": 1.5}.items():
             b.width(c, w)
         for c in self.adj_cols:
             b.width(c, 10)
 
         base = int(self.doc.NamedRanges.getByName("Cfg_BaseYear").ReferredCells.getValue())
-        study = int(b.cell("%s6" % a0).getValue())
+        study = int(self.doc.NamedRanges.getByName("RFS_StudyYear").ReferredCells.getValue())
 
         # The labels as the formulas give them, for the user's rows.
         doc.calculateAll()
@@ -622,7 +655,7 @@ class Restructure:
         cf.addNew((
             pv("Operator", uno.Enum("com.sun.star.sheet.ConditionOperator", "FORMULA")),
             pv("Formula1",
-               "ABS({c}{r}-IFERROR(INDEX(RFS_Fv_Values;MATCH($G{r};RFS_Fv_Key;0);"
+               "ABS(N({c}{r})-IFERROR(INDEX(RFS_Fv_Values;MATCH($G{r};RFS_Fv_Key;0);"
                "MATCH({c}$6;RFS_Fv_Years;0));0))>0.5".format(c=a0, r=self.first)),
             pv("StyleName", "Changed"),
             pv("SourcePosition", rng.getCellByPosition(0, 0).CellAddress),

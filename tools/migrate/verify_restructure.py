@@ -143,9 +143,24 @@ def main():
             errors = rng.queryFormulaCells(4)  # com.sun.star.sheet.FormulaResult.ERROR
             c.true("%s: error values in %s" % (name, errors.RangeAddressesAsString),
                    errors.Count == 0)
-        checks = [v for (v,) in block(new, "Adjustments", "H1:H80") if v not in ("", "Check")]
+        checks = [v for (v,) in block(new, "Adjustments", "H1:H80") if v not in ("", "Check", "OK")]
         c.true("Adjustments: flagged rows %s" % checks, not checks)
         c.eq("Adjustments A2", "", block(new, "Adjustments", "A2:A2")[0][0])
+        oks = [v for (v,) in block(new, "Adjustments", "H39:H44")]
+        c.true("Adjustments: the user's six rows show OK: %s" % oks, oks == ["OK"] * 6)
+
+        # Blank versus deliberate zero (design 13.4): 3.9 has no RFS amount and no adjustment in
+        # 2027, so it is blank; its 2025 amount was moved away entirely, so it is 0.
+        r39 = find_row(new, "Expenditures", "B", "3.9")
+        y = [int(v) for v in block(new, "Expenditures", "U6:AX6")[0]]
+        row = block(new, "Expenditures", "A%d:AX%d" % (r39, r39))[0]
+        c.true("Expenditures 3.9 2027 is blank: %r" % row[20 + y.index(2027)], row[20 + y.index(2027)] == "")
+        c.true("Expenditures 3.9 next year is blank: %r" % row[18], row[18] == "")
+        c.true("Expenditures 3.9 2025 is a zero: %r" % row[20 + y.index(2025)], row[20 + y.index(2025)] == 0.0)
+        # Variances: more spending than the RFS is negative.
+        c2028 = col(21 + y.index(2028))
+        v2028 = block(new, "Expenditures", "%s5:%s5" % (c2028, c2028))[0][0]
+        c.true("Expenditures 2028 variance is negative: %r" % v2028, v2028 < 0)
 
         # Adjustments behaviour, in memory, in the last block: each check, and one valid move.
         adj = new.Sheets.getByName("Adjustments")
@@ -159,7 +174,7 @@ def main():
             (label, 2027, 2027, 1, "x", "Year from = Year to"),
             ("Not an item", 2027, 2028, 1, "x", "Item not in Expenditures"),
             (label, "", "", 5, "", "Missing entry"),
-            (label, 2030, 2031, 1000, "x", ""),
+            (label, 2030, 2031, 1000, "x", "OK"),
         ]
         for i, (item, frm, to, amount, reason, _) in enumerate(rows):
             r = 55 + i

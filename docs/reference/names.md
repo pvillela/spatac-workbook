@@ -48,7 +48,7 @@ workbook).
 | Name | Range | Meaning |
 |---|---|---|
 | `Exp_Adjusted` | U7:AX250 | Adjusted RFS amount per item and year: the RFS amount with the Adjustments tab applied. |
-| `Exp_AdjustedYears` | U6:AX6 | The years of `Exp_Adjusted`: the RFS study year and the 29 after it. |
+| `Exp_AdjustedYears` | U6:AX6 | The years of `Exp_Adjusted`: the RFS study year and the 29 after it. Numbers, green and invisible; the headings in row 7 show them as text, so that the column totals do not add them. |
 
 ## Adjustments (`Adj_`)
 
