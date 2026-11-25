@@ -28,7 +28,6 @@ from com.sun.star.util import CellProtection
 from migrate import (
     MONEY_RED,
     HEADER_COLOR,
-    MONEY,
     MONEY_ZERO,
     PERCENT,
     SEPARATOR_COLOR,
@@ -556,7 +555,7 @@ class Restructure:
         b.style("S%d:S%d" % (hdr, hdr), "Default")
         b.wrap("J%d:%s%d" % (hdr, a1, hdr))
         b.cell("%s%d:%s%d" % (a0, hdr, a1, hdr)).HoriJustify = right
-        b.fmt("R3:%s4" % a1, MONEY)
+        b.fmt("R3:%s4" % a1, MONEY_ZERO)  # totals: a zero shows 0 (design 15.6)
         for rng in ("O5", "R5", "%s5:%s5" % (a0, a1)):
             b.fmt(rng, MONEY_RED)
         b.bold("R4")

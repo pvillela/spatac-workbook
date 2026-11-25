@@ -1311,6 +1311,10 @@ This replaces the "RFS baseline, read-only" of 13.6.
   by the user as too much red noise.
 - **Expenditures Approved and Actuals to date** (L8:M249) change from the hide-zero format to
   `#,##0` (`MONEY_ZERO`): a zero shows 0, black. This supersedes 13.4's exception for them.
+- **Expenditures totals** (rows 3–4 of next year and the adjusted block) also change from the
+  hide-zero format, carried over from the old RFS and Revised blocks, to `#,##0`: a year's total
+  of 0 is a result, not an absence. Every amount on Expenditures is now `#,##0`, except the red
+  variance row 5.
 - **`-0` is accepted.** An amount between −0.5 and 0 shows `-0`, as in the legacy workbook. A
   conditional format (`[RED][<=-0.5]#,##0;#,##0`) would avoid it, but the user prefers the
   simple one. Today only Projected_Balances I26, I27 and I29 (about −1e-8, rounding noise in the
