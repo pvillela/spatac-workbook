@@ -65,7 +65,7 @@ year.)
 
 - **Projected_Balances P6:** the last year of contribution increases fixed by the new funding
   plan. Review the catch-up increases in P7:P9.
-- **Projected_Balances, validation:** I13 shows 0: the recomputed RFS balance matches
+- **Projected_Balances, validation:** I12 shows 0: the recomputed RFS balance matches
   RFS_cashflow in every year (see
   [Checking the vendor's arithmetic](../purposes/validate-funding.md#checking-the-vendors-arithmetic)).
 - **Settings:** the minimum target and its year, if the Board revisits them; the **years of

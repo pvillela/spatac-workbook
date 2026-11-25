@@ -717,7 +717,8 @@ class Restructure:
         doc = self.doc
         sheet = doc.Sheets.getByName("Projected_Balances")
         b = Builder(doc, sheet)
-        hdr, first, last = 14, 15, 64
+        # Header row 13, years in rows 14-63: the blank row 11 is gone (design 15.7).
+        hdr, first, last = 13, 14, 63
         last30 = first + RFS_SPAN - 1
 
         # The user's inputs, kept: opening balance, the "through" year, the catch-up increases and
@@ -800,8 +801,8 @@ class Restructure:
         # value and its first negative one, with their years (design 15.5).
         self.margin_summary(b, "B", "RFS, first 30 years", ("J", "K", "L"), first, last30)
         self.margin_summary(b, "R", "What-if, first 30 years", ("W", "X", "Y"), first, last30)
-        name("PB_RFSLowest", "B5:H7")
-        name("PB_Lowest", "R5:X7")
+        name("PB_RFSLowest", "B5:G7")
+        name("PB_Lowest", "R5:W7")
 
         # The year table.
         b.value("B%d" % (hdr - 1), "RFS (recomputed from RFS_cashflow inputs)")
@@ -923,6 +924,9 @@ class Restructure:
         b.width("N", 2)
         b.width("AA", 2)
         b.group_cols("AB", "AB", collapse=True)
+        ctrl = doc.CurrentController
+        ctrl.setActiveSheet(sheet)
+        ctrl.freezeAtPosition(1, hdr)
 
         for n, c in (
             ("PB_Year", "A"), ("PB_RFSOpening", "B"), ("PB_RFSCost", "C"),
@@ -939,12 +943,11 @@ class Restructure:
             name(n, "%s%d:%s%d" % (c, first, c, last))
 
     def margin_summary(self, b, at, title, margins, first, last30):
-        """Label at `at` (running over the next two columns); then Lowest, Year, First negative,
-        Year."""
+        """Label at `at` (running over the next column); then Lowest, Year, First negative, Year."""
         c0 = colnum(at)
-        low, low_year, neg, neg_year = (col(c0 + k) for k in (3, 4, 5, 6))
+        low, low_year, neg, neg_year = (col(c0 + k) for k in (2, 3, 4, 5))
         years = "$A$%d:$A$%d" % (first, last30)
-        b.values("%s4:%s4" % (at, neg_year), [[title, "", "", "Lowest", "Year", "First negative", "Year"]])
+        b.values("%s4:%s4" % (at, neg_year), [[title, "", "Lowest", "Year", "First negative", "Year"]])
         b.style("%s4:%s4" % (at, neg_year), "Header")
         labels = ("Margin over minimum", "Margin over inflated minimum", "PV margin over minimum")
         for i, (label, m) in enumerate(zip(labels, margins)):

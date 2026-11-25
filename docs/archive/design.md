@@ -1295,8 +1295,9 @@ This replaces the "RFS baseline, read-only" of 13.6.
 
 - **Inputs above the what-if**: A4:B10 move to O4:P10. The labels are right-justified in O and
   run left over the empty cells before it. Column A holds only years now and is narrowed.
-- **Two summaries**, one above each block, over the first 30 years: B4:H7 for the RFS
-  (`PB_RFSLowest`, B5:H7) and R4:X7 for the what-if (`PB_Lowest`, R5:X7). Each has a row per
+- **Two summaries**, one above each block, over the first 30 years: B4:G7 for the RFS
+  (`PB_RFSLowest`, B5:G7) and R4:W7 for the what-if (`PB_Lowest`, R5:W7), the figures starting
+  two columns after the label (D and T). Each has a row per
   margin (over minimum, over inflated minimum, PV) and the columns Lowest, Year, **First
   negative**, Year. The first negative year is `MINIFS` of the years where the margin is below
   zero; "none" when there is none, with the amount blank.
@@ -1322,3 +1323,10 @@ This replaces the "RFS baseline, read-only" of 13.6.
   conditional format (`[RED][<=-0.5]#,##0;#,##0`) would avoid it, but the user prefers the
   simple one. Today only Projected_Balances I26, I27 and I29 (about −1e-8, rounding noise in the
   check) show it.
+
+### 15.7 Projected_Balances rows
+
+- The blank row 11 is deleted: the block headings and the "years that differ" count are in row
+  12, the column headings in row 13, the years in rows 14–63 (the light grey years 44–63), and
+  the panes freeze below row 13. This supersedes the row numbers of 15.2–15.6 (the count in
+  I12, the `-0`s in I25, I26 and I28).

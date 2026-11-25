@@ -115,11 +115,11 @@ The extraction tool keeps these.
 | `PB_ContribFixedThrough` | P6 | Last year whose contribution increase follows the RFS schedule. |
 | `PB_CatchUp` | P7:P9 | Increases in the three years after it. |
 | `PB_SubsequentIncrease` | P10 | The increase after those. |
-| `PB_RFSLowest`, `PB_Lowest` | B5:H7, R5:X7 | The RFS's and the what-if's margins over the first 30 years: lowest and first negative, with their years. |
-| `PB_Year` | column A, rows 15–64 | The years. |
-| `PB_RFSOpening`, `PB_RFSCost`, `PB_RFSIncrease`, `PB_RFSContrib`, `PB_RFSRate`, `PB_RFSInterest`, `PB_RFSBalance`, `PB_RFSDifference`, `PB_RFSMargin`, `PB_RFSMarginInflated`, `PB_RFSMarginPV`, `PB_RFSPerUnitMonth` | columns B–M, rows 15–64 | The RFS, recomputed from its inputs. `PB_RFSDifference` is the recomputed balance minus RFS_cashflow's. |
-| `PB_Opening`, `PB_Cost`, `PB_Increase`, `PB_Contributions`, `PB_Rate`, `PB_Interest`, `PB_Balance`, `PB_Variance`, `PB_Margin`, `PB_MarginInflated`, `PB_MarginPV`, `PB_PerUnitMonth` | columns O–Z, rows 15–64 | The what-if. `PB_Variance` is the difference from the RFS balance. |
-| `PB_Inflator` | column AB, rows 15–64 | The inflation factor from the study year: the short-term rate for `Cfg_ShortInflationYears` years, the long-term rate after. The Adjustments tab inflates and deflates with it. |
+| `PB_RFSLowest`, `PB_Lowest` | B5:G7, R5:W7 | The RFS's and the what-if's margins over the first 30 years: lowest and first negative, with their years. |
+| `PB_Year` | column A, rows 14–63 | The years. |
+| `PB_RFSOpening`, `PB_RFSCost`, `PB_RFSIncrease`, `PB_RFSContrib`, `PB_RFSRate`, `PB_RFSInterest`, `PB_RFSBalance`, `PB_RFSDifference`, `PB_RFSMargin`, `PB_RFSMarginInflated`, `PB_RFSMarginPV`, `PB_RFSPerUnitMonth` | columns B–M, rows 14–63 | The RFS, recomputed from its inputs. `PB_RFSDifference` is the recomputed balance minus RFS_cashflow's. |
+| `PB_Opening`, `PB_Cost`, `PB_Increase`, `PB_Contributions`, `PB_Rate`, `PB_Interest`, `PB_Balance`, `PB_Variance`, `PB_Margin`, `PB_MarginInflated`, `PB_MarginPV`, `PB_PerUnitMonth` | columns O–Z, rows 14–63 | The what-if. `PB_Variance` is the difference from the RFS balance. |
+| `PB_Inflator` | column AB, rows 14–63 | The inflation factor from the study year: the short-term rate for `Cfg_ShortInflationYears` years, the long-term rate after. The Adjustments tab inflates and deflates with it. |
 
 ## RFS tabs (`RFS_`)
 

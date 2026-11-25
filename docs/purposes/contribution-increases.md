@@ -22,7 +22,7 @@ year, and column R the resulting contributions; column Z gives them per unit per
 
 ## The result
 
-The summary at R4:X7 shows, three ways, the lowest margin over the minimum in the study's first
+The summary at R4:W7 shows, three ways, the lowest margin over the minimum in the study's first
 30 years and the first negative one, each with its year (see [Margins over the minimum](validate-funding.md#margins-over-the-minimum)).
 The what-if columns show the balance, interest and contributions year by year.
 
@@ -36,7 +36,7 @@ Use **Goal Seek** to find the catch-up increase that brings the lowest margin to
 - **Excel:** Data › What-If Analysis › Goal Seek.
 - **LibreOffice:** Tools › Goal Seek.
 
-Set the cell **U5** (lowest what-if margin over the minimum) to the value **0** by changing
+Set the cell **T5** (lowest what-if margin over the minimum) to the value **0** by changing
 **P7**. Then copy P7 into P8 and P9 if the three catch-up years should rise equally, and repeat
 until P7 stops changing.
 

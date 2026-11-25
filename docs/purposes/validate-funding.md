@@ -9,7 +9,7 @@ and whether the vendor's arithmetic holds.
 ## The two projections
 
 Projected_Balances has one row per year of the study, 2024 to 2073 for the 2024 study. Years
-past the study's 30-year horizon (rows 45–64) are shaded light grey.
+past the study's 30-year horizon (rows 44–63) are shaded light grey.
 
 - **Columns B–M, the RFS:** the vendor's projection, recomputed in the workbook. Only the
   study's inputs are read from RFS_cashflow: its expected costs (column B), its interest rates
@@ -36,7 +36,7 @@ method:
 
 Column I compares the recomputed balance with the balance RFS_cashflow states, year by year.
 It should be **zero in every year**. A year that differs by more than 0.5 is shaded orange, and
-I13, above the column, counts those years in red. A year that differs means the vendor's
+I12, above the column, counts those years in red. A year that differs means the vendor's
 balance does not follow from its own costs, contributions, increases and interest rates. Raise
 it with the vendor.
 
@@ -51,7 +51,7 @@ study-year dollars. Both projections compare each year's balance with it three w
 | K, X | balance minus the minimum inflated to that year; |
 | L, Y | balance in study-year dollars minus the minimum (PV margin). |
 
-A summary above each block (B4:H7 for the RFS, R4:X7 for the what-if) gives, for each margin
+A summary above each block (B4:G7 for the RFS, R4:W7 for the what-if) gives, for each margin
 over the study's first 30 years, its lowest value and its first negative value, each with its
 year ("none" when the margin never goes negative).
 
