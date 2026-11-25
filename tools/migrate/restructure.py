@@ -497,7 +497,8 @@ class Restructure:
         box(b.cell("R2:R5"))
 
         # The adjusted RFS block.
-        b.value("S2", "RFS amounts by year, with the Adjustments tab applied (amounts that "
+        # Two leading spaces keep the text clear of the next-year box to its left.
+        b.value("S2", "  RFS amounts by year, with the Adjustments tab applied (amounts that "
                       "differ from the RFS are shaded orange)")
         b.bold("S2")
         b.cell("S2").IsTextWrapped = False
