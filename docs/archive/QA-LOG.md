@@ -865,3 +865,67 @@ mentioned in passing. **User:** "Lousy job there. I just committed it." (Folded 
 commit by amendment: `2fe7d34`.)
 
 **User:** "Create a handoff document similar to previous ones and update the Q&A log."
+
+## Session of 2026-11-26: the PV baseline, RFS totals checks, no hidden errors
+
+Questions are numbered I1–I21 here (Q1–Q21 in the session); design section 16 cites them by
+those numbers.
+
+**User:** "Read @docs/archive/HANDOFF-20261125.md for context and /grill-me on
+@docs/archive/Prompt-20261126.md." The prompt names the new baseline `Spatac-20261125h-PV.xlsx`
+(the MTC fix from the DS review), the rename of `design.md` to `design-history.md`, and
+`defects-20261126.md`.
+
+### Round 1 (I1–I15)
+
+| Q | Question ➡️ recommendation | Answer |
+|---|---|---|
+| I1 | A new script editing a copy of PV, not `restructure.py` replaying the hand edits. | "ok." |
+| I2 | What to take from `-PV-edits.xlsx`: headings and A6 only. | Headings and A6: yes. P7 0.04 and P8:P9 `=P7`: "No." The blank Settings row 10: "Yes." Unprotected tabs: "No." ("changes to display only") |
+| I3 | Design decisions as section 16 of `design-history.md`. | "ok." |
+| I4 | Explicit row heights with a line of slack; the README URL on its own row. | "ok." |
+| I5 | Meaning of "Check it after pasting a new RFS or adding a row" and new text. | "ok." |
+| I6 | Colour swatches on the README legend. | "ok." |
+| I7 | Recompute the RFS totals from the RFS_fvalues items; Expenditures row 3 becomes that sum, flagged against row 10, with a count; a new Projected_Balances column. | The recomputation: "I don't understand." Expenditures: "Yes." The column: "No. Use approach similar to what you proposed for Expenditures and add the count cell." |
+| I8 | Loud format: red fill, bold white text. | "ok." |
+| I9 | The what-if summary over 33 years. | "I mistakenly asked for 33 years, but is should be from the current year through the end of the current RFS + 3 years. Rows below the current RFS stay light grey. The RFS summary at B4:G7 stays at 30 years." |
+| I10 | Justifications for the formula anomalies; drop C's and I's IFERROR; P's ISNA becomes an explicit test; the what-if reads the RFS sources, not the RFS block; R with LET and IFS. | All "ok", except: "I don't understand the part 'the RFS block becomes a pure check'." |
+| I11 | Audit every IFERROR/ISNA/IFNA; remove those that can only hide an error, list the rest with reasons. | "ok." |
+| I12 | MTC grid negatives: red font on orange. | "the red fill with bold white text you proposed for Q8 sounds better." |
+| I13 | No green on the RFS block. | "ok." |
+| I14 | Inflator column ungrouped. | "ok." |
+| I15 | The plug line documented on the Investment Plan page and in a comment. | "ok, but avoid referring to row numbers in the documentation; prefer references to row or column headings." |
+
+### Round 2 (I16–I19)
+
+| Q | Question ➡️ recommendation | Answer |
+|---|---|---|
+| I16 | A long explanation of the recomputed totals. | "This long diatribe gave me a headache. What's your point? You didn't answer my question." |
+| I17 | Details of the Projected_Balances check. | "I had already approved this, why ask again?" |
+| I18 | Settings input "Years between RFS updates" = 3; label with the span. | "ok." |
+| I19 | What "pure check" means. | "Are you trying to say that my request to not have references to the RFS block in the what-if block makes sense? If so, I knew that already." |
+
+**Claude:** I16, in short: add up each year's item amounts on RFS_fvalues and flag a year that
+differs from the vendor's total. **User:** "Q16: are you trying to tell me that you will do as I
+requested?" **Claude:** yes. **User:** "How are you going to do the checks without creating a new
+row and a new column? How complex will the formulas end up being?" **Claude:** one-line formulas,
+except the Projected_Balances count, which would need `MMULT` (I20: count against the vendor's
+total instead, leaving 2054–2073 uncounted). **User:** "I don't understand why you need to
+reference the Expenditures tab." Then: "Expenditures will compute the total expenditures from
+RFS_fvalues. Expenditure values in Projected_Balances will need to be based on the computed
+values from Expenditures. That will require a transpose formula. In addition, the Expenditures
+tab does not contain totals for years beyond year 30. … Am I right so far?"
+**Claude:** no transpose is needed; better, Projected_Balances column C adds up the items itself
+for all 50 years and is checked against RFS_cashflow's costs (I21).
+**User:** "Q21 - ok. Finally a sensible solution."
+
+### Implementation (2026-11-26, continued)
+
+**User:** "proceed with implementation". `tools/migrate/update_20261126.py` and
+`verify_20261126.py`; output `Spatac-20261126a.xlsx` (44,947 checks). Found while building: rows
+inserted on Settings shifted the Adjustments amount validations of the 2025–2027 blocks two rows
+(a LibreOffice bug), so the script sets them again last; Projected_Balances row 14 had kept the
+header's height since 15.7. Layout departures reported: the counts in Expenditures P3 (label O3)
+and Projected_Balances F12 (label E12, H12 "Balance years that differ", B12 "RFS (recomputed)");
+R4 without the bracketed explanation; a "Red" line on the README legend.
+**User:** "Yes" (commit, Q&A log and handoff).

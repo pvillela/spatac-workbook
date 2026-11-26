@@ -1,6 +1,6 @@
 # Workbook migration
 
-One-off tooling that restructured the Spatac workbook (design: `docs/archive/design.md`,
+One-off tooling that restructured the Spatac workbook (design: `docs/archive/design-history.md`,
 phases 3 and 4). Kept for reference and so the restructure can be re-run against a newer
 source workbook.
 
@@ -45,3 +45,23 @@ lock file beside a source in `_nogit`.
 
 Neither script writes to the source workbook. Each starts LibreOffice with a throwaway profile, so
 it does not touch your own LibreOffice settings or a running instance.
+
+## The 2026-11-26 update (design section 16)
+
+`update_20261126.py` starts from the user's baseline, `_nogit/Spatac-20261125h-PV.xlsx`, not
+from `restructure.py`'s output: the baseline carries hand edits to Medium_Term_Cashflow. It edits
+a copy in place: the RFS totals are recomputed from the items and checked, the what-if no longer
+reads the RFS block, formulas no longer hide errors, and README, Settings and the formats follow
+the defects of that day.
+
+```
+/opt/libreoffice26.2/program/python tools/migrate/update_20261126.py _nogit/Spatac-20261125h-PV.xlsx OUT.xlsx
+/opt/libreoffice26.2/program/python tools/migrate/verify_20261126.py _nogit/Spatac-20261125h-PV.xlsx _nogit/Spatac-20261125h-PV-edits.xlsx OUT.xlsx
+```
+
+- `update_20261126.py` writes OUT once and refuses an existing file.
+- `verify_20261126.py` requires every value to equal the baseline's, apart from the cells section
+  16 changes; recomputes the what-if summary; makes each new check catch a changed RFS item,
+  vendor total and RFS_cashflow cost; clears the RFS block to show the what-if does not read it;
+  and checks the formats, headings, README text and protection. `EDITS` is the user's
+  `Spatac-20261125h-PV-edits.xlsx`, for the headings and labels.

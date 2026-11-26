@@ -24,8 +24,11 @@ headings, in quotes, such as "Actuals to date", so they stay right when columns 
 
 Above the headings:
 
-- Row 3 is the **RFS total** for each year: the vendor's own total, for next year and each
-  year of the adjusted block.
+- Row 3 is the **RFS total (sum of items)** for each year: the amounts of every item on
+  RFS_fvalues added up, for next year and each year of the adjusted block. **Years where items
+  differ from RFS_fvalues totals**, to the left of the current year's total, counts the years
+  where that sum differs from the vendor's own annual total by more than 0.5; those years show
+  in red with bold white text. It should be 0.
 - Row 4 totals the columns that hold an amount for every item: Approved, Actuals to date, the
   Current estimate, next year and the adjusted block. The estimate columns, which hold changes
   only, have no total.

@@ -57,16 +57,18 @@ For each flag:
 Column F is protected: unprotect Expenditures to change it, and protect it again afterwards.
 
 When both columns are clear, every RFS item has its row and every row finds its amounts. Then
-check, on Expenditures, that row 3 (the RFS totals) equals row 4 (the items added up) in
-the adjusted block. (With the Adjustments tab emptied in section 2, the two rows agree in every
+check, on Expenditures, that **Years where items differ from RFS_fvalues totals** shows 0 (the
+vendor's annual totals add up), and that row 3 (the RFS totals) equals row 4 (the items added
+up) in the adjusted block. (With the Adjustments tab emptied in section 2, the two rows agree in every
 year.)
 
 ## 4. Review what follows from the study
 
 - **Projected_Balances P6:** the last year of contribution increases fixed by the new funding
   plan. Review the catch-up increases in P7:P9.
-- **Projected_Balances, validation:** I12 shows 0: the recomputed RFS balance matches
-  RFS_cashflow in every year (see
+- **Projected_Balances, validation:** **Cost years that differ** and **Balance years that
+  differ** both show 0: the recomputed RFS's costs and balances match RFS_cashflow in every
+  year (see
   [Checking the vendor's arithmetic](../purposes/validate-funding.md#checking-the-vendors-arithmetic)).
 - **Settings:** the minimum target and its year, if the Board revisits them; the **years of
   short-term inflation**, which must match the study's (RFS_fvalues labels them, for example

@@ -34,7 +34,7 @@ year. The grey ▶ End column after them marks where a new year column goes at t
 | 18 | 5-year investments to buy | Calculated: whatever cash is left above the minimum, the carry-over and the adjustment. |
 | 20 | Closing cash balance | Rows 5–13. By construction, the minimum plus the carry-over plus the adjustment. |
 | 22 | Additional cash carry-over | Typed in: cash to hold above the minimum. |
-| 23 | Adjustment to minimum cash balance | Typed in: a correction to the cash the plan holds, such as a rounding difference with the bank. |
+| 23 | Adjustment to minimum cash balance | Typed in: a plug. See [The adjustment to minimum cash balance](#the-adjustment-to-minimum-cash-balance). |
 | 25 | Minimum closing cash balance | Settings: the Board's minimum target (s.3.5), inflated from the year it is stated in at the RFS short-term inflation rate. |
 | 29–31 | RFS versus Revised expenditures | The Board's changes, year by year. |
 | 33–35 | RFS versus projected fund balance | Projected_Balances, for context. Not part of the extracted plan. |
@@ -51,6 +51,21 @@ year. The grey ▶ End column after them marks where a new year column goes at t
 - **Year columns** (N onward): each investment's cash flows. An annual-interest investment pays
   its interest in each year after purchase and before maturity. In the maturity year it pays
   back its value plus that year's interest.
+
+## The adjustment to minimum cash balance
+
+The **Adjustment to minimum cash balance** line is a plug that tidies the 5-year investments,
+which are calculated as whatever cash is left:
+
+- **First year:** it rounds the **5-year investments to buy** to a round amount. In the
+  November 2026 plan, −587 turns 479,413.36 into 480,000.36.
+- **Later years:** it brings a trivial 5-year investment (under $1,000) to zero, keeping the
+  cash instead. In the November 2026 plan, 311 in 2028 leaves 0.44, which is not bought.
+
+Type a whole number. It changes the **Closing cash balance** by the same amount: a negative
+adjustment leaves closing cash that much below the minimum. A negative amount in
+any **year to buy** cell of the investment grid shows in red with bold white text: it is not
+an investment, and the plan needs a different term choice or adjustment.
 
 ## Checking the plan against the policy
 

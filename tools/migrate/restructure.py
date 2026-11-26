@@ -1,4 +1,4 @@
-"""Restructures the Spatac workbook around an Adjustments tab (docs/archive/design.md section 14).
+"""Restructures the Spatac workbook around an Adjustments tab (docs/archive/design-history.md section 14).
 
 Usage (LibreOffice's bundled Python carries the `uno` module):
 

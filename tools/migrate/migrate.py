@@ -1,4 +1,4 @@
-"""Restructures the Spatac workbook as specified in docs/archive/design.md (phase 3).
+"""Restructures the Spatac workbook as specified in docs/archive/design-history.md (phase 3).
 
 Usage (LibreOffice's bundled Python carries the `uno` module):
 

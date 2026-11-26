@@ -1330,3 +1330,117 @@ This replaces the "RFS baseline, read-only" of 13.6.
   12, the column headings in row 13, the years in rows 14–63 (the light grey years 44–63), and
   the panes freeze below row 13. This supersedes the row numbers of 15.2–15.6 (the count in
   I12, the `-0`s in I25, I26 and I28).
+
+## 16. Revisions of 2026-11-26
+
+Decisions from the session of 2026-11-26, on `docs/archive/defects-20261126.md` and
+`docs/archive/Prompt-20261126.md`. Question numbers are prefixed **I** (I1–I21). Where this
+section conflicts with sections 1–15, this section wins.
+
+### 16.1 Baseline and build (I1–I3)
+
+- The baseline is the user's `_nogit/Spatac-20261125h-PV.xlsx`: `Spatac-20261125h.xlsx` with
+  the Medium_Term_Cashflow fix from the DS review (the 2027 one-year investment 320,000; the
+  2028 adjustment to minimum cash balance 311), which removes the negative 2028 five-year
+  investment.
+- A new script, `tools/migrate/update_20261126.py`, edits a copy of the baseline in place, as
+  `restructure.py` did. `restructure.py` is no longer re-run: it would have to replay the
+  user's hand edits. `verify_20261126.py` requires every value to equal the baseline's except
+  where this section changes it on purpose.
+- From the user's `_nogit/Spatac-20261125h-PV-edits.xlsx` only display changes are taken: the
+  Projected_Balances column headings B13:M13, the Settings A6 label and a blank row before the
+  Settings note. Its what-if increases (P7 4%, P8:P9 `=P7`) and its unprotected tabs are not.
+- `design.md` is now `design-history.md`; the scripts' references follow.
+
+### 16.2 README and row heights (I4–I6)
+
+- Calc and Excel fit a row's height at 100% zoom; at another zoom the text can reflow onto one
+  more line and be cut off (README A3 at 110%). Every README line has an explicit height: the
+  fitted height with Excel's 10% margin, plus one line of slack when the text ends within 15%
+  of a line's end. Each Adjustments block header gets the fitted height plus one line.
+- The documentation URL moves to a row of its own (A4), below its description.
+- Each line's topic, the text before " — ", is bold. The text edits of the defects file are
+  made; the RFS check's "Check it after pasting a new RFS or adding a row." becomes "The column
+  updates by itself. After pasting a new RFS or adding a row, scan it and resolve every flag."
+- The colour legend shows each colour: Orange and Light grey take their fills (they had the
+  Grey style), and a new line describes the Red alarm (16.3).
+
+### 16.3 The Alarm format (I8, I12)
+
+- A failed check shows a **red fill with bold white text** (cell style `Alarm`, fill
+  `0xC00000`), applied by a conditional format: a count that is not 0, and each value it
+  counts. It replaces the orange shading of Projected_Balances column I and the red font of
+  I12.
+- Medium_Term_Cashflow's investment grid (B14:G18) uses it for a negative investment.
+
+### 16.4 The RFS totals are recomputed and checked (I7, I16–I21)
+
+- New name `RFS_Fv_Items` = RFS_fvalues C15:AZ400, the item rows below the "Item | Building
+  Element" header. Section headings in it (item 0) hold 0. In the baseline the items add up to
+  the vendor's "Total Annual Expected Costs" (row 10) in all 50 years.
+- **Expenditures row 3** (U3:AX3, "RFS total (sum of items)") adds up the items instead of
+  reading row 10: `=SUM(INDEX(RFS_Fv_Items,0,MATCH(U$6,RFS_Fv_Years,0)))`. Each year is
+  flagged (16.3) where it differs from row 10 by more than 0.5; P3 counts those years
+  (`SUMPRODUCT` over `SUMIF`), labelled in O3 "Years where items differ from RFS_fvalues
+  totals". No row is added.
+- **Projected_Balances column C** (Expected costs) adds up the items too, for all 50 years:
+  `=-SUM(INDEX(RFS_Fv_Items,0,MATCH($A14,RFS_Fv_Years,0)))`. Each year is flagged where it
+  differs from RFS_cashflow's expected cost; F12 counts them, labelled "Cost years that
+  differ" in E12. No column is added, and no formula on Projected_Balances reads
+  Expenditures. (An earlier proposal, a count across all items and years in one cell, needed
+  `MMULT` and an array formula, which Excel 2019 would enter with Ctrl+Shift+Enter; computing
+  C from the items removed the need.)
+- To fit both counts in row 12: the block heading B12 becomes "RFS (recomputed)", and H12
+  "Balance years that differ".
+
+### 16.5 No hidden errors; the what-if is independent (I10, I11, I19)
+
+- Rule: a formula never turns an error into a value. Removed:
+  - Projected_Balances C and I: `IFERROR` around lookups into RFS_cashflow, which covers all
+    50 years.
+  - Projected_Balances P: `ISNA(adjusted_column)`, which also hid a year missing inside the
+    adjusted block. It is now an explicit `year>MAX(Exp_AdjustedYears)` test; those years
+    (2054–2073) use the sum of the RFS items.
+  - Expenditures U3:AX3: `IFERROR(…,0)` (replaced by 16.4).
+  - Adjustments G (To-year amount): the outer `IFERROR(…,"")`. Its blank cases are handled
+    inside; it could only hide a year missing from `PB_Year`, which the validation prevents.
+- Kept, each because the "not found" case is a legitimate value, not an error:
+  - Expenditures adjusted amounts and their orange conditional format: an item with no RFS
+    amounts (a Spatac row) is 0.
+  - Expenditures H (Key2): a blank or non-numeric GL account gives an empty key; the RFS check
+    then flags the row.
+  - Adjustments H (Check): an item not in Expenditures becomes the flag "Item not in
+    Expenditures"; an item with no RFS amounts holds 0.
+  - Medium_Term_Cashflow row 11 (Planned investments maturing): `IFERROR` inside `SUMPRODUCT`
+    drops column A's text labels (13.8).
+  - RFS_info J and K: a non-numeric GL cell is a heading of the vendor's sheet; a key not on
+    Expenditures becomes the flag "No Expenditures row".
+- **The what-if reads no cell of the RFS block** (B–M). P reads `RFS_Fv_Items` beyond the
+  adjusted block (was `$C`); Q reads `RFS_CatchUpIncreases` and `RFS_SubsequentIncrease`
+  through P6 (was `$D`); R's first year grows from `RFS_Cf_Contrib` of the year before (was
+  `$E`); S reads `RFS_ShortInterest` and `RFS_LongInterest` (was `$F`). Only V, a comparison,
+  reads H. Q, R and S are `LET` and `IFS`, with no nested `IF`. Every what-if value is
+  unchanged; the verifier clears B:M and checks that O:Z (bar V) stay the same.
+
+### 16.6 The what-if summary span (I9, I18)
+
+- New Settings input B10, `Cfg_YearsBetweenRFS` = 3, "Years between RFS updates"; a blank
+  row 11; the note moves to A12.
+- The what-if summary (R4:W7) runs from the current year through the RFS's last year plus
+  `Cfg_YearsBetweenRFS`: 2026–2056 today, the span of the next RFS. R4 shows it: "What-if,
+  2026–2056". Lowest, Year and First negative use `MINIFS` and `COUNTIFS` over the years in
+  the span. The RFS summary (B4:G7) keeps the first 30 years.
+- Today: lowest margin over minimum −2,115,795 (2055), first negative −1,058,672 (2045).
+
+### 16.7 Medium_Term_Cashflow (I12, I15)
+
+- The investment grid (B14:G18) flags a negative investment (16.3).
+- A comment on A23 explains the plug "Adjustment to minimum cash balance"; the Investment Plan
+  page explains it in full, by headings rather than row numbers.
+
+### 16.8 Projected_Balances layout (I13, I14)
+
+- The RFS block (B14:M63) has no fill, which sets it apart from the green what-if; 2054–2073
+  stay light grey.
+- The Inflator column (AB) is no longer grouped and always shows.
+- Row 14 (2024) had kept the header's height since 15.7; it is fitted.

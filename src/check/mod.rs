@@ -88,6 +88,8 @@ const NAMES: &[&str] = &[
     "Cfg_BaseYear",
     "Cfg_ShortInflationYears",
     "Cfg_ShortInterestYears",
+    "Cfg_YearsBetweenRFS",
+    "RFS_Fv_Items",
     "Exp_AdjustedYears",
     "Adj_Item",
     "Adj_From",

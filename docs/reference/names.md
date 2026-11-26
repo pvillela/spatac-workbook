@@ -28,6 +28,7 @@ again, and an insert at that edge would fall outside them.
 | `Cfg_NewInvRate` | B7 | The interest rate assumed for planned investments. |
 | `Cfg_ShortInflationYears` | B8 | How many years from the study year the RFS applies its short-term inflation rate; the long-term rate applies after them. |
 | `Cfg_ShortInterestYears` | B9 | How many years, from the study year on, the RFS earns its short-term interest rate; the long-term rate applies after them. |
+| `Cfg_YearsBetweenRFS` | B10 | How many years pass between RFS updates. The what-if summary on Projected_Balances runs this many years past the RFS's last year, to cover the next RFS. |
 
 ## Expenditures (`Exp_`)
 
@@ -115,7 +116,7 @@ The extraction tool keeps these.
 | `PB_ContribFixedThrough` | P6 | Last year whose contribution increase follows the RFS schedule. |
 | `PB_CatchUp` | P7:P9 | Increases in the three years after it. |
 | `PB_SubsequentIncrease` | P10 | The increase after those. |
-| `PB_RFSLowest`, `PB_Lowest` | B5:G7, R5:W7 | The RFS's and the what-if's margins over the first 30 years: lowest and first negative, with their years. |
+| `PB_RFSLowest`, `PB_Lowest` | B5:G7, R5:W7 | The margins' lowest and first negative values, with their years: the RFS's over its first 30 years; the what-if's from the current year through the RFS's last year plus `Cfg_YearsBetweenRFS`. |
 | `PB_Year` | column A, rows 14–63 | The years. |
 | `PB_RFSOpening`, `PB_RFSCost`, `PB_RFSIncrease`, `PB_RFSContrib`, `PB_RFSRate`, `PB_RFSInterest`, `PB_RFSBalance`, `PB_RFSDifference`, `PB_RFSMargin`, `PB_RFSMarginInflated`, `PB_RFSMarginPV`, `PB_RFSPerUnitMonth` | columns B–M, rows 14–63 | The RFS, recomputed from its inputs. `PB_RFSDifference` is the recomputed balance minus RFS_cashflow's. |
 | `PB_Opening`, `PB_Cost`, `PB_Increase`, `PB_Contributions`, `PB_Rate`, `PB_Interest`, `PB_Balance`, `PB_Variance`, `PB_Margin`, `PB_MarginInflated`, `PB_MarginPV`, `PB_PerUnitMonth` | columns O–Z, rows 14–63 | The what-if. `PB_Variance` is the difference from the RFS balance. |
@@ -130,6 +131,7 @@ The extraction tool keeps these.
 | `RFS_Fv_Values` | RFS_fvalues C1:AZ400 |
 | `RFS_Fv_Years` | RFS_fvalues C9:AZ9 |
 | `RFS_Fv_Totals` | RFS_fvalues C10:AZ10 |
+| `RFS_Fv_Items` | RFS_fvalues C15:AZ400: the item rows, below the Item header. Expenditures and Projected_Balances add them up for each year's RFS total. |
 | `RFS_Cf_Year`, `RFS_Cf_Cost`, `RFS_Cf_Interest`, `RFS_Cf_Contrib`, `RFS_Cf_Balance` | RFS_cashflow A, B, C, D, G (rows 1–200) |
 | `RFS_StudyYear` | RFS_cashflow A15 |
 | `RFS_Units`, `RFS_MinBalance`, `RFS_OpeningBalance`, `RFS_PresentContribution` | RFS_cashflow C6, C10, C11, C12 |

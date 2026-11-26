@@ -36,13 +36,27 @@ workbook:
 - [ ] **Adjustments, 2026 block:** column H shows OK on all six rows; G shows 243,547 · 50,000
       · 432,973 · 514,686 · 85,314 · 40,800.
 - [ ] **Projected_Balances B4:G7 and R4:W7:** the lowest and first negative margins show
-      amounts and years, not errors (`MINIFS` needs Excel 2019 or later): T5 −1,882,352 (2050),
-      V5 −1,058,672 (2045).
+      amounts and years, not errors (`MINIFS` and `COUNTIFS` need Excel 2019 or later). R4
+      reads "What-if, 2026–2056"; T5 −2,115,795 (2055), V5 −1,058,672 (2045).
+- [ ] **Settings B10** (Years between RFS updates): type 5. R4 reads "What-if, 2026–2058". Undo.
 - [ ] **Projected_Balances money format:** a negative amount such as U43 (−341,094) shows red
       with a minus sign.
-- [ ] **Projected_Balances validation:** column I shows 0 in every year and I12 shows 0. Type
-      1000 more into RFS_cashflow G20: I19 turns orange and I12 shows 1 in red. Undo afterwards.
-- [ ] **Projected_Balances, light grey:** rows 44–63 (2054–2073) are shaded.
+- [ ] **Projected_Balances validation:** column I shows 0 in every year, and F12 (Cost years
+      that differ) and I12 (Balance years that differ) show 0 with no fill. Type 1000 more into
+      RFS_cashflow G20: I19 and I12 turn red with bold white text, I12 shows 1. Undo. Type 1000
+      more into RFS_cashflow B16: C15 and F12 turn red, F12 shows 1. Undo.
+- [ ] **Expenditures P3** (Years where items differ from RFS_fvalues totals) shows 0 with no
+      fill. Type 1000 more into RFS_fvalues D10: P3 shows 1 and V3 (2025) turns red with bold
+      white text. Undo.
+- [ ] **Medium_Term_Cashflow investment grid:** type 900000 into C14: C18 turns negative, red
+      with bold white text. Undo.
+- [ ] **Projected_Balances column AB** (Inflator) shows, with no group button above it.
+- [ ] **Projected_Balances, light grey:** rows 44–63 (2054–2073) are shaded. The RFS block
+      (B–M) has no green; the what-if (O–Z) is green.
+- [ ] **README:** each line's topic is bold, the colour lines show their colours, and no line
+      is cut off at 100%, 110% or 120% zoom.
+- [ ] **Adjustments:** each block's header shows "Amount (from-year $; to-year $ when Year from
+      is none)" in full at 100%, 110% and 120% zoom.
 
 ## Behaviour
 
