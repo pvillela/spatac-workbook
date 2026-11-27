@@ -18,6 +18,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- `xlsx-diff` reports changed cell formats, column widths and row heights by default;
+  `--no-formats` leaves them out (`--formats` is still accepted).
 - The workbook, 2026-11-27 (design 17): the RFS tabs are protected and `spatac-check` requires
   it; the RFS totals check sits in Expenditures T1 with its alarm; the Projected_Balances alarms
   show white text (their own number format) and column I is rounded to whole dollars; every

@@ -24,6 +24,8 @@ and, on every tab but the RFS tabs (their layout is the vendor's, design 17.6):
   line must fit the width with the margin, or overflow into empty neighbours; numbers must fit
   the width. Text typed into an input cell or a number column is the user's and is not
   measured for width.
+- **Filter buttons**: in an AutoFilter's header row, the drop-down button covers the right side
+  of each cell; its width (`FILTER_BUTTON`) is not available to the text.
 - **Breaks**: wrapped text never breaks inside a word; in a fixed-height row (a heading) not at
   a hyphen either ("Late-/year"). Lines are filled as the programs fill them.
 
@@ -42,6 +44,7 @@ from uno_session import Session
 
 WIDER = 1.1  # how much wider text may render in Excel or at 110-120% zoom
 SLACK = 10  # 1/100 mm: rounding in LibreOffice's fitted sizes
+FILTER_BUTTON = 500  # 1/100 mm: an AutoFilter drop-down button (about 17 pixels at 100%)
 INPUT_FILL = 0xFFF2CC
 ALARM_FILL = 0xC00000
 COLOUR_CODE = re.compile(r"\[(RED|BLACK|BLUE|GREEN|CYAN|MAGENTA|WHITE|YELLOW|COLOR\d+)\]", re.I)
@@ -219,14 +222,14 @@ class Lint:
                                          "height" % addr(sheet, c, r))
 
         # Numbers: in each column, the largest positive and the most negative value stand for the
-        # rest (the column shares a format).
+        # rest (the column shares a format). Hidden columns too: a folded group can be unfolded.
         numbers = {}
         for r in range(rows):
             if not row_vis[r]:
                 continue
             for c in range(cols):
                 v = data[r][c]
-                if isinstance(v, float) and col_vis[c]:
+                if isinstance(v, float):
                     key = (c, v < 0)
                     if key not in numbers or abs(v) > abs(data[numbers[key]][c]):
                         numbers[key] = r
@@ -249,6 +252,12 @@ class Lint:
             if merged and (m.StartColumn, m.StartRow) != (c, r):
                 continue  # a hidden part of a merged area
             w = sum(widths[k] for k in range(m.StartColumn, m.EndColumn + 1) if col_vis[k])
+            if not col_vis[c]:
+                if not isinstance(data[r][c], float):
+                    continue
+                w = widths[c]  # a number in a folded column, measured as if unfolded
+            if self.in_filter_header(cell):
+                w -= FILTER_BUTTON  # the drop-down button covers the cell's right side
             h = sum(heights[k] for k in range(m.StartRow, m.EndRow + 1) if row_vis[k])
             fixed = not all(automatic[k] for k in range(m.StartRow, m.EndRow + 1))
             value = data[r][c]
@@ -343,6 +352,17 @@ class Lint:
     def close_scratch(self):
         self.doc.Sheets.removeByName(SCRATCH)
 
+    def in_filter_header(self, cell):
+        """Whether the cell is in an AutoFilter's header row, under a drop-down button."""
+        a = cell.CellAddress
+        ranges = self.doc.getPropertyValue("UnnamedDatabaseRanges")
+        if not ranges.hasByTable(a.Sheet):
+            return False
+        db = ranges.getByTable(a.Sheet)
+        area = db.DataArea
+        return bool(db.AutoFilter) and a.Row == area.StartRow \
+            and area.StartColumn <= a.Column <= area.EndColumn
+
     def load_cell(self, cell):
         value = cell.getValue() if cell.getType().value == "VALUE" else cell.getString().rstrip()
         self.load(cell, cell.getFormula(), value)
@@ -357,10 +377,14 @@ class Lint:
             need = max([self.text_width(p) for p in pieces] or [0])
         else:
             need = self.width()
-        return int(need * WIDER) + SLACK
+        button = FILTER_BUTTON if self.in_filter_header(cell) else 0
+        return int(need * WIDER) + SLACK + button
 
     def needed_height(self, cell, width):
-        """The height a wrapped cell needs at `width` less `WIDER`'s margin."""
+        """The height a wrapped cell needs at `width` less `WIDER`'s margin (and less a filter
+        button's width, under one)."""
+        if self.in_filter_header(cell):
+            width -= FILTER_BUTTON
         self.load_cell(cell)
         return self.height(int(width / WIDER)) + SLACK
 

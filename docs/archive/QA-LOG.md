@@ -986,10 +986,40 @@ layout check, run on `Spatac-20261126a.xlsx`, found both reported defects (the w
 unprotected RFS tabs) and, once taught to fill lines as the programs do, O7. Reading the renders
 found three more that the check then learned or the build fixed: "-0" in Projected_Balances I,
 one-line item rows made two lines tall by the hidden, wrapped column J (and a stray wrapped E241),
-and the wrapped end-of-items marker. Output `Spatac-20261127a.xlsx`: layout check 0 problems;
-verifier 88,985 checks passed; `spatac-check` no problems; `InvestmentPlan-20261127a.xlsx`
+and the wrapped end-of-items marker. Output `Spatac-20261127.xlsx`: layout check 0 problems;
+verifier 88,985 checks passed; `spatac-check` no problems; `InvestmentPlan-20261127.xlsx`
 1,633 cells compared, 0 failures, layout check 0 problems. `xlsx-diff` fixed in `f7586b5`; the
 same comparison now reports one column inserted and four cell changes.
 
 An untracked `docs/archive/defects-20261127a.md` appeared during the session (the user's report of
 the same `xlsx-diff` noise). Asked; the user said to leave it alone.
+
+### Review of the build (2026-11-27, continued)
+
+The user renamed the outputs to `Spatac-20261127.xlsx` and `InvestmentPlan-20261127.xlsx` (the
+first build of a day takes no letter; Claude had used "a").
+
+**User:** "Expenditures cell O7 still doesn't display properly, even at 100x zoom." With a
+screenshot: the AutoFilter buttons of row 7 cover the cells' right side ("RFS chec/k", "2026
+Approve/d", "2026 Late-/year/estimate" cut off); the PDF renders do not draw them. Fixed by
+allowing for the button in the layout check and the build (design 17.5).
+
+**User:** "you added rounding to the formulas without telling me. While I'm OK with the change, I
+want to be told beforehand. Now, the J12 formula is more complex than it needs to be." (I12.)
+After several exchanges (Claude first also proposed changing the alarm rule, which confused the
+point; the user: "Don't just blindly do it. Tell me whether what I instructed is sound or not
+first."): I12 becomes `=SUMPRODUCT(--(I14:I63<>0))`, "similar to F12"; F12 and Expenditures T1
+keep `SUMPRODUCT` because `COUNTIF` cannot compute a difference per year; the alarm rule stays.
+
+**User:** "The diff tool doesn't report on formatting changes." `--formats` existed; asked
+whether to make it the default: "Yes." `--no-formats` leaves formats out.
+
+**User:** "Adjustments cell E42 still doesn't display properly at 110x. However, when I add text
+to it, save, and close, the expanded text displays properly upon re-loading … I'll just have to
+live with it if it's a limitation of the Calc rendering engine."
+
+**User:** "Please stop generating investment plans in _nogit every time you issue a new Spatac
+workbook. Do it in a scratch area."
+
+Output `Spatac-20261127a.xlsx`: verifier 88,990 checks passed (layout check included);
+`spatac-check` no problems; the plan, in the scratch area, 0 failures and 0 layout problems.

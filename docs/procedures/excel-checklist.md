@@ -97,4 +97,4 @@ workbook:
 ## Saving
 
 - [ ] Save as `.xlsx` under a new name, then run `xlsx-diff` from the LibreOffice-saved version
-      to the Excel-saved one. Without `--formats` it should report no cell changes.
+      to the Excel-saved one. With `--no-formats` it should report no cell changes.

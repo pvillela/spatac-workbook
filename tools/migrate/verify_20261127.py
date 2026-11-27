@@ -131,6 +131,17 @@ def run(c, build, edits, new, new_path, lint_doc):
                 c.true("Projected_Balances %s: alarm number format %r has a colour" % (rng, fmt.group(1)),
                        "[" not in fmt.group(1))
     c.true("Projected_Balances C14 has no Alarm format", alarm_at(new, pb, "C14"))
+    c.eq("Projected_Balances I12", "=SUMPRODUCT(--(I14:I63<>0))", pb.getCellRangeByName("I12").getFormula())
+    c.eq("Projected_Balances I12 today", 0.0, get(new, "Projected_Balances", "I12"))
+    bal = new.Sheets.getByName("RFS_cashflow").getCellRangeByName("G20")
+    kept = bal.getValue()
+    for delta, want in ((1000, 1.0), (0.4, 0.0), (-0.6, 1.0)):
+        bal.setValue(kept + delta)
+        new.calculateAll()
+        c.eq("after RFS_cashflow G20 %+g: Projected_Balances I12" % delta, want,
+             get(new, "Projected_Balances", "I12"))
+    bal.setValue(kept)
+    new.calculateAll()
     for r in (14, 33, 63):
         c.true("Projected_Balances I%d is not rounded" % r,
                pb.getCellRangeByName("I%d" % r).getFormula().startswith("=ROUND("))

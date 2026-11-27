@@ -1529,7 +1529,13 @@ them before it is handed over:
   the columns keep their red negatives.
 - Projected_Balances I is rounded to whole dollars, `=ROUND(H−balance;0)`: floating-point
   remainders around 1e-8 showed as a red "-0" in 22 years. Whole dollars are the check's own
-  resolution (it flags a difference over 0.5).
+  resolution (it flags a difference over 0.5). The rounding was made without asking first; the
+  user accepted it but wants such changes proposed beforehand.
+- With whole dollars in I, its count I12 is `=SUMPRODUCT(--(I14:I63<>0))`, written like F12
+  (was two `COUNTIF`s over ±0.5; the result is the same). F12 and Expenditures T1 keep
+  `SUMPRODUCT`: they compute each year's difference inside the formula, which `COUNTIF` cannot.
+  The `--` turns TRUE/FALSE into 1/0, which Excel's `SUMPRODUCT` needs. The alarm rule on
+  I14:I63 (`ABS(N(I14))>0.5`) is left as it is: on whole dollars it flags the same years.
 
 ### 17.5 Expenditures layout (J3)
 
@@ -1544,6 +1550,16 @@ them before it is handed over:
   (headings that broke inside a word, "RFS_cashflow" among them) and B, R (the summary labels);
   Medium_Term_Cashflow A (the Schedule_of_Investments label was cut); Schedule_of_Investments
   A, B, C, E, F, G, J ("Compounding" was cut); Settings A.
+
+- Row 7 is the AutoFilter's header: each heading's drop-down button covers about 0.45 cm of the
+  cell's right side (17 pixels at 100%). The first build ignored it, and the user's screenshot
+  showed "RFS chec/k" (I7), "2026 Approve/d" (L7) and "2026 Late-/year/estimate" cut off (O7).
+  The layout check now takes 0.5 cm off every AutoFilter heading, and the build widens to fit
+  (widths in characters, as `xlsx-diff` reports them): A 5.90 → 8.46, D 10.97 → 11.83, I 7.76 →
+  9.84, L:P 10.97 → 13.51, S 12.61 → 12.75.
+- A folded column group must fit when unfolded: the hidden past years (V, W, 2024–2025) are
+  widened with the rest of the RFS block, and the layout check measures numbers in hidden
+  columns.
 
 ### 17.6 The RFS tabs (J4, J10)
 
@@ -1564,8 +1580,17 @@ them before it is handed over:
   until the alignment stops changing; a range whose rows or columns were all deleted reads
   `#REF!` instead of a range whose ends cross. The same comparison now reports one column
   inserted (T) and four cell changes.
+- Formats (cell formats, column widths, row heights) are reported by default; `--no-formats`
+  leaves them out, and `--formats` is still accepted.
 
-### 17.8 Noted, not changed
+### 17.8 Outputs
+
+- The user renamed the first outputs to `Spatac-20261127.xlsx` and `InvestmentPlan-20261127.xlsx`
+  (the first build of a day takes no letter). The second build, with the filter-button widths
+  and I12, is `Spatac-20261127a.xlsx`.
+- The Investment Plan made to check a build goes to the scratch area, not `_nogit`.
+
+### 17.9 Noted, not changed
 
 - Medium_Term_Cashflow's 2028 adjustment (311) leaves a 5-year investment of 0.44, which shows
   as 0 and matures at 0.51, shown as 1, on Schedule_of_Investments row "Planned 5-year

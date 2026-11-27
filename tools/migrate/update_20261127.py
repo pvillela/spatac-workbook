@@ -122,14 +122,17 @@ class Update:
 
     # -- layout helpers -----------------------------------------------------------------------
 
-    def fit_columns(self, sheet, ranges, uniform=False):
+    def fit_columns(self, sheet, ranges, uniform=False, hidden=False):
         """Widens each column of `ranges` to what its cells need (never narrows). With
-        `uniform`, all the columns take the widest need."""
+        `uniform`, all the columns take the widest need. Hidden columns are skipped unless
+        `hidden`: a folded group (Expenditures' past years) must fit when it is unfolded."""
         needs = {}
         for address in ranges:
             rng = sheet.getCellRangeByName(address)
             a = rng.RangeAddress
             for c in range(a.StartColumn, a.EndColumn + 1):
+                if not hidden and not sheet.Columns.getByIndex(c).IsVisible:
+                    continue
                 for r in range(a.StartRow, a.EndRow + 1):
                     cell = sheet.getCellByPosition(c, r)
                     if cell.getString().strip() == "" or cell.getError():
@@ -215,10 +218,11 @@ class Update:
         for c in hidden:
             cell("%s%d:%s%d" % (c, FIRST_ROW, c, LAST_ROW)).IsTextWrapped = False
 
+        # Row 7 is the AutoFilter's header: each heading leaves room for its drop-down button.
         self.fit_columns(sheet, ["L7:P7"], uniform=True)
-        self.fit_columns(sheet, ["A7", "B%d:B%d" % (FIRST_ROW, LAST_ROW),
+        self.fit_columns(sheet, ["A7:K7", "Q7:AY7", "B%d:B%d" % (FIRST_ROW, LAST_ROW),
                                  "D%d:D%d" % (FIRST_ROW, LAST_ROW)])
-        self.fit_columns(sheet, ["V3:AY5"], uniform=True)
+        self.fit_columns(sheet, ["V3:AY5"], uniform=True, hidden=True)
         self.fit_fixed_row(sheet, 7)
 
     # -- Projected_Balances -------------------------------------------------------------------
@@ -248,6 +252,11 @@ class Update:
             if c.getFormula() != want:
                 raise RuntimeError("Projected_Balances I%d: unexpected formula %r" % (r, c.getFormula()))
             c.setFormula("=ROUND(" + want[1:] + ";0)")
+        # With whole dollars in I, the count of years that differ counts the non-zeros, written
+        # like F12's count (the user, 2026-11-27).
+        if cell("I12").getFormula() != '=COUNTIF(I14:I63;">0.5")+COUNTIF(I14:I63;"<-0.5")':
+            raise RuntimeError("Projected_Balances I12: unexpected formula")
+        cell("I12").setFormula("=SUMPRODUCT(--(I14:I63<>0))")
         self.fit_columns(sheet, ["D13:E13", "I13", "M13", "P13:R13", "Z13", "F4", "V4"])
         self.fit_span(sheet, "B6", "B", ["C"])
         self.fit_span(sheet, "R6", "R", ["S"])
