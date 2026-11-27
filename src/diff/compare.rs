@@ -374,9 +374,55 @@ fn align_sheets(o: &Sheet, n: &Sheet) -> (Alignment, Alignment) {
         h.finish()
     };
     let (ob, nb) = (col_bags(o), col_bags(n));
-    let osig: Vec<u64> = ob.iter().map(bag_sig).collect();
     let nsig: Vec<u64> = nb.iter().map(bag_sig).collect();
-    let cols = align(&osig, &nsig, blank, &|i, j| bag_similarity(&ob[i], &nb[j]));
+    let mut cols = align(
+        &ob.iter().map(bag_sig).collect::<Vec<_>>(),
+        &nsig,
+        blank,
+        &|i, j| bag_similarity(&ob[i], &nb[j]),
+    );
+    // A column whose formulas point at columns that moved (`$U8:$AX8` become `$V8:$AY8` when a
+    // column is inserted before them) does not look like itself. Align again with the old
+    // formulas rewritten through the alignment so far, until it no longer changes.
+    for _ in 0..3 {
+        let identity = Alignment::default();
+        let lookup = |sheet: Option<&str>| {
+            sheet.is_none().then_some(SheetMap {
+                new_name: "",
+                rows: &identity as &dyn Remap,
+                cols: &cols as &dyn Remap,
+            })
+        };
+        let mut bags = vec![HashMap::new(); o.max_col as usize];
+        for (&(r, c), cell) in &o.cells {
+            if cell.has_content() && c <= o.max_col {
+                let nc = cols.exact(c).unwrap_or(c);
+                let sig = match &cell.content {
+                    Content::Formula { tokens, .. } => format!(
+                        "={}",
+                        formula::relative_form(
+                            &formula::tokenize(&formula::remap(tokens, &lookup)),
+                            r,
+                            nc
+                        )
+                    ),
+                    _ => cell.content_signature(r, c),
+                };
+                *bags[c as usize - 1].entry(sig).or_insert(0) += 1;
+            }
+        }
+        let again = align(
+            &bags.iter().map(bag_sig).collect::<Vec<_>>(),
+            &nsig,
+            blank,
+            &|i, j| bag_similarity(&bags[i], &nb[j]),
+        );
+        let stable = again.old_to_new == cols.old_to_new;
+        cols = again;
+        if stable {
+            break;
+        }
+    }
 
     // Rows: each old cell's formula rewritten through the column alignment, then signed relative
     // to its new position, so that a column insert does not make every row look different.

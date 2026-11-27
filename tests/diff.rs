@@ -289,3 +289,70 @@ fn relabelled_and_reordered_rows_are_moves_not_deletions() {
     );
     assert_eq!(s.cells.len(), 1, "{s:#?}");
 }
+
+/// Data: A = 1..5; B adds D and E through absolute column references; D and E numbers; the
+/// name `Total` is B1:B5. `shift` moves D and E right by one column, as an insert before D
+/// would, and rewrites B's references to follow.
+fn absolute_refs(shift: u32) -> Workbook {
+    let mut wb = umya_spreadsheet::new_file();
+    let ws = wb.sheet_mut(0).unwrap();
+    ws.set_name("Data");
+    let (d, e) = (4 + shift, 5 + shift);
+    let letter = |c: u32| char::from(b'A' + c as u8 - 1);
+    for r in 1..=5u32 {
+        ws.cell_mut((1, r)).set_value_number(r as f64);
+        ws.cell_mut((2, r))
+            .set_formula(format!("${}{r}+${}{r}", letter(d), letter(e)));
+        ws.cell_mut((d, r)).set_value_number(f64::from(r * 2));
+        ws.cell_mut((e, r)).set_value_number(f64::from(r * 3));
+    }
+    ws.add_defined_name("Total", "Data!$B$1:$B$5").unwrap();
+    wb
+}
+
+#[test]
+fn column_whose_absolute_references_moved_is_not_deleted() {
+    // A column inserted at C moves D:E to E:F; B's $D/$E become $E/$F. B is the same column.
+    let mut new = absolute_refs(1);
+    new.sheet_mut(0)
+        .unwrap()
+        .cell_mut("C1")
+        .set_value("inserted");
+    let r = run("absolute", &absolute_refs(0), &new, Options::default());
+    let s = sheet(&r, "Data");
+    assert!(
+        s.structure
+            .iter()
+            .any(|t| t.contains("1 column inserted") && t.ends_with(": C")),
+        "{s:#?}"
+    );
+    assert!(!s.structure.iter().any(|t| t.contains("deleted")), "{s:#?}");
+    assert_eq!(s.cells.len(), 1, "{s:#?}");
+    assert!(r.names.is_empty(), "{:#?}", r.names);
+}
+
+#[test]
+fn name_on_a_deleted_column_points_at_ref() {
+    // Column B deleted: the name over B1:B5 has nothing left, not a range whose ends cross.
+    let old = absolute_refs(0);
+    let mut new = absolute_refs(0);
+    let ws = new.sheet_mut(0).unwrap();
+    for r in 1..=5u32 {
+        ws.cell_mut((2, r)).set_value_string("");
+    }
+    ws.remove_column("B", 1);
+    let r = run("deleted", &old, &new, Options::default());
+    let before = r.names.iter().find_map(|n| match n {
+        NameChange::Changed { name, before, .. }
+        | NameChange::Removed {
+            name,
+            refers_to: before,
+        } if name == "Total" => Some(before.clone()),
+        _ => None,
+    });
+    assert!(
+        before.as_deref().is_some_and(|b| b.contains("#REF!")),
+        "{:#?}",
+        r.names
+    );
+}

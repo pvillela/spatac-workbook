@@ -289,7 +289,7 @@ pub struct SheetMap<'a> {
 /// `lookup` resolves a sheet name of the old workbook, or `None` for the formula's own sheet. A
 /// sheet it cannot resolve (one deleted in the new workbook) leaves its references untouched. A
 /// single-cell reference to a deleted row or column becomes `#REF!`, as it would in the
-/// spreadsheet application.
+/// spreadsheet application, and so does a range all of whose rows or columns were deleted.
 pub fn remap<'a>(
     tokens: &[Token],
     lookup: &dyn Fn(Option<&str>) -> Option<SheetMap<'a>>,
@@ -314,6 +314,13 @@ pub fn remap<'a>(
                         let start = map_part(&r.start, &map, Direction::Forward);
                         let end = map_part(end, &map, Direction::Backward);
                         match (start, end) {
+                            // Both ends in deleted rows or columns: the range is gone, and the
+                            // ends cross (S7:S250 with S deleted would read U7:R250).
+                            (Some(start), Some(end))
+                                if start.col > end.col || start.row > end.row =>
+                            {
+                                None
+                            }
                             (Some(start), Some(end)) => Some(Reference {
                                 sheet: None,
                                 start,

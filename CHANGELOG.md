@@ -56,6 +56,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- `xlsx-diff`: a column whose formulas use absolute references to columns that a column insert
+  had moved (`$U8:$AX8` becoming `$V8:$AY8`) was reported as deleted and re-inserted, with every
+  one of its cells as a change, and a defined name on it as a range whose ends crossed
+  (`$U$7:$R$250`). Columns are now aligned again with the old formulas rewritten through the
+  first alignment, and a range whose rows or columns were all deleted reads `#REF!`.
 - `xlsx-diff`: a cell unlocked through its cell style was read as locked when its own format
   set `applyProtection="false"`, as LibreOffice writes it, so saving a workbook in another
   application reported cells as newly unlocked. The unlocked state is now read from the file's
