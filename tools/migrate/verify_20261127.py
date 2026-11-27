@@ -107,6 +107,17 @@ def run(c, build, edits, new, new_path, lint_doc):
     cell.setValue(kept)
     new.calculateAll()
 
+    # Medium_Term_Cashflow row 11: no IFERROR, same values (the value comparison covers them).
+    mtc = new.Sheets.getByName("Medium_Term_Cashflow")
+    for k in "BCDEFG":
+        f = mtc.getCellRangeByName("%s11" % k).getFormula()
+        c.true("Medium_Term_Cashflow %s11 hides errors: %s" % (k, f[:60]), "IFERROR" not in f)
+        c.true("Medium_Term_Cashflow %s11 is not the LET form" % k, "SUMPRODUCT(amounts;" in f)
+        c.true("Medium_Term_Cashflow %s11 holds an array in a LET name" % k, "term;" not in f)
+    c.eq("Medium_Term_Cashflow B11:G11",
+         [0.0, 0.0, 399619.4, 0.0, 103000.0, 646492.67],
+         [round(v, 2) for v in block(new, "Medium_Term_Cashflow", "B11:G11")[0]])
+
     # Row 7: the year on a line of its own.
     for k, label in HEADINGS.items():
         c.eq("Expenditures %s7" % k, "2026\n" + label, get(new, "Expenditures", "%s7" % k))

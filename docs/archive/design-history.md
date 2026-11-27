@@ -1597,3 +1597,37 @@ them before it is handed over:
   investment, bought 2028". A plug of 311.44 would clear it; it is the user's input.
 - The Investment Plan's Cover lines A2 and A16 run past column B: whole on screen, cut if
   printed with the print area at B.
+
+### 17.10 Medium_Term_Cashflow row 11 in Excel
+
+- In Excel, row 11 (Planned investments maturing) showed 0 in every year, so the 5-year
+  balancing row went wrong (2028: −399,619). Excel reads every formula LibreOffice saves as a
+  legacy formula (the file has no dynamic-array markers), and in a legacy formula an array
+  computed outside a function that evaluates arrays itself (`SUMPRODUCT`, `SUMIF`, `MINIFS`) is
+  narrowed to one cell. The old formula's `SUMPRODUCT(IFERROR(…))` was evaluated that way; the
+  `IFERROR`, kept in 16.5 to absorb column A's labels, turned the resulting error into 0.
+- Reading the maturities from Schedule_of_Investments' planned rows was reconsidered: summing
+  a year's whole column is circular (13.10), and fixed per-year ranges break at the January
+  rollover (deleting Medium_Term_Cashflow column B leaves each year pointing at the wrong
+  Schedule_of_Investments column and rows). Kept self-contained.
+- New formula (D11, 2028):
+
+  ```
+  =LET(
+    this_year; D$3;
+    amounts; $A$14:C18;
+    year_bought; $A$3:C3;
+    first_row; ROW($A$14);
+    SUMPRODUCT(amounts;
+      (year_bought+ROW(amounts)-first_row+1=this_year)
+      *(1+Cfg_NewInvRate)^(ROW(amounts)-first_row+1)))
+  ```
+
+  The grid is `SUMPRODUCT`'s own argument, where text counts as 0, so there is no `IFERROR`
+  (16.5's exception is withdrawn); column A stays in the ranges because the rollover never
+  deletes it. Names chosen by the user. A first version also named the term
+  (`term; ROW(amounts)-first_row+1`) and gave `#VALUE!` in Excel (`Spatac-20261127b.xlsx`):
+  Excel showed `term,@ ROW(amounts)…`, narrowing that array to one cell, and nothing else. So
+  a LET name may hold a range or a single value, never a computed array; the term is computed
+  inside `SUMPRODUCT` (`Spatac-20261127c.xlsx`). Values unchanged in Calc; a simulated rollover
+  gives 2028 = 329,600 (the 2027 1-year investment).

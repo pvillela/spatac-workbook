@@ -22,6 +22,7 @@ import tempfile
 import uno  # noqa: F401  (registers the com.sun.star import hook)
 
 from layout_lint import ALARM_FILL, VENDOR_TABS, Lint
+from migrate import col
 from restructure import keep_autofilter, protection
 from uno_session import Session
 
@@ -265,7 +266,30 @@ class Update:
     # -- other tabs ---------------------------------------------------------------------------
 
     def mtc(self):
+        """Row 11 (Planned investments maturing) in a form Excel evaluates as arrays: Excel reads
+        LibreOffice's formulas as legacy ones, and the old `SUMPRODUCT(IFERROR(…))` gave 0 there
+        (design 17.10). The grid is SUMPRODUCT's own argument, so column A's labels count as 0
+        and need no IFERROR; column A stays in the ranges because the rollover never deletes it.
+        The term (`ROW(amounts)-first_row+1`, an array) is computed inside SUMPRODUCT: held in a
+        LET name, Excel narrowed it to one cell (`@`) and showed #VALUE!."""
         sheet = self.doc.Sheets.getByName("Medium_Term_Cashflow")
+        if sheet.getCellRangeByName("A11").getString() != "Planned investments maturing (from the grid below)":
+            raise RuntimeError("Medium_Term_Cashflow A11 is not the planned maturities row")
+        for k in range(2, 8):  # B..G
+            c, p = col(k), col(k - 1)
+            cell = sheet.getCellRangeByName("%s11" % c)
+            if "SUMPRODUCT(IFERROR(" not in cell.getFormula():
+                raise RuntimeError("Medium_Term_Cashflow %s11: unexpected formula" % c)
+            cell.setFormula(
+                "=LET(\n"
+                "  this_year; {c}$3;\n"
+                "  amounts; $A$14:{p}18;\n"
+                "  year_bought; $A$3:{p}3;\n"
+                "  first_row; ROW($A$14);\n"
+                "  SUMPRODUCT(amounts;\n"
+                "    (year_bought+ROW(amounts)-first_row+1=this_year)\n"
+                "    *(1+Cfg_NewInvRate)^(ROW(amounts)-first_row+1)))"
+                .format(c=c, p=p))
         self.fit_columns(sheet, ["A5:A25"])
 
     def schedule(self):

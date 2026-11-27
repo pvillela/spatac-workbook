@@ -1023,3 +1023,33 @@ workbook. Do it in a scratch area."
 
 Output `Spatac-20261127a.xlsx`: verifier 88,990 checks passed (layout check included);
 `spatac-check` no problems; the plan, in the scratch area, 0 failures and 0 layout problems.
+
+### Excel (2026-11-27, continued)
+
+**User:** "There is something wrong with the workbook in Excel. The MTC tab doesn't show the
+same values as in Calc." (Screenshot: row 11 all 0, D18 −399,619.) **Claude:** Excel treats
+LibreOffice's formulas as legacy; `SUMPRODUCT(IFERROR(…))` and the LET array `term` are
+evaluated one cell at a time, and the `IFERROR` turns the error into 0. Claude first said the
+16.5 audit had missed the `IFERROR`, then corrected itself: 16.5 had kept it on purpose.
+
+**User:** "Why are you basically reimplementing my old diagonal formula in a more elegant way,
+rather than using the information in Schedule_of_Investments? I know you ran into a circular
+reference problem." **Claude:** summing a year's whole planned column is circular; summing only
+the earlier purchase years' fixed rows is not, and was recommended. **User:** "yes" (to a full
+proposal). Checking the rollover showed fixed ranges break when Medium_Term_Cashflow column B
+is deleted; Claude withdrew the recommendation and proposed a self-contained
+`SUMPRODUCT(amounts; …)` without `IFERROR`, tested in Calc and through a simulated rollover.
+
+**User** shaped the formula: "Can the formula be made more readable with LET?"; "Give D3 a name";
+"rename bought to year_bought, year to this_year"; "would it make sense to introduce a new name
+duration with value ROW(amounts) - first_row?" **Claude:** that is the term minus 1, and a LET
+name holding an array is the suspected Excel hazard. **User:** "ok, introduce name term, with
+the correct definition." Output `Spatac-20261127b.xlsx` (design 17.10): verifier 89,003 checks
+passed; values unchanged; Excel check pending.
+
+**User:** "Now Excel ended up with #VALUE! in multiple cells in the MTC tab." Asked where Excel
+shows `@`, the user pasted B11: only `term,@ ROW(amounts)-first_row+1`. The term moved inside
+`SUMPRODUCT`, the other names kept: `Spatac-20261127c.xlsx`, verifier 89,009 checks passed,
+values unchanged, Excel check pending.
+
+**User:** "It's fine in Excel."

@@ -55,6 +55,11 @@ workbook:
 - [ ] **Row heights:** on Expenditures, type a three-line note into an empty Working notes cell
       (column Q): the row grows to fit it while the tab is protected. Undo.
 - [ ] **RFS tabs** are protected: typing into RFS_info H12 is refused.
+- [ ] **Medium_Term_Cashflow row 11** (Planned investments maturing) shows the same figures
+      as in Calc: 0, 0, 399,619, 0, 103,000, 646,493 (2026–2031), and row 18 (5-year
+      maturity) shows 480,000, 68,627, 0, 155,911, 199,818, 741,937. Select D11: the formula
+      bar shows no `@`. (Excel reads LibreOffice's formulas as legacy ones; an array computed
+      in the wrong place shows 0 or an error here.)
 - [ ] **Medium_Term_Cashflow investment grid:** type 900000 into C14: C18 turns negative, red
       with bold white text. Undo.
 - [ ] **Projected_Balances column AB** (Inflator) shows, with no group button above it.
