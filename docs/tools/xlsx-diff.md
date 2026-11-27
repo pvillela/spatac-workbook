@@ -4,7 +4,7 @@
 any `.xlsx` workbook, not only the Spatac one.
 
 ```
-xlsx-diff OLD.xlsx NEW.xlsx [-o REPORT.md] [--values] [--formats]
+xlsx-diff OLD.xlsx NEW.xlsx [-o REPORT.md] [--values] [--no-formats]
 ```
 
 Without `-o`, the report goes to the terminal. Markdown reads well as plain text and renders as
@@ -28,6 +28,9 @@ a formatted page in VS Code, on GitHub, or in any Markdown viewer.
   - sheet protection, and cells newly locked or unlocked;
   - hidden rows, columns and tabs;
   - frozen panes.
+- **Formats:** cells whose format changed (font, fill, borders, alignment, number format,
+  wrap, protection), and column widths and row heights. Widths and heights are compared with a
+  tolerance, because each application rounds them differently on saving.
 - **Cell changes:** every cell whose formula, constant or comment changed, with its address in
   both versions and the old and new content. A change made the same way to neighbouring cells
   (a formula filled down or across, say) is listed once, with the range and a count.
@@ -43,9 +46,8 @@ old formulas accordingly. A formula that merely moved, or whose references only 
 - `--values`: also list cells whose formula is unchanged but whose result changed, in a
   separate, folded section. Without it, one changed input that ripples through a hundred
   totals is reported once, as the input.
-- `--formats`: also list changed cell formats, column widths and row heights. Widths and
-  heights are compared with a tolerance, because each application rounds them differently on
-  saving.
+- `--no-formats`: leave out changed cell formats, column widths and row heights, for a
+  report about content only. (`--formats`, which they once needed, is still accepted.)
 - `-o FILE`: write the report to `FILE`.
 
 ## Reading a report

@@ -11,7 +11,8 @@ use std::process::ExitCode;
 /// Reports tabs added, deleted, renamed and reordered; defined names; and, for each tab in both
 /// versions, inserted, deleted and moved rows and columns, changed formulas, constants and
 /// comments, and structural changes (merged cells, conditional formats, data validation,
-/// protection, unlocked cells, hidden rows and columns, frozen panes).
+/// protection, unlocked cells, hidden rows and columns, frozen panes), and changed cell formats,
+/// column widths and row heights.
 #[derive(Parser)]
 #[command(version, about, long_about)]
 struct Args {
@@ -27,8 +28,11 @@ struct Args {
     /// Also report recalculated results of formulas that did not change.
     #[arg(long)]
     values: bool,
-    /// Also report changed cell formats, column widths and row heights.
+    /// Leave out changed cell formats, column widths and row heights.
     #[arg(long)]
+    no_formats: bool,
+    /// Formats are reported by default; kept so that older command lines still work.
+    #[arg(long, hide = true, conflicts_with = "no_formats")]
     formats: bool,
     /// Print the third-party notices and exit.
     #[arg(long)]
@@ -46,7 +50,7 @@ fn main() -> ExitCode {
     };
     let options = Options {
         values: args.values,
-        formats: args.formats,
+        formats: args.formats || !args.no_formats,
     };
     let report = match diff::diff_files(&old, &new, options) {
         Ok(r) => r,

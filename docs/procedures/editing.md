@@ -39,6 +39,6 @@ holds it at a time.
 ## After saving in a different application
 
 Each application rewrites parts of the file it does not need to: styles, number formats and
-column widths. Run `xlsx-diff` between the version before and after the save. Without
-`--formats`, the report shows only real changes. If it lists formula or value changes nobody
+column widths. Run `xlsx-diff --no-formats` between the version before and after the save:
+leaving out formats, the report shows only real changes. If it lists formula or value changes nobody
 made, investigate before carrying on.
