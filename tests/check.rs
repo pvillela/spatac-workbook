@@ -81,6 +81,7 @@ fn every_problem_is_reported() {
         "Adjustments!H2: a formula cell is unlocked",
         "Adjustments!B2: the input has lost its validation (copy the row above)",
         "Adjustments: the tab is not protected",
+        "RFS_fvalues: the tab is missing",
         "Exp_Gone: the name points at #REF!",
         "Cfg_BaseYear: the name is missing",
     ] {

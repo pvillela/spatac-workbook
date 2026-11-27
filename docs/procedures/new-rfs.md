@@ -20,14 +20,17 @@ before pasting. The [reference](../reference/names.md) lists every `RFS_` name.
 ## 2. Paste
 
 1. Save the workbook under a new date.
-2. On each RFS tab, select the vendor's area and delete its contents:
+2. Unprotect the three RFS tabs (they are protected without a password, like the others).
+3. On each RFS tab, select the vendor's area and delete its contents:
    - RFS_info: A:H;
    - RFS_fvalues: A:BA;
    - RFS_cashflow: A:K.
 
    Leave the helper columns to the right (RFS_info J:K, RFS_fvalues BC) alone.
-3. Paste the vendor's corresponding tab at A1, as values.
-4. **Empty the Adjustments tab.** The adjustments changed the old study; the new one starts
+4. Paste the vendor's corresponding tab at A1, as values. Pasting values keeps the tab's
+   formats: the descriptions wrap and the rows fit them by themselves. Protect the three tabs
+   again.
+5. **Empty the Adjustments tab.** The adjustments changed the old study; the new one starts
    clean. Unprotect Adjustments and clear the yellow cells (columns A–E) of all four blocks.
    Leave the green columns F–H: their formulas stay. The block titles follow the new study year
    by themselves, and changes the Board approves from now on go in the first block.
@@ -57,8 +60,8 @@ For each flag:
 Column F is protected: unprotect Expenditures to change it, and protect it again afterwards.
 
 When both columns are clear, every RFS item has its row and every row finds its amounts. Then
-check, on Expenditures, that **Years where items differ from RFS_fvalues totals** shows 0 (the
-vendor's annual totals add up), and that row 3 (the RFS totals) equals row 4 (the items added
+check, on Expenditures, that **No. of RFS years where totals don't add-up correctly** (T1)
+shows 0 (the vendor's annual totals add up), and that row 3 (the RFS totals) equals row 4 (the items added
 up) in the adjusted block. (With the Adjustments tab emptied in section 2, the two rows agree in every
 year.)
 

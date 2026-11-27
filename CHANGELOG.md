@@ -18,6 +18,14 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The workbook, 2026-11-27 (design 17): the RFS tabs are protected and `spatac-check` requires
+  it; the RFS totals check sits in Expenditures T1 with its alarm; the Projected_Balances alarms
+  show white text (their own number format) and column I is rounded to whole dollars; every
+  input row has an automatic height; Expenditures headings keep "Mid-year" and "Late-year"
+  whole, column C wraps, and columns too narrow for their text on six tabs are widened.
+- `tools/migrate/`: `layout_lint.py` checks what a build looks like on every tab (fit, word
+  breaks, colour overrides, orphaned formats, "-0", row heights, protection), and `render.py`
+  prints tabs to PDF to look at; every build runs both before it is handed over.
 - Expenditures: the next-year and year-after estimate blocks, the Reason for change column and
   the RFS and Revised blocks are replaced by an adjustment label (J), a next-year column (R) and
   the adjusted RFS for the study's 30 years (T onwards), shaded where it differs from the RFS.

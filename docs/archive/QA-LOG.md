@@ -929,3 +929,67 @@ header's height since 15.7. Layout departures reported: the counts in Expenditur
 and Projected_Balances F12 (label E12, H12 "Balance years that differ", B12 "RFS (recomputed)");
 R4 without the bracketed explanation; a "Red" line on the README legend.
 **User:** "Yes" (commit, Q&A log and handoff).
+
+## Session of 2026-11-27: the user's edits, self-review of every build, RFS tabs protected
+
+Questions are numbered J1–J12 here (Q1–Q12 in the session); design section 17 cites them by
+those numbers.
+
+**User:** "Read @docs/archive/HANDOFF-20261126.md for context. /grill-me on
+@docs/archive/Prompt-20261127.md." The prompt: "Address the defects in `defects-20261127.md`."
+
+### Round 1 (J1–J7)
+
+| Q | Question ➡️ recommendation | Answer |
+|---|---|---|
+| J1 | Start from `Spatac-20261126a-edits.xlsx` (LibreOffice already did the column insert), or redo the edits in code from 26a. ➡️ The edits file. | "ok. Do you need to continue using your Python scripts or are they just getting in the way?" **Claude:** they are needed: the only way to edit through LibreOffice, which recalculates and keeps formats, names and validations. |
+| J2 | Projected_Balances C and I: their `[RED]` number format overrides the alarm's white text. Give them an alarm with its own number format, or drop `[RED]`. ➡️ The alarm's own format. | "ok." |
+| J3 | Expenditures O7: taller row 7, or wider L:P. ➡️ Taller row. | "I don't care. Make it work and check your work." |
+| J4 | Protect the RFS tabs, all cells locked; `spatac-check` requires it; new-RFS procedure unprotects to paste. | "ok." |
+| J5 | Move P3's alarm to T1; docs use the user's label, leading spaces kept. | "ok." |
+| J6 | `xlsx-diff` showed `Exp_NextYear` as `$U$7:$R$250`: fix it as a separate commit. | "ok." |
+| J7 | Commit the two untracked files on `aicode` first; work on `aicode`. | "ok." |
+
+**User**, before answering: "If you look at the various defect files, you will notice that
+certain kinds of formatting defects are recurring. That reflects careless on your part. You need
+to check your own work and endeavour to avoid leaving garbage for me to identify."
+
+| Q | Question ➡️ recommendation | Answer |
+|---|---|---|
+| J8 | A layout check in the verifier for every tab (fit with a margin, colour overrides, orphaned formats, protection, regressions of earlier defects), and a PDF render of each tab read before handing over. | "ok." |
+
+### Round 2 (J9–J11)
+
+| Q | Question ➡️ recommendation | Answer |
+|---|---|---|
+| J9 | Expenditures C descriptions cut at D: wrap C, widen C to ~13 cm, or exempt it. ➡️ Wrap. | "ok." |
+| J10 | The RFS tabs' layout (about 80 cut texts): fix widths and heights, or check protection and formats only. ➡️ Fix. | "The column should be set to auto-wrap, don't set fixed row heights. If the text doesn't fully display, so be it. I don't want to complicate a tab that is just a data source." |
+| J11 | The user's text: Working notes a line short, Adjustments E42, "incl in 18.3.1" in the estimate columns: fit heights and wrap, content unchanged. | Notes: "This is an annoying problem. Auto-wrap simply does't work as it should and, when a tab is protected, one can't double-click on the row's bottom boundary to force it to auto-adjust. How do we solve this problem in a clean way; setting fixed row heights is a solution." E42: "same as above." The "incl" cells: "I don't know what tab you are referring to. Don't waste my time with half-baked text addressed to me." |
+
+### Round 3 (J11c, J12)
+
+| Q | Question ➡️ recommendation | Answer |
+|---|---|---|
+| J11c | The tab: Expenditures O208:P210, O240:P240, N241:O241. Wrap them? ➡️ Yes. | "Those two examples are inconsequential -- normally, only numbers would be typed in those cells. If auto-wrap is turned on, it must be done for all cells in the range column." |
+| J12 | (a) fixed heights with a margin for notes over one line, (b) automatic rows otherwise, (c) protection allowing row formatting (Excel only), (d) the check refits on each build. | (a) "This doesn't work. Notes are edited over time." (b) "ok." (c) "You are effectively telling me that I can't work productively in LibreOffice if we enable tab protection." (d) "sounds like a kludge." |
+
+**Claude** checked LibreOffice's Protect Sheet dialog (no row-format option) and proposed: every
+input row automatic (an automatic row re-fits on every edit, protected or not); no margin on
+those rows; the 110% on-screen bug acknowledged as unfixable from the file; text in number
+columns neither wrapped nor flagged. **User:** "ok." **User**, on the summary: "Yes, also ensure
+design-history.md is kept up-to-date."
+
+### Implementation (2026-11-27, continued)
+
+`tools/migrate/layout_lint.py`, `render.py`, `update_20261127.py`, `verify_20261127.py`. The
+layout check, run on `Spatac-20261126a.xlsx`, found both reported defects (the white font, the
+unprotected RFS tabs) and, once taught to fill lines as the programs do, O7. Reading the renders
+found three more that the check then learned or the build fixed: "-0" in Projected_Balances I,
+one-line item rows made two lines tall by the hidden, wrapped column J (and a stray wrapped E241),
+and the wrapped end-of-items marker. Output `Spatac-20261127a.xlsx`: layout check 0 problems;
+verifier 88,985 checks passed; `spatac-check` no problems; `InvestmentPlan-20261127a.xlsx`
+1,633 cells compared, 0 failures, layout check 0 problems. `xlsx-diff` fixed in `f7586b5`; the
+same comparison now reports one column inserted and four cell changes.
+
+An untracked `docs/archive/defects-20261127a.md` appeared during the session (the user's report of
+the same `xlsx-diff` noise). Asked; the user said to leave it alone.

@@ -1444,3 +1444,131 @@ section conflicts with sections 1–15, this section wins.
   stay light grey.
 - The Inflator column (AB) is no longer grouped and always shows.
 - Row 14 (2024) had kept the header's height since 15.7; it is fitted.
+
+## 17. Revisions of 2026-11-27
+
+Decisions from the session of 2026-11-27, on `docs/archive/defects-20261127.md` and
+`docs/archive/Prompt-20261127.md`. Question numbers are prefixed **J** (J1–J12). Where this
+section conflicts with sections 1–16, this section wins.
+
+### 17.1 Baseline and build (J1, J7)
+
+- The baseline is the user's `_nogit/Spatac-20261126a-edits.xlsx`: the previous build with their
+  edits. On Expenditures they inserted a column at T: the RFS totals count moved from P3 to T1,
+  labelled in U1 "  No. of RFS years where totals don’t add-up correctly" (leading spaces kept,
+  J5), O3:P3 emptied, and the RFS block moved from U:AX to V:AY. On README they shortened the
+  Red legend line (A21) and bolded A25 and A28; on Adjustments they reworded the amount headings
+  (D6, D22, D38, D54) to "Amount in from-year $s (in to-year $s when Year from is none)"; on
+  Settings they widened column A and cleared B11's input format. Their unprotected tabs are not
+  kept.
+- `tools/migrate/update_20261127.py` edits a copy of the baseline in place, as
+  `update_20261126.py` did. LibreOffice had already re-pointed every reference and name for the
+  inserted column, so the script does not redo it. `verify_20261127.py` checks that the user's
+  edits changed no value of `Spatac-20261126a.xlsx` (with the column shift), and that the
+  update changed no value of the baseline but the cells this section changes.
+- The Python scripts stay: they are the only way to edit the workbook through LibreOffice
+  itself, which recalculates and keeps formats, names and validations; the Rust library cannot
+  write a workbook this complex without loss.
+
+### 17.2 Self-review of every build (J8)
+
+The defect files of 2026-11-21 to 2026-11-27 kept returning to the same kinds of defect: text
+that does not fit, formats that do not show as set, leftover or misplaced cells, protection, and
+regressions of earlier fixes. Two tools now check what a build looks like, and every build runs
+them before it is handed over:
+
+- `tools/migrate/layout_lint.py` checks every tab: protection and unlocked cells; a conditional
+  font colour overridden by a number format's colour code; a conditional format on empty cells
+  only; a discrepancy count without the Alarm format; a number shown as "-0"; and, on every tab
+  but the RFS tabs, fit (17.3), word breaks, input rows with a fixed height, and wrapped text in
+  hidden columns. It measures each cell by copying it, with its formats, to a scratch tab and
+  asking LibreOffice for its optimal width and height. On a fixed-height row, text must fit when
+  it renders 10% wider (Excel, 110–120% zoom). A heading in a fixed-height row may not break at
+  a hyphen: "Late-/year" was the reported defect, and the narrowest margin missed it, so the
+  check fills lines as the programs do.
+- `tools/migrate/render.py` prints tabs or ranges to PDF at a chosen zoom, with row and column
+  headings. The renders of this build were read page by page; they found the "-0" values, the
+  hidden column J making one-line rows two lines tall, and the wrapped end-of-items marker,
+  which the check then learned to catch (the first two) or the build fixed (the third).
+- `verify_20261127.py` also repeats one check for each earlier defect that a build can bring
+  back: top alignment, locked identity columns, "Late-year" wording, Settings last, "RFS total"
+  wording, explicit zeros in column S, right-aligned legends, the bold S2 year, the right-aligned
+  Adjustments Check, red negatives on Projected_Balances, no leftover labels, the visible
+  inflator, the RFS block without green.
+- The build sizes columns and rows with the check's own measurements (`needed_width`,
+  `needed_height`), so the build and the check cannot disagree.
+
+### 17.3 Row heights and the user's text (J9, J11, J12)
+
+- LibreOffice cannot resize a row by hand on a protected tab (its Protect Sheet options have no
+  "format rows", unlike Excel). What works in both programs, protected or not, is an automatic
+  row height: the row re-fits whenever a cell in it is edited. So every row with an input cell
+  has an automatic height, and the build sets no fixed height on one. The Adjustments input rows
+  had a fixed one-line height, which is why E42's note was cut. Fixed heights computed by the
+  build were rejected: notes change over time.
+- An automatic row is measured with no margin: the program fits it. At some zooms (110%)
+  LibreOffice draws a fitted row one line short on screen; no setting in the file fixes it,
+  and the row prints and shows whole at 100%. `docs/workbook.md` says so.
+- Expenditures column C (Building element) wraps in the item rows, so long descriptions take a
+  second line instead of being cut at column D (J9). The end-of-items marker (C250) does not
+  wrap.
+- Text typed into an input cell, or into a number column ("incl in 18.3.1" in the estimate
+  columns), is the user's and is not measured for width (J11).
+- The README colour legend's Yellow line (A16) was an unlocked input cell; it is a sample of
+  the colour, so it is locked.
+
+### 17.4 Alarm formats (J2, J5)
+
+- The RFS totals check moved to Expenditures T1 with the user's edit; its alarm moves with it,
+  and the empty P3 loses its conditional format.
+- Projected_Balances C (Expected costs) and I (Diff from RFS_cashflow balance) have the number
+  format `#,##0;[RED]-#,##0`, whose `[RED]` overrode the alarm's white text: negative values
+  stayed red on red. The alarm on these two columns uses a new cell style, `AlarmNumber`: red
+  fill, bold white text and its own number format `#,##0;-#,##0`. In the saved file the alarm's
+  `dxf` carries that number format, so Excel and Calc both show white text; outside the alarm
+  the columns keep their red negatives.
+- Projected_Balances I is rounded to whole dollars, `=ROUND(H−balance;0)`: floating-point
+  remainders around 1e-8 showed as a red "-0" in 22 years. Whole dollars are the check's own
+  resolution (it flags a difference over 0.5).
+
+### 17.5 Expenditures layout (J3)
+
+- Row 7 headings L7:P7 put the year on a line of its own: `=Cfg_BaseYear&CHAR(10)&"Late-year
+  estimate"`. "Mid-year" and "Late-year" no longer break at their hyphen; L:P are widened
+  together to fit "Approved", the widest word.
+- The hidden columns E–H and J no longer wrap: J's adjustment labels, wrapped in a hidden
+  column, made one-line item rows two lines tall.
+- Widened to fit with the margin: A (Row #), B (item numbers), D (GL accounts), V:AY (the RFS
+  totals in rows 3–5, up to 4,265,166).
+- Other tabs, widened by the same measurement: Projected_Balances D, E, F, I, M, P, Q, R, V, Z
+  (headings that broke inside a word, "RFS_cashflow" among them) and B, R (the summary labels);
+  Medium_Term_Cashflow A (the Schedule_of_Investments label was cut); Schedule_of_Investments
+  A, B, C, E, F, G, J ("Compounding" was cut); Settings A.
+
+### 17.6 The RFS tabs (J4, J10)
+
+- RFS_info, RFS_fvalues and RFS_cashflow are protected without a password, every cell locked.
+  `spatac-check` requires it. The new-RFS procedure unprotects them to paste and protects them
+  again.
+- Their description columns (RFS_info C and D, RFS_fvalues B) wrap, and their item rows have an
+  automatic height; no fixed heights on a data source. Text that still does not show fully is
+  left so (J10). The layout check runs only its protection and format checks there.
+
+### 17.7 `xlsx-diff` (J6)
+
+- Comparing `Spatac-20261126a.xlsx` with the user's edits reported two columns inserted and one
+  deleted for the one column inserted, 498 cell changes, and `Exp_NextYear` as
+  `$U$7:$R$250`. The 2027 column's formulas use absolute references (`$U8:$AX8`) that the
+  insert moved, so its content no longer matched itself and it was paired with nothing. Columns
+  are now aligned a second time with the old formulas rewritten through the first alignment,
+  until the alignment stops changing; a range whose rows or columns were all deleted reads
+  `#REF!` instead of a range whose ends cross. The same comparison now reports one column
+  inserted (T) and four cell changes.
+
+### 17.8 Noted, not changed
+
+- Medium_Term_Cashflow's 2028 adjustment (311) leaves a 5-year investment of 0.44, which shows
+  as 0 and matures at 0.51, shown as 1, on Schedule_of_Investments row "Planned 5-year
+  investment, bought 2028". A plug of 311.44 would clear it; it is the user's input.
+- The Investment Plan's Cover lines A2 and A16 run past column B: whole on screen, cut if
+  printed with the print area at B.

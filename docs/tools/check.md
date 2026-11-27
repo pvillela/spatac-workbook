@@ -22,8 +22,8 @@ recalculate it.
 - **Errors.** A cell whose last calculated result is an error, such as `#N/A` or `#REF!`.
 - **Validations.** An Adjustments input row whose Item, Year from or Year to has lost its
   dropdown, or whose Amount has lost its rule.
-- **Protection.** A Spatac tab left unprotected, a formula cell that is unlocked, or an
-  Adjustments input cell that is locked.
+- **Protection.** A tab left unprotected (the three RFS tabs included), a formula cell that is
+  unlocked, or an Adjustments input cell that is locked.
 
 ## The report
 

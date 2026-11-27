@@ -107,6 +107,6 @@ the Treasurer and the broker, and it is kept with the approving minutes. It cont
 
 The reasons for the Board's changes from the RFS are not part of the plan: the cover says they
 are described in the Spatac workbooks for the current and previous years (Expenditures
-column U).
+column V onwards).
 
 See [spatac-investment-plan](../tools/investment-plan.md).

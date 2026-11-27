@@ -24,14 +24,19 @@
   the Adjustments tab.
 - Everything else is a label or a calculation.
 
-The Spatac tabs are protected **without a password**, so that a stray keystroke cannot
-overwrite a formula. Yellow cells stay editable while a tab is protected. To change anything
-else, unprotect the tab:
+Every tab is protected **without a password**, the three RFS tabs included, so that a stray
+keystroke cannot overwrite a formula or the vendor's figures. Yellow cells stay editable while a
+tab is protected. To change anything else, unprotect the tab:
 
 - **Excel:** Review › Unprotect Sheet.
 - **LibreOffice:** Tools › Protect Sheet (untick it).
 
 Protect it again when you are done.
+
+Rows with yellow cells have an automatic height: a row grows or shrinks to fit its text as you
+type, even on a protected tab, so there is no need to drag a row's border (LibreOffice does not
+allow that on a protected tab). At some zoom levels, 110% for one, LibreOffice can draw a fitted
+row one line short on screen; the row is right, and shows whole at 100% and when printed.
 
 Some tabs group columns, so that a block of input columns can be folded away, for example when
 sharing your screen on a call. The **+** and **−** buttons above the column letters fold and

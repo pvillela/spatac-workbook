@@ -65,3 +65,44 @@ the defects of that day.
   vendor total and RFS_cashflow cost; clears the RFS block to show the what-if does not read it;
   and checks the formats, headings, README text and protection. `EDITS` is the user's
   `Spatac-20261125h-PV-edits.xlsx`, for the headings and labels.
+
+## The 2026-11-27 update (design section 17)
+
+`update_20261127.py` starts from the user's edited copy of the previous build,
+`_nogit/Spatac-20261126a-edits.xlsx`, which already carries their edits (a column inserted on
+Expenditures, labels on README, Adjustments and Settings). It moves the RFS totals check's alarm
+to its new cell, gives the Projected_Balances alarms a number format of their own, protects the
+RFS tabs, and fixes the layout: every column and fixed row is sized by `layout_lint.py`'s own
+measurements, and every input row gets an automatic height.
+
+```
+/opt/libreoffice26.2/program/python tools/migrate/update_20261127.py _nogit/Spatac-20261126a-edits.xlsx OUT.xlsx
+/opt/libreoffice26.2/program/python tools/migrate/verify_20261127.py _nogit/Spatac-20261126a.xlsx _nogit/Spatac-20261126a-edits.xlsx OUT.xlsx
+```
+
+- `update_20261127.py` writes OUT once and refuses an existing file.
+- `verify_20261127.py` checks that the user's edits changed no value of the previous build, and
+  that the update changed no value of the edits apart from the cells section 17 changes; runs
+  the layout check; makes the moved check catch an item that no longer adds up; reads the
+  Projected_Balances alarm formats from the saved file; and repeats one check for each defect
+  of the earlier defect files that a build can bring back.
+
+## Checking the layout of any build
+
+Two tools check what a build looks like, not only what it computes (design 17.2). Run both on
+every build, the Investment Plan included, before handing it over.
+
+```
+/opt/libreoffice26.2/program/python tools/migrate/layout_lint.py OUT.xlsx
+/opt/libreoffice26.2/program/python tools/migrate/render.py OUT.xlsx OUT.pdf [--scale 100] [TAB[!RANGE] ...]
+```
+
+- `layout_lint.py` lists every problem and exits 1 if there is one: text that does not fit its
+  cell with a 10% margin for Excel and other zooms (on a fixed-height row), a heading that breaks
+  inside a word, a number that would show `###`, a conditional format whose font colour a
+  number format's `[RED]` overrides, a conditional format on empty cells only, a discrepancy
+  count without the Alarm format, a number shown as "-0", wrapped text in a hidden column, an
+  input row with a fixed height, an unlocked cell that is not a yellow input, and an unprotected
+  tab. The RFS tabs get the protection and format checks only: their layout is the vendor's.
+- `render.py` prints the tabs, or ranges of them, to a PDF at a given zoom, with row and column
+  headings, to look at before handing a build over.

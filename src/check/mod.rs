@@ -9,8 +9,8 @@
 //! - **Errors**: a cell whose stored result is an error (`#N/A`, `#REF!`…), as Excel or Calc
 //!   last calculated it.
 //! - **Validations**: an Adjustments input row without its dropdowns or its amount rule.
-//! - **Protection**: an unprotected Spatac tab, a formula cell that is unlocked, or an
-//!   Adjustments input cell that is locked.
+//! - **Protection**: an unprotected tab (the Spatac tabs and the three RFS tabs), a formula cell
+//!   that is unlocked, or an Adjustments input cell that is locked.
 
 use crate::diff::formula::{self, Token};
 use crate::diff::model::parse_range;
@@ -31,6 +31,9 @@ const SPATAC_TABS: [&str; 7] = [
     "Projected_Balances",
     "Settings",
 ];
+
+/// The vendor's tabs, protected too (design 17.6): they are unprotected only to paste a new RFS.
+const VENDOR_TABS: [&str; 3] = ["RFS_info", "RFS_fvalues", "RFS_cashflow"];
 
 /// Which cells of a named range must hold formulas.
 #[derive(Clone, Copy)]
@@ -190,7 +193,7 @@ pub fn check(path: &Path) -> Result<Vec<Problem>, String> {
     for ws in wb.sheet_collection() {
         errors(&mut cx, ws);
     }
-    for tab in SPATAC_TABS {
+    for tab in SPATAC_TABS.into_iter().chain(VENDOR_TABS) {
         match wb.sheet_by_name(tab) {
             Ok(ws) if ws.sheet_protection().is_some_and(|p| p.sheet()) => {}
             Ok(_) => {

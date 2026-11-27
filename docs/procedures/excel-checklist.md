@@ -25,10 +25,10 @@ workbook:
 - [ ] **Schedule_of_Investments rows 49–78:** the planned investments, one row per grid cell,
       with gaps; row 50 reads "Planned 2-year investment, bought 2026". No cell shows an error.
 - [ ] **Formulas with `LET`, `IFS` and `SWITCH`** calculate (Excel 2021 or later), for example
-      Expenditures I8, J8 and U8, Adjustments H7, Medium_Term_Cashflow B9 and B11, and
+      Expenditures I8, J8 and V8, Adjustments H7, Medium_Term_Cashflow B9 and B11, and
       Projected_Balances D15, P16, Q16 and AB16. Their line
       breaks show in the formula bar when it is expanded.
-- [ ] **Expenditures row 5** over the adjusted block (from column U): 0 in every year but
+- [ ] **Expenditures row 5** over the adjusted block (from column V): 0 in every year but
       2025 (188,700), 2026 (416,160), 2027 (−607,552, red) and 2028 (−151,541, red), the years the
       Adjustments tab changes.
 - [ ] **Expenditures, orange shading:** the adjusted amounts that differ from the RFS are
@@ -45,9 +45,16 @@ workbook:
       that differ) and I12 (Balance years that differ) show 0 with no fill. Type 1000 more into
       RFS_cashflow G20: I19 and I12 turn red with bold white text, I12 shows 1. Undo. Type 1000
       more into RFS_cashflow B16: C15 and F12 turn red, F12 shows 1. Undo.
-- [ ] **Expenditures P3** (Years where items differ from RFS_fvalues totals) shows 0 with no
-      fill. Type 1000 more into RFS_fvalues D10: P3 shows 1 and V3 (2025) turns red with bold
-      white text. Undo.
+- [ ] **Expenditures T1** (No. of RFS years where totals don't add-up correctly, in U1) shows 0
+      with no fill. Type 1000 more into RFS_fvalues D10: T1 shows 1 in red with bold white text,
+      and so does W3 (2025; unfold the past years to see it). Undo.
+- [ ] **Expenditures L7:P7:** each heading shows the year on its own line ("2026", then
+      "Late-year estimate"); no word is split, "Late-year" and "Mid-year" included.
+- [ ] **Projected_Balances C and I, the alarm:** type 1000 more into RFS_cashflow B16: C15 shows
+      white bold text on red, not red text on red. Undo.
+- [ ] **Row heights:** on Expenditures, type a three-line note into an empty Working notes cell
+      (column Q): the row grows to fit it while the tab is protected. Undo.
+- [ ] **RFS tabs** are protected: typing into RFS_info H12 is refused.
 - [ ] **Medium_Term_Cashflow investment grid:** type 900000 into C14: C18 turns negative, red
       with bold white text. Undo.
 - [ ] **Projected_Balances column AB** (Inflator) shows, with no group button above it.
